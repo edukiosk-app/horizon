@@ -255,8 +255,7 @@ button.mini{padding:5px 8px;font-size:12px}
 
     <div class="panel">
       <h2>Séances guidées</h2>
-      <input id="wsearch" type="text" placeholder="Chercher une séance (côtes, 10k, sprint…)" style="width:100%;margin-bottom:8px">
-      <div class="row" style="margin-bottom:8px"><button id="ivSync">Mettre à jour mes séances Intervals.icu</button></div><p id="ivSyncMsg" class="hint" style="margin-top:0"></p>
+      <div class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input id="wsearch" type="text" placeholder="Chercher une séance (côtes, 10k, sprint…)" style="flex:1;min-width:0"><button id="wsync">Actualiser</button></div><p class="muted" id="wsyncMsg" style="margin:0 0 8px"></p>
       <div id="wlist" class="list"></div>
       <details style="margin-top:10px">
         <summary style="cursor:pointer;font-weight:600">Ajouter une séance d'Intervals.icu</summary>
@@ -656,19 +655,25 @@ function parseWorkout(text){
     if(!l){flush();section=null;continue}
     if(/^warm\s*up$/i.test(l)){flush();section='warm';continue}
     if(/^cool\s*down$/i.test(l)){flush();section='cool';continue}
-    const m=l.match(/^(?:[^-].*?\s)?(\d+)\s*x(?:\s+.*)?$/i);if(m&&!l.startsWith('-')){flush();rep=+m[1];continue}
+    const m=l.match(/^(\d+)\s*x$/i);if(m){flush();rep=+m[1];continue}
     if(!l.startsWith('-'))continue;
     let t=l.slice(1).trim(),type=section==='warm'?'warm':section==='cool'?'cool':'foot';
     const im=t.match(/intensity=(\w+)/i);if(im){t=t.replace(im[0],'');if(!section){const v=im[1].toLowerCase();type=v==='interval'?'work':v==='recovery'?'rec':v==='warmup'?'warm':v==='cooldown'?'cool':'foot'}}
     let dur=0,dist=0;
     t=t.replace(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(mtr|km)(?=\s|$)/i,(a,n,u)=>{dist=parseFloat(n.replace(',','.'))*(u.toLowerCase()==='km'?1000:1);return ' '});
     t=t.replace(/(?:^|\s)((?:\d+h)?(?:\d+m(?!tr))?(?:\d+s)?)(?=\s|$)/,(a,g)=>{if(!g)return a;const h=g.match(/(\d+)h/),mm=g.match(/(\d+)m/),s=g.match(/(\d+)s/);dur=(h?+h[1]*3600:0)+(mm?+mm[1]*60:0)+(s?+s[1]:0);return ' '});
-    t=t.replace(/\S+\s+Pace/i,'').replace(/(?:^|\s)(?:\d+(?:-\d+)?%(?:\s*(?:LTHR|HR|FTP|MMP))?|Z\d(?:-Z?\d)?(?:\s*(?:HR|Pace))?|\d+:\d+(?:-\d+:\d+)?\/km|ramp|freeride)(?=\s|$)/ig,' ').replace(/\s+/g,' ').trim();
+    let pv=0,pc=0,ramp=null;const isRamp=/\bramp\b/i.test(t);t=t.replace(/\bramp\b/i,' ');
+    t=t.replace(/(\d+):(\d{2})(?:\s*-\s*(\d+):(\d{2}))?\s*\/\s*km(?:\s+Pace)?/i,(a,m1,s1,m2,s2)=>{const v1=3600/(+m1*60+ +s1),v2=m2?3600/(+m2*60+ +s2):v1;if(isRamp&&m2)ramp=[v1,v2];else pv=(v1+v2)/2;return ' '});
+    t=t.replace(/(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d+(?:[.,]\d+)?))?\s*km\/h/i,(a,a1,a2)=>{const v1=parseFloat(a1.replace(',','.')),v2=a2?parseFloat(a2.replace(',','.')):v1;if(isRamp&&a2)ramp=[v1,v2];else pv=(v1+v2)/2;return ' '});
+    t=t.replace(/(\d+)(?:\s*-\s*(\d+))?\s*%\s*Pace/i,(a,a1,a2)=>{const p1=+a1,p2=a2?+a2:p1;if(isRamp&&a2)ramp=['%',p1,p2];else pc=(p1+p2)/2;return ' '});
+    t=t.replace(/\S+\s+Pace/i,'').replace(/\s+/g,' ').trim();
     if(!dur&&!dist)continue;
-    const st={label:t||(type==='work'?'Effort':type==='rec'?'Récupération':'Footing'),type,dur,dist};
+    const st={label:t||(type==='work'?'Effort':type==='rec'?'Récupération':type==='warm'?'Échauffement':type==='cool'?'Retour au calme':'Footing'),type,dur,dist};if(pv)st.pv=pv;if(pc)st.pc=pc;if(ramp)st.ramp=ramp;
     if(rep)block.push(st);else steps.push(st)}
   flush();return steps}
 function speedFor(s){const V=k=>+$(k).value;const L=s.label.toLowerCase();let v;
+  if(s.ramp){const r=s.ramp[0]==='%'?[V('v10k')*s.ramp[1]/100,V('v10k')*s.ramp[2]/100]:s.ramp;return Math.round((r[0]+r[1])/2*10)/10}
+  if(s.pv)return Math.round(s.pv*10)/10;if(s.pc)return Math.round(V('v10k')*s.pc/100*10)/10;
   if(s.type==='warm')v=V('vWarm');else if(s.type==='cool')v=V('vCool');else if(s.type==='rec')v=V('vRec');
   else if(/sprint/.test(L))v=V('vSprint');
   else if(/5 ?k/.test(L)||/10 ?k/.test(L)){let pace=3600/(/5 ?k/.test(L)?V('v5k'):V('v10k'));
@@ -686,8 +691,7 @@ const BUILTIN=[
  {name:"10 côtes toniques",text:`Warmup\n- Échauffement 30m\n\n10x\n- Côte tonique 30s intensity=interval\n- Récupération 3m intensity=recovery`},
  {name:"Footing long avec bloc soutenu",text:`- Footing cool 40m intensity=active\n\n- Allure 10k plus une minute vingt 30m intensity=interval\n\n- Footing cool 10m intensity=active`}];
 const workouts=()=>[...BUILTIN.map(w=>({...w,builtin:true})),...store.get('workouts',[])];
-const fLabel=f=>/david/i.test(f)?(f.replace(/david/ig,'').replace(/^[\s·\-]+|[\s·\-]+$/g,'')||'Séances du coach'):f;
-function wPath(w){if(w.builtin)return['Horizon'];if(w.ivId){const f=w.folder&&w.folder!=='Workouts'?w.folder.split(/\s*·\s*/).map(fLabel):[];return['Intervals.icu',...f]}if(!w.folder)return['Mes séances'];return w.folder.split(/\s*·\s*/).map(fLabel)}
+function wPath(w){if(w.builtin)return['Horizon'];if(w.ivId)return['Intervals.icu',...(w.folder&&w.folder!=='Workouts'?w.folder.split(/\s*·\s*/):[])];if(!w.folder)return['Mes séances'];if(w.folder==='Workouts')return['Intervals.icu'];return w.folder.split(/\s*·\s*/)}
 function wDate(name){const m=name.match(/^(\d{1,2})\/(\d{1,2})\s*·\s*/);if(!m)return null;const d=+m[1],mo=+m[2];return{lab:String(d).padStart(2,'0')+'/'+String(mo).padStart(2,'0'),ord:((mo>=8?mo-8:mo+4)*40+d),rest:name.slice(m[0].length)}}
 const wOpen=new Set(store.get('wOpen',['Horizon']));
 function wItem(w,label,sel){const st=w.test?testWorkout().steps:parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0),km=st.reduce((a,s)=>a+(s.dist||s.dur*(speedFor(s)/3.6)),0);
@@ -707,7 +711,7 @@ function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsear
   const all=[{name:"Test d'allures",builtin:true,test:true,text:''},...workouts()];
   all.forEach(w=>{if(qy&&!(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))return;let n=root;wPath(w).forEach(p=>{if(!n.kids.has(p))n.kids.set(p,{name:p,kids:new Map(),items:[]});n=n.kids.get(p)});n.items.push(w)});
   const count=n=>n.items.length+[...n.kids.values()].reduce((a,k)=>a+count(k),0);
-  const order=['Horizon','Intervals.icu','Mes séances'];
+  const order=['Horizon','Mes séances','David','Intervals.icu'];
   const draw=(n,parent,path)=>{
     [...n.kids.values()].sort((a,b)=>{const ia=order.indexOf(a.name),ib=order.indexOf(b.name);return(ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name,'fr')}).forEach(k=>{
       const key=[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
@@ -923,10 +927,10 @@ $('connect').onclick=async()=>{
     const srv=await(await dev.gatt.connect()).getPrimaryService(FTMS);
     try{const ir=await(await srv.getCharacteristic(IRANGE)).readValue();const lo=ir.getInt16(0,true)/10,hi=ir.getInt16(2,true)/10;log(`Pente du tapis : ${fmt(lo)} à ${fmt(hi)} %`);
       if(+$('incMax').value>hi)$('incMax').value=hi;if(+$('incMin').value<lo)$('incMin').value=lo}catch(e){}
-    try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;bt.minSpd=sr.getUint16(0,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
+    try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
     const td=await srv.getCharacteristic(TDATA);await td.startNotifications();
     td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null){run.speed=r.speed;if(Math.abs(r.speed-(bt.lastLog??-9))>=0.5||(r.speed===0)!==(bt.lastLog===0)){bt.lastLog=r.speed;log('Le tapis indique '+fmt(r.speed)+' km/h')}}if(r.inc!=null&&Math.abs(r.inc-(bt.lastInc??-99))>=0.5){bt.lastInc=r.inc;log('Le tapis indique une pente de '+fmt(r.inc)+' %')}if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
-    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(op===8&&res!==1)bt.refused8=true;if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
+    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
     await cmd([0x00],'Contrôle du tapis obtenu');bt.dev=dev;bt.ok=true;setBt();log('Connecté à '+(dev.name||'tapis'))}
   catch(e){log('Connexion impossible : '+e.message)}};
 function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connecté';$('bt').className='pill'+(bt.ok?' on':'');
@@ -944,7 +948,7 @@ function adjInc(d){incAdj=d===null?0:Math.max(-15,Math.min(15,Math.round((incAdj
 function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
 function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
   if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
-  const s=workout.steps[i];applySpeed(s.v);run.sentAt=0;
+  const s=workout.steps[i];if(s.ramp){const V=k=>+$(k).value,r=s.ramp[0]==='%'?[V('v10k')*s.ramp[1]/100,V('v10k')*s.ramp[2]/100]:s.ramp;s.v=Math.round(r[0]*10)/10}applySpeed(s.v);run.sentAt=0;
   say(`${s.label}, ${durWords(s)}, ${fmt(s.v)} kilomètres heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
 let wake=null;async function keepAwake(){try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
 $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='running')return;
@@ -955,20 +959,12 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
-  if(bt.ok){if(!first)await cmd([0x00]);bt.hardStop=false;await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
+  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
   run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
   if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
-// Pause : certains tapis ignorent ou refusent la pause FTMS (0x08 0x02). On vérifie que la bande ralentit
-// vraiment, sinon on envoie l'arrêt (0x08 0x01), puis en dernier recours la vitesse minimale.
-async function pauseBelt(){if(!bt.ok)return;bt.refused8=false;const v0=run.speed;await cmd([0x08,0x02],'Tapis en pause');
-  const moving=()=>run.state==='paused'&&bt.ok&&run.speed>0.5&&run.speed>v0-1;
-  await new Promise(r=>setTimeout(r,bt.refused8?300:2500));
-  if(moving()||bt.refused8){log('Pause ignorée par le tapis : arrêt envoyé');bt.hardStop=true;await cmd([0x08,0x01],'Tapis arrêté (pause)');
-    await new Promise(r=>setTimeout(r,2500));
-    if(moving()){log('Arrêt ignoré : vitesse au minimum');await setSpeedRaw(Math.max(0.5,+(bt.minSpd||1)))}}}
-$('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(!bt.ok)run.speed=0;
-  $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;$('fsPause').textContent='Reprendre';say('Pause','Paused');
-  pauseBelt()};
+$('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';
+  $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;try{renderFS()}catch(e){}say('Pause','Paused');
+  if(bt.ok){await cmd([0x08,0x02],'Tapis en pause');setTimeout(async()=>{if(run.state==='paused'&&bt.ok&&run.speed>0.5){log("Le tapis tourne encore : ordre d'arrêt");await cmd([0x08,0x01],'Tapis arrêté')}},2500)}else run.speed=0};
 $('skip').onclick=()=>{if(workout&&run.state==='running'){if(curStep()?.test)finishTest();enterStep(run.step+1)}};
 function testWorkout(){const V=k=>+$(k).value;return{name:"Test d'allures",test:true,steps:[
   {label:'Échauffement',type:'warm',dur:600,dist:0,v:V('vWarm')},
@@ -1004,7 +1000,7 @@ function fsPad(on=true){const m=RM.map;if(RM.kind!=='gl'||!m||!m.setPadding)retu
 function exitFS(){if($('fs').hidden)return;fsPad(false);const mw=document.querySelector('.mapwrap');if(fsHome&&mw)fsHome.p.insertBefore(mw,fsHome.n);$('fs').hidden=true;
   try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}setTimeout(()=>{RM.resize();RM.lastPlace=null;lastMap=0;render()},120)}
 $('fsOpen').onclick=()=>{if(!route){show('prep');return}RM.init();enterFS()};$('fsExit').onclick=exitFS;
-$('fsPause').onclick=()=>{if(run.state==='running')$('pause').onclick();else if(run.state==='paused'){$('fsPause').textContent='Pause';$('start').onclick()}};
+$('fsPause').onclick=()=>{if(run.state==='running')$('pause').onclick();else if(run.state==='paused')$('start').onclick()};
 $('fsSkip').onclick=()=>$('skip').onclick();
 $('fsStop').onclick=()=>{const b=$('fsStop');if(b.dataset.ok){delete b.dataset.ok;b.textContent='Terminer';$('stop').onclick()}else{b.dataset.ok=1;b.textContent='Confirmer ?';setTimeout(()=>{delete b.dataset.ok;b.textContent='Terminer'},4000)}};
 document.querySelectorAll('#fs [data-a]').forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(b.dataset.a==='s')bump(+v);else adjInc(v==='auto'?null:+v)});
@@ -1015,7 +1011,7 @@ function renderFS(){if($('fs').hidden)return;if(RM.map&&!RM.map._fsPad){RM.map._
   const st=!$('steppanel').hidden&&run.state!=='idle';$('fsStep').hidden=!st;if(st){$('fsNow').textContent=$('stNow').textContent;$('fsLeft').textContent=$('stLeft').textContent;$('fsNext').textContent=$('stNext').textContent;$('fsStep').classList.toggle('work',$('steppanel').classList.contains('work'))}
   const g=!$('ghostbox').hidden;$('fsGap').hidden=!g;if(g){$('fsGap').textContent=$('gGap').textContent;$('fsGap').className='fs-gap '+$('gGap').className}
   $('fsPause').textContent=run.state==='paused'?'Reprendre':'Pause';$('fsSkip').disabled=!workout||run.state!=='running'}
-function bump(dv){const base=run.state==='running'?(realSpeed()||run.target):run.target;
+function bump(dv){const cs=curStep();if(cs)cs.manual=true;const base=run.state==='running'?(realSpeed()||run.target):run.target;
   run.target=Math.max(1,Math.min(S().vmax,Math.round((base+dv)*10)/10));
   if(run.state==='running'){if(bt.ok)setSpeed(run.target);else run.speed=run.target}render()}
 $('im1').onclick=()=>adjInc(-1);$('im05').onclick=()=>adjInc(-.5);$('ip05').onclick=()=>adjInc(.5);$('ip1').onclick=()=>adjInc(1);$('iauto').onclick=()=>adjInc(null);
@@ -1029,6 +1025,7 @@ function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);r
     // séance
     const st=curStep();
     if(st){const before=st.dur?st.dur-run.stepT:0;run.stepT+=dt;run.stepD+=dd;
+      if(st.ramp&&!st.manual){const V=k=>+$(k).value,r=st.ramp[0]==='%'?[V('v10k')*st.ramp[1]/100,V('v10k')*st.ramp[2]/100]:st.ramp;const f=Math.min(1,st.dur?run.stepT/st.dur:run.stepD/(st.dist||1));const v=Math.round((r[0]+(r[1]-r[0])*f)*10)/10;if(Math.abs(v-run.target)>=0.1){run.target=v;if(bt.ok)setSpeed(v);else run.speed=v}}
       if(st.dur){const after=st.dur-run.stepT;for(const n of[3,2,1])if(before>n&&after<=n&&st.dur>8)say(String(n),['','one','two','three'][n])}
       if((st.dur&&run.stepT>=st.dur)||(st.dist&&run.stepD>=st.dist)){if(st.test)finishTest();enterStep(run.step+1)}}
     // annonce des côtes du parcours
@@ -1082,7 +1079,7 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
       lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
       setLeader(gx==null||run.time<1?null:(run.dist>=gx?'me':'ref'));
       RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
-setInterval(tick,500);setInterval(()=>{try{renderFS()}catch(e){}},500);
+setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */
 /* ================= INTERVALS.ICU ================= */
@@ -1095,34 +1092,24 @@ async function iv(path,opt={}){const key=($('ivKey').value||'').trim();if(!key)t
   if(r.status===401||r.status===403)throw new Error('clé API ou identifiant refusé');if(!r.ok)throw new Error('Intervals.icu a répondu '+r.status);
   const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text()}
 $('ivTest').onclick=async()=>{ivMsg('Connexion…');try{const a=await iv(`/athlete/${ivAth()}`);if(a.id){$('ivId').value=a.id;store.set('ivId',a.id)}ivMsg(`Connecté au compte ${a.name||a.id}.`)}catch(e){ivMsg('Connexion impossible : '+e.message+'.')}};
-/* Convertit la séance structurée d'Intervals.icu (workout_doc) en texte lisible par parseWorkout */
-function docToText(doc){if(!doc||!Array.isArray(doc.steps))return'';const out=[];
-  const dur=st=>{if(st.distance)return Math.round(st.distance)+'mtr';const t=Math.round(st.duration||0);if(!t)return'';const h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return(h?h+'h':'')+(m?m+'m':'')+(x?x+'s':'')};
-  const one=(st,cls)=>{const d=dur(st);if(!d)return null;const it=st.warmup?'warmup':st.cooldown?'cooldown':(st.intensity||cls||'active');
-    const lab=(st.text||'').replace(/[\n\r-]+/g,' ').trim()||({warmup:'Échauffement',cooldown:'Retour au calme',interval:'Effort',recovery:'Récupération',rest:'Récupération'}[it]||'Footing');
-    return`- ${lab} ${d} intensity=${it==='rest'?'recovery':it}`};
-  doc.steps.forEach(st=>{if(st.reps&&Array.isArray(st.steps)){out.push('',st.reps+'x');st.steps.forEach(c=>{const l=one(c);if(l)out.push(l)});out.push('')}
-    else{const l=one(st);if(l)out.push(l)}});
-  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim()}
-const isRun=t=>!t||/run|walk/i.test(t);
-async function ivImportAll(say=ivMsg){say('Import des séances…');
-  const folders=await iv(`/athlete/${ivAth()}/folders`)||[];const list=[],seen=new Set();
-  const add=(c,folder)=>{if(seen.has(c.id)||!isRun(c.type))return;seen.add(c.id);
-    let text=c.description&&parseWorkout(c.description).length?c.description:docToText(c.workout_doc);
-    list.push({name:(c.name||'Séance').trim(),text,folder,ivId:c.id,raw:!!(c.description||c.workout_doc)})};
-  folders.forEach(f=>(f.children||[]).forEach(c=>add(c,f.name)));
-  try{const fmap=new Map(folders.map(f=>[f.id,f.name]));(await iv(`/athlete/${ivAth()}/workouts`)||[]).forEach(c=>{
-      const k=list.find(w=>w.ivId===c.id);if(k){if(!parseWorkout(k.text).length){const t=c.description&&parseWorkout(c.description).length?c.description:docToText(c.workout_doc);if(t)k.text=t}}
-      else add(c,fmap.get(c.folder_id)||'')})}catch(e){}
-  const usable=list.filter(w=>w.text&&parseWorkout(w.text).length),bad=list.filter(w=>!usable.includes(w));
-  const mine=store.get('workouts',[]).filter(w=>!w.ivId);const names=new Set([...mine.map(w=>w.name),...BUILTIN.map(w=>w.name)]);
-  usable.forEach(w=>{let n=w.name;if(names.has(n))n=n+' ('+fLabel(w.folder||'Intervals')+')';let k=2;while(names.has(n))n=w.name+' '+(k++);names.add(n);const{raw,...o}=w;mine.push({...o,name:n})});
-  store.set('workouts',mine);store.set('ivSyncAt',Date.now());if(usable.length){wOpen.add('Intervals.icu');store.set('wOpen',[...wOpen])}listWorkouts();
-  say(`${usable.length} séance${usable.length>1?'s':''} d'Intervals.icu, rangée${usable.length>1?'s':''} dans le dossier « Intervals.icu »`+(bad.length?`. Sans étapes lisibles, donc non importée${bad.length>1?'s':''} : ${bad.slice(0,6).map(w=>'« '+w.name+' »').join(', ')}${bad.length>6?'…':''}`:'')+'.');return usable.length}
-$('ivImport').onclick=async()=>{try{await ivImportAll()}catch(e){ivMsg('Import impossible : '+e.message+'.')}};
-$('ivSync').onclick=async()=>{const m=t=>$('ivSyncMsg').textContent=t;try{await ivImportAll(m)}catch(e){m('Mise à jour impossible : '+e.message+'.')}};
-// au lancement : mise à jour automatique si le compte est relié (au plus toutes les 6 h)
-setTimeout(()=>{if(($('ivKey').value||'').trim()&&Date.now()-(+store.get('ivSyncAt',0))>6*3600e3)ivImportAll(t=>$('ivSyncMsg').textContent=t).catch(()=>{})},1500);
+function docToText(doc){if(!doc||!doc.steps)return'';const out=[];
+  const line=s=>{let t='- '+(s.text||'').replace(/\n/g,' ').trim();if(s.distance)t+=' '+(s.distance>=1000?(s.distance/1000)+'km':Math.round(s.distance)+'mtr');else if(s.duration){const d=Math.round(s.duration),m=Math.floor(d/60),x=d%60;t+=' '+(m?m+'m':'')+(x?x+'s':'')}else return null;
+    const pc=s.pace;if(pc&&pc.units==='%pace'){t+=(s.ramp?' ramp ':' ')+(pc.start!=null?Math.round(pc.start)+'-'+Math.round(pc.end):Math.round(pc.value))+'% Pace'}
+    const it=s.intensity||(s.warmup?'warmup':s.cooldown?'cooldown':'');if(it)t+=' intensity='+it;return t};
+  doc.steps.forEach(s=>{if(s.reps&&s.steps){out.push('',s.reps+'x');s.steps.forEach(k=>{const l=line(k);if(l)out.push(l)});out.push('')}else{const l=line(s);if(l)out.push(l)}});
+  return out.join('\n').trim()}
+async function ivSync(quiet){if(!(store.get('ivKey','')&&ivAth()!=='0'))return;try{await $('ivImport').onclick(quiet)}catch(e){}}
+$('ivImport').onclick=async(quiet)=>{ivMsg('Import des séances…');if(quiet===true)$('wsyncMsg').textContent='Mise à jour depuis Intervals.icu…';try{
+    const folders=await iv(`/athlete/${ivAth()}/folders`).catch(()=>[]);const fname=new Map();const list=[],seen=new Set();
+    const isRun=c=>!c.type||/run/i.test(c.type);
+    const add=(c,folder)=>{if(seen.has(c.id)||!isRun(c))return;const text=c.description&&parseWorkout(c.description).length?c.description:docToText(c.workout_doc);if(!text)return;seen.add(c.id);list.push({name:c.name,text,folder,ivId:c.id})};
+    (folders||[]).forEach(f=>{fname.set(f.id,f.name);(f.children||[]).forEach(c=>add(c,f.name))});
+    const ws=await iv(`/athlete/${ivAth()}/workouts`).catch(()=>[]);(ws||[]).forEach(c=>add(c,fname.get(c.folder_id)||'Workouts'));
+    const usable=list.filter(w=>parseWorkout(w.text).length);
+    const mine=store.get('workouts',[]).filter(w=>!w.ivId);const names=new Set(mine.map(w=>w.name));
+    usable.forEach(w=>{let n=w.name;if(names.has(n))n=n+' ('+(w.folder||'Intervals')+')';names.add(n);mine.push({...w,name:n})});
+    store.set('workouts',mine);listWorkouts();$('wsyncMsg').textContent=`${usable.length} séances d'Intervals.icu, à jour à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`;ivMsg(`${usable.length} séances importées${list.length>usable.length?`, ${list.length-usable.length} ignorées (sans étapes lisibles)`:''}. Elles sont dans « Séances guidées ».`)}
+  catch(e){ivMsg('Import impossible : '+e.message+'.');$('wsyncMsg').textContent='Intervals.icu : '+e.message+'.'}};
 $('wsearch').oninput=()=>listWorkouts();
 async function sendToWatch(w,row,btn){let box=row.querySelector('.sendrow');if(box){box.remove();return}
   box=document.createElement('div');box.className='sendrow';const today=new Date().toISOString().slice(0,10);
@@ -1202,7 +1189,7 @@ let calTaps=0,calOn=false,calTimer=0;
 function calUI(){const k=+store.get('calib',1)||1;$('calInfo').textContent=k===1?'Aucun calibrage : Horizon fait confiance à l\'affichage du tapis.':`Calibrage enregistré : ton tapis va ${k>1?'plus':'moins'} vite qu'il ne l'affiche (${k>1?'+':''}${fmt((k-1)*100,1)} %). Distances et vitesses sont corrigées.`}
 $('calStart').onclick=async()=>{const L=+$('calLen').value/100;if(!(L>0.5)){$('calMsg').textContent='Mesure d\'abord la longueur de la bande (en cm).';return}
   calTaps=0;calOn=true;$('calTap').disabled=false;$('calTap').textContent='Repère passé (0)';let left=60;$('calMsg').textContent='Mets le tapis à 6 km/h. Touche le gros bouton à chaque passage du repère. 60 s';
-  if(bt.ok){if(!first)await cmd([0x00]);bt.hardStop=false;await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
+  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
   clearInterval(calTimer);calTimer=setInterval(()=>{left--;$('calMsg').textContent=`Touche le bouton à chaque passage du repère. ${left} s`;
     if(left<=0){clearInterval(calTimer);calOn=false;$('calTap').disabled=true;
       const real=calTaps*L*60/1000,k=Math.round(real/6*1000)/1000;
