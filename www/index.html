@@ -209,6 +209,8 @@ button.mini{padding:6px 10px;font-size:13px}
 .decor b{font:700 16px var(--display);text-transform:uppercase;letter-spacing:.04em}.decor small{color:var(--muted);line-height:1.35}
 .decor .km{font:600 13px var(--body);color:var(--accent)}
 .decor.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ai-step{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
+#aiPanel textarea{width:100%;margin-top:6px}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -306,6 +308,23 @@ button.mini{padding:6px 10px;font-size:13px}
         <textarea id="wtext" style="margin-top:6px" placeholder="Warmup&#10;- Échauffement 30m&#10;&#10;6x&#10;- Effort 40s intensity=interval&#10;- Récupération 20s intensity=recovery"></textarea>
         <div class="row" style="margin-top:6px"><button id="wadd" class="primary">Ajouter la séance</button><span id="wmsg" class="hint" style="margin:0"></span></div>
       </details>
+    </div>
+
+    <div class="panel" id="aiPanel">
+      <h2>Assistant séance IA</h2>
+      <p class="hint" style="margin-top:0">Colle le message de ton coach ou décris la séance voulue : une IA (Claude, ChatGPT, Gemini…) la transforme en séance prête pour le tapis, avec vitesses et pentes.</p>
+      <h3 class="ai-step">1. La séance</h3>
+      <label>Nom de la séance<input id="aiName" type="text" placeholder="ex. 20/10 · Pyramide"></label>
+      <textarea id="aiText" rows="6" placeholder="Colle ici le texte de la séance (mail du coach, plan d'entraînement…) ou décris-la : « 45 min avec 6 côtes de 1 min à 6 % »"></textarea>
+      <textarea id="aiPrefs" rows="2" placeholder="Consignes en plus (facultatif) : pas plus de 8 % de pente, récupération en marchant…"></textarea>
+      <h3 class="ai-step">2. Envoyer à l'IA</h3>
+      <p class="hint">Le bouton ouvre le partage : choisis ton appli d'IA. Le texte est aussi copié, tu peux le coller toi-même dans le chat. Tes allures et les limites de ton tapis sont incluses.</p>
+      <div class="row"><button class="primary" id="aiShare">Envoyer à l'IA</button><button id="aiCopy">Copier seulement</button></div>
+      <h3 class="ai-step">3. Coller la réponse</h3>
+      <p class="hint">L'IA répond par un bloc qui commence par { . Copie-le, colle-le ici, puis ajoute la séance.</p>
+      <textarea id="aiJson" rows="5" placeholder='{"name":"…","segments":[…]}' style="font-family:monospace"></textarea>
+      <div class="row"><button class="primary" id="aiApply">Ajouter la séance</button></div>
+      <p class="hint" id="aiMsg"></p>
     </div>
 
     <div class="panel" id="edPanel">
@@ -777,7 +796,7 @@ function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsear
   const all=[{name:"Test d'allures",builtin:true,test:true,text:''},...workouts()];
   all.forEach(w=>{if(qy&&!(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))return;let n=root;wPath(w).forEach(p=>{if(!n.kids.has(p))n.kids.set(p,{name:p,kids:new Map(),items:[]});n=n.kids.get(p)});n.items.push(w)});
   const count=n=>n.items.length+[...n.kids.values()].reduce((a,k)=>a+count(k),0);
-  const order=['Horizon','Intervals.icu','Mes séances'];
+  const order=['Horizon','Assistant IA','Intervals.icu','Mes séances'];
   const draw=(n,parent,path,mk=(w,l)=>wItem(w,l,sel),pk='')=>{
     [...n.kids.values()].sort((a,b)=>{const ia=order.indexOf(a.name),ib=order.indexOf(b.name);return(ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name,'fr')}).forEach(k=>{
       const key=pk+[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
@@ -833,6 +852,51 @@ function wspLive(name){if(!workout||workout.name!==name||run.state==='idle'||run
   const fresh=progSteps(name,parseWorkout(w.text));
   workout.steps.forEach((s,i)=>{const f=fresh[i];if(!f)return;if(i>run.step){s.v=f.v;s.ramp=f.ramp;s.inc=f.inc}else if(i===run.step){s.inc=f.inc;run.sentInc=null;run.sentAt=0;if(!s.manual&&s.v!==f.v){s.v=f.v;s.ramp=null;applySpeed(f.v)}}})}
 setTimeout(renderWSpeeds,0);
+/* ---------- assistant séance IA ---------- */
+function aiPrompt(){const V=k=>fmt(+$(k).value),s=S();
+  return `Tu es un entraîneur de course à pied. Transforme la séance ci-dessous en séance pour tapis de course, au format JSON décrit plus bas.
+
+SÉANCE :
+${$('aiText').value.trim()||'(décris ici la séance)'}
+${$('aiPrefs').value.trim()?'\nCONSIGNES EN PLUS :\n'+$('aiPrefs').value.trim()+'\n':''}
+MES ALLURES (vitesses en km/h) : échauffement ${V('vWarm')}, récupération ${V('vRec')}, retour au calme ${V('vCool')}, allure 10 km ${V('v10k')}, allure 5 km ${V('v5k')}, effort court ${V('vShort')}, sprint ${V('vSprint')}.
+MON TAPIS : vitesse maxi ${fmt(s.vmax)} km/h, pente de ${fmt(s.min)} à ${fmt(s.max)} %.
+
+RÈGLES :
+- Convertis chaque allure en vitesse en km/h à partir de mes allures (« allure 10k plus vingt » = allure 10 km ralentie de 20 secondes au kilomètre).
+- Mets une pente (incline_pct) seulement pour les côtes ou si la séance le demande ; sinon laisse incline_pct à null : la pente suivra le parcours.
+- Une répétition s'écrit {"repeat": N, "segments": [...]}.
+- Chaque bloc a une durée en secondes (duration_s) OU une distance en mètres (distance_m).
+- type vaut warmup, work, recovery, cooldown ou steady.
+- Ne dépasse jamais les limites de mon tapis.
+
+RÉPONDS UNIQUEMENT avec le JSON, sans texte autour, sous cette forme :
+{"version":1,"name":"nom court de la séance","segments":[
+ {"label":"Échauffement","type":"warmup","duration_s":900,"speed_kmh":8.5,"incline_pct":null},
+ {"repeat":6,"segments":[
+  {"label":"Côte","type":"work","duration_s":60,"speed_kmh":11,"incline_pct":6},
+  {"label":"Récupération","type":"recovery","duration_s":90,"speed_kmh":7,"incline_pct":1}]},
+ {"label":"Retour au calme","type":"cooldown","distance_m":1000,"speed_kmh":7.5,"incline_pct":null}]}`}
+async function aiCopy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}ta.remove();return ok}}
+$('aiCopy').onclick=async()=>{if(!$('aiText').value.trim()){$('aiMsg').textContent="Colle d'abord la séance à l'étape 1.";return}$('aiMsg').textContent=await aiCopy(aiPrompt())?'Copié : colle-le dans ton appli d\'IA, puis reviens coller la réponse à l\'étape 3.':'Copie impossible ici, utilise « Envoyer à l\'IA ».'};
+$('aiShare').onclick=async()=>{if(!$('aiText').value.trim()){$('aiMsg').textContent="Colle d'abord la séance à l'étape 1.";return}const t=aiPrompt();await aiCopy(t);
+  if(navigator.share){try{await navigator.share({title:'Séance pour Horizon',text:t});$('aiMsg').textContent='Envoyé. Quand l\'IA a répondu, copie son bloc { … } et colle-le à l\'étape 3.';return}catch(e){}}
+  $('aiMsg').textContent='Texte copié : ouvre ton appli d\'IA, colle-le et envoie. Ensuite, colle sa réponse à l\'étape 3.'};
+function aiToText(j){const out=[];const dur=b=>{if(b.distance_m)return b.distance_m%1000===0?(b.distance_m/1000)+'km':Math.round(b.distance_m)+'mtr';const t=Math.round(+b.duration_s||0);if(!t)return'';const m=Math.floor(t/60),x=t%60;return(m?m+'m':'')+(x?x+'s':'')};
+  const INT={warmup:'warmup',work:'interval',recovery:'recovery',cooldown:'cooldown',steady:'active',rest:'recovery'};
+  const line=b=>{const d=dur(b);if(!d)return null;const lab=String(b.label||'').replace(/[\n\r-]+/g,' ').replace(/\s+/g,' ').trim()||({warmup:'Échauffement',work:'Effort',recovery:'Récupération',cooldown:'Retour au calme'}[b.type]||'Footing');
+    let t=`- ${lab} ${d}`;const v=parseFloat(b.speed_kmh);if(v>0)t+=' '+String(Math.round(v*10)/10)+'km/h';const i=b.incline_pct;if(i!=null&&i!==''&&!isNaN(+i))t+=' pente='+(Math.round(+i*2)/2);t+=' intensity='+(INT[b.type]||'active');return t};
+  (j.segments||[]).forEach(b=>{if(b.repeat&&Array.isArray(b.segments)){out.push('',b.repeat+'x');b.segments.forEach(c=>{const l=line(c);if(l)out.push(l)});out.push('')}else{const l=line(b);if(l)out.push(l)}});
+  return out.join('\n').replace(/\n{3,}/g,'\n\n').trim()}
+$('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b=raw.lastIndexOf('}');let j=null;
+  if(a>=0&&b>a){try{j=JSON.parse(raw.slice(a,b+1).replace(/[“”]/g,'"'))}catch(e){}}
+  let text=j?aiToText(j):raw.trim();const st=parseWorkout(text);
+  if(!st.length){$('aiMsg').textContent="Je n'arrive pas à lire cette réponse. Copie bien tout le bloc qui commence par { et finit par }.";return}
+  const name=($('aiName').value.trim()||j?.name||'Séance IA').slice(0,60);
+  const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text,folder:'Assistant IA'});store.set('workouts',ws);listWorkouts();
+  const tot=st.reduce((x,s)=>x+stepSec({...s,v:speedFor(s)}),0);
+  $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${clock(tot)}. Tu peux la choisir dans « Séance sur ce parcours ».`;
+  $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
   b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small><span class="km">${d.len>=1000?fmt(d.len/1000,0)+' km':d.len+' m'} · en boucle</span>`;
   b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
