@@ -364,6 +364,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <label><span class="incLbl" data-t="Pente maximale">Pente maximale</span><input id="incMax" type="number" step="0.5" value="20"></label>
         <label>Intensité des côtes (%)<input id="incFactor" type="number" step="10" value="100"></label>
         <label><span class="incLbl" data-t="Pente des « côtes »">Pente des « côtes »</span><input id="incHill" type="number" step="0.5" value="6"></label>
+        <label class="check"><input id="vrHQ" type="checkbox"> Décors en haute qualité (ombres, image plus nette) : seulement si ton téléphone reste fluide</label>
         <label>Vitesse maximale (km/h)<input id="spdMax" type="number" step="0.1" value="15.9"></label>
         <label>Ton prénom (pour les défis)<input id="me" type="text" placeholder="Prénom"></label>
       </div>
@@ -1277,6 +1278,9 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
       setLeader(gx==null||run.time<1?null:(run.dist>=gx?'me':'ref'));
       RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
 $('incUnit').value=store.get('incUnit','pts');$('incUnit').onchange=()=>{store.set('incUnit',$('incUnit').value);if($('incUnit').value==='pts'&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange()}incUI();renderWSpeeds();render()};setTimeout(()=>{if(PTS()&&!store.get('incMax20')&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange();store.set('incMax20',1)}incUI()},0);
+// position du coureur lue en continu par les décors : mouvement fluide entre deux mesures du tapis
+window.trLive=()=>{if(replaying||!route||!route.decor)return null;let d=run.dist,v=0;if(run.state==='running'){v=realSpeed()/3.6;d+=v*Math.min(0.6,(performance.now()-run.last)/1000)}return{x:wrapX(d),v}};
+try{$('vrHQ').checked=localStorage.getItem('vrHQ')==='1'}catch(e){}$('vrHQ').onchange=()=>{try{localStorage.setItem('vrHQ',$('vrHQ').checked?'1':'0')}catch(e){}if(RM.kind==='decor')RM.teardown()};
 setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */

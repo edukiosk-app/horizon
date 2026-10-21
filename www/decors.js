@@ -79,8 +79,9 @@
 
   function create(el, route) {
     const T = THREE, k = route.decor;
-    const ren = new T.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
-    ren.setPixelRatio(Math.min(k === 'scifi' ? 1.25 : 1.5, window.devicePixelRatio || 1)); el.innerHTML = ''; el.appendChild(ren.domElement);
+    const HQ = (() => { try { return localStorage.getItem('vrHQ') === '1'; } catch (e) { return false; } })();
+    const ren = new T.WebGLRenderer({ antialias: HQ, powerPreference: HQ ? 'high-performance' : 'low-power' });
+    ren.setPixelRatio(Math.min(HQ ? 1.5 : 1, window.devicePixelRatio || 1)); el.innerHTML = ''; el.appendChild(ren.domElement);
     ren.domElement.style.display = 'block'; ren.domElement.style.width = '100%'; ren.domElement.style.height = '100%';
     const scene = new T.Scene(), cam = new T.PerspectiveCamera(60, 1, 0.3, 1500);
     const nature = k !== 'track' && k !== 'hilly', forest = nature;
@@ -100,9 +101,9 @@
       g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); const skyM = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })); skyM.renderOrder = -1; scene.add(skyM); var SKY = skyM; }
     scene.add(new T.HemisphereLight(TH.hemi[0], TH.hemi[1], TH.hemi[2]));
     const sunDir = new T.Vector3(...TH.sun).normalize();
-    const sun = new T.DirectionalLight(TH.sunC, TH.sunI); sun.castShadow = k !== 'scifi'; sun.shadow.mapSize.set(1024, 1024);
+    const sun = new T.DirectionalLight(TH.sunC, TH.sunI); sun.castShadow = HQ && k !== 'scifi'; sun.shadow.mapSize.set(1024, 1024);
     { const c = sun.shadow.camera; c.left = -35; c.right = 35; c.top = 35; c.bottom = -35; c.near = 1; c.far = 400; } sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
-    ren.shadowMap.enabled = true; ren.shadowMap.type = T.PCFSoftShadowMap; cam.far = k === 'mountain' ? 3000 : 1500; cam.updateProjectionMatrix();
+    ren.shadowMap.enabled = sun.castShadow; ren.shadowMap.type = T.PCFShadowMap; cam.far = k === 'mountain' ? 3000 : 1500; cam.updateProjectionMatrix();
 
     // trajet en mètres (x vers l'est, z vers le sud, y en hauteur)
     const P = route.pts.map((p) => { const [x, y] = toXY(p); return new T.Vector3(x, p[2], -y); });
@@ -348,15 +349,17 @@
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
       let dx = x - o.x; if (dx < -L / 2) dx += L; if (dx > L / 2) dx -= L; const dt = (now - o.t) / 1000;
-      o.v = dt > 0.2 ? Math.max(0, Math.min(12, dx / dt)) : o.v; o.x = x; o.t = now; }
+      o.v = dt > 0.2 ? o.v * 0.6 + 0.4 * Math.max(0, Math.min(12, dx / dt)) : o.v; o.x = x; o.t = now; }
     const shown = (o) => { if (o.x == null) return null; const dt = Math.min(1.4, (performance.now() - o.t) / 1000); return o.x + o.v * dt; };
     let camPos = null;
     function frame() {
       if (!S.alive) return; S.raf = requestAnimationFrame(frame);
+      const tF = performance.now(); if (tF - (S.lastDraw || 0) < (HQ ? 15 : 31)) return; S.lastDraw = tF;   // 30 images/s en qualité normale
       const w = el.clientWidth, h = el.clientHeight; if (!w || !h || el.offsetParent === null) return;
       if (ren.domElement.width !== Math.round(w * ren.getPixelRatio())) { ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
       const nowT = performance.now(), fdt = Math.min(0.1, (nowT - (S.lastF || nowT)) / 1000); S.lastF = nowT;
-      const xm = shown(S.me) ?? 0, A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
+      const lv = window.trLive && window.trLive(); if (lv) S.me.v = lv.v;
+      const xm = lv ? lv.x : (shown(S.me) ?? 0), A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
       const xr = shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); if (FIG) animate(ref, S.ref.v, fdt); else pulse(ref, nowT); ref.visible = true; } else ref.visible = false;
       const lead = S.lead === 'me' ? me : S.lead === 'ref' && ref.visible ? ref : null; medal.visible = !!lead;
       if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
@@ -377,7 +380,7 @@
     return {
       route, decor: k,
       place(x, gx, total) { track(S.me, x); track(S.ref, gx); S.lapDist = total; },
-      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map(Math.round), x: S.me.x, v: S.me.v }; },
+      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v }; },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; },
