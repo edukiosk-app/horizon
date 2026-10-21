@@ -2,7 +2,7 @@
   "name": "horizon-tapis",
   "version": "1.0.0",
   "private": true,
-  "description": "Horizon, l'application de tapis de course",
+  "description": "Treadverse, l'application de tapis de course",
   "scripts": {
     "build:native": "esbuild src/native.js --bundle --format=iife --outfile=www/native.js --minify",
     "android": "npm run build:native && npx cap add android && node scripts/patch-android.js && npx cap sync android"
