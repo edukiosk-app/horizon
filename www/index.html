@@ -879,7 +879,7 @@ $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()|
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
-$('wsel').onchange=()=>{try{goalPick()}catch(e){}setTimeout(()=>{try{drawProfile($('profile'),-1)}catch(e){}},0);const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
+$('wsel').onchange=()=>{if(run.state==='done')startOver();try{goalPick()}catch(e){}setTimeout(()=>{try{drawProfile($('profile'),-1)}catch(e){}},0);const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
   updateGhostInfo();renderSteps();renderWSpeeds();wpickLabel()};
 document.body.append($('wpickSheet'));$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
 function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
@@ -996,7 +996,7 @@ function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filte
   if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${clock(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
   if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${clock(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
   $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
-$('gsel').onchange=updateGhostInfo;
+$('gsel').onchange=()=>{if(run.state==='done')startOver();updateGhostInfo()};
 function saveRun(done){if(run.time<60||!route)return;const all=store.get('runs',{}),k=runKey(),list=all[k]||[];
   run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0]);
   list.push({date:new Date().toISOString(),time:Math.round(run.time),dist:Math.round(run.dist),done,s:run.samples,...(run.sim?{sim:true}:{})});
@@ -1259,7 +1259,7 @@ $('stop').onclick=async()=>{if(run.state==='done')return;const done=workout?run.
   run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();exitFS();
   saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${clock(run.time)}, D+ ${Math.round(run.gain)} m`);
   const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo, tu bats ${R.fr} de ${d} secondes.`:`${R.Fr} garde ${d} secondes d'avance. La prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
-  $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver};
+  $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver;$('wsel').disabled=false;$('gsel').disabled=false;wpickLabel()};
 const startOrig=$('start').onclick;
 function startOver(){$('start').onclick=startOrig;resetRun()}
 let fsHome=null;
