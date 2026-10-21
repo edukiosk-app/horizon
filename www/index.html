@@ -232,6 +232,12 @@ button.mini{padding:6px 10px;font-size:13px}
       </div>
     </div>
 
+    <div class="panel" id="prepSession">
+      <h2>Séance sur ce parcours</h2>
+      <div id="wspSlotPrep"></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="goRun">Courir ce parcours</button></div>
+    </div>
+
     <div class="panel">
       <h2>Profil</h2>
       <span id="routeinfo" class="hint" style="margin:0">Aucun parcours.</span>
@@ -769,7 +775,7 @@ function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts(
 function wspSet(name,k,v){v=Math.max(1,Math.min(S().vmax||25,v));const a=store.get('wSpeeds',{});(a[name]=a[name]||{})[k]=v;store.set('wSpeeds',a);wspLive(name);renderWSpeeds();renderSteps()}
 function wspLive(name){if(!workout||workout.name!==name||run.state==='idle'||run.state==='done')return;const o=wspGet(name);
   workout.steps.forEach((s,i)=>{const v=o[gKey(s)]??speedFor(s);if(i>run.step){s.v=v;s.ramp=o[gKey(s)]!=null?null:s.ramp}else if(i===run.step&&!s.manual&&s.v!==v){s.v=v;s.ramp=null;applySpeed(v)}})}
-setTimeout(renderWSpeeds,0);
+setTimeout(renderWSpeeds,0);$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
 const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
@@ -891,7 +897,12 @@ $('btn3d').onclick=()=>RM.toggle3d();
 // garde-fou : si la carte 3D se bloque (tâche interne en erreur), on la relance
 setInterval(()=>{const m=RM.map;if(RM.kind!=='gl'||!m||$('view-run').hidden)return;const q=m._renderTaskQueue;if(q&&q._currentlyRunning){log('Carte bloquée : relance automatique');RM.rebuild()}},3000);
 function setLeader(l){RM.setLeader(l)}
-function show(v){$('view-prep').hidden=v!=='prep';$('view-run').hidden=v!=='run';$('view-out').hidden=v!=='out';$('tab-out').setAttribute('aria-selected',v==='out');
+const wspHome={};
+function wspMove(v){const lab=$('wsel').closest('label'),box=$('wspeeds');
+  if(!wspHome.lab){wspHome.lab={p:lab.parentNode,n:lab.nextSibling};wspHome.box={p:box.parentNode,n:box.nextSibling}}
+  if(v==='prep'){$('wspSlotPrep').append(lab,box);lab.style.display='block'}
+  else if(v==='run'&&lab.parentNode===$('wspSlotPrep')){wspHome.lab.p.insertBefore(lab,wspHome.lab.n);wspHome.box.p.insertBefore(box,wspHome.box.n);lab.style.display=''}}
+function show(v){try{wspMove(v)}catch(e){}$('view-prep').hidden=v!=='prep';$('view-run').hidden=v!=='run';$('view-out').hidden=v!=='out';$('tab-out').setAttribute('aria-selected',v==='out');
   if(v==='out'){oRoutes();setTimeout(()=>{oInitMap();O.map.invalidateSize();oInfo();oRender()},50)}
   $('tab-prep').setAttribute('aria-selected',v==='prep');$('tab-run').setAttribute('aria-selected',v==='run');
   if(v==='run'){RM.init();
