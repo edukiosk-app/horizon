@@ -252,6 +252,10 @@ button.mini{padding:5px 8px;font-size:12px}
         <label>Vitesse maximale (km/h)<input id="spdMax" type="number" step="0.1" value="15.9"></label>
         <label>Ton prénom (pour les défis)<input id="me" type="text" placeholder="Prénom"></label>
       </div>
+      <h3>Sauvegarde</h3>
+      <p class="hint" style="margin-top:0">Tes parcours, séances, records, badges et réglages restent sur ce téléphone. Pour les garder en lieu sûr ou les passer sur un autre appareil, envoie-toi une sauvegarde (Drive, mail, WhatsApp).</p>
+      <div class="row"><button id="bkExport">Envoyer une sauvegarde</button><label class="btn" style="flex-direction:row;color:var(--fg)">Restaurer une sauvegarde<input id="bkImport" type="file" accept=".json,.txt,application/json,text/plain" hidden></label></div>
+      <p id="bkMsg" class="hint"></p>
       <h3>Calibrage du tapis</h3>
       <p class="hint" style="margin-top:0">Beaucoup de tapis n'avancent pas exactement à la vitesse affichée. Colle un bout de scotch sur la bande, mesure la longueur totale de la bande (le tour complet, en cm), lance le test et touche le bouton à chaque passage du scotch pendant 60 s.</p>
       <div class="row"><label>Longueur de la bande (cm)<input id="calLen" type="number" step="1" placeholder="ex. 290" style="width:120px"></label><button id="calStart">Lancer le calibrage</button><button id="calReset" class="mini">Effacer</button></div>
@@ -1245,6 +1249,15 @@ $('oUpload').onclick=async()=>{const m=$('oMsg');m.textContent='Envoi…';
     m.textContent='Course envoyée dans Intervals.icu.';$('oUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 
 if(window.HORIZON_ANDROID){$('tab-out').hidden=true}
+/* ---------- sauvegarde et restauration ---------- */
+const BK_KEYS=['routes','runs','watchRuns','workouts','settings','profile','friend','calib','me','lang','voice','zen','mapStyle','ivId'];
+$('bkExport').onclick=async()=>{const data={app:'Horizon',version:1,date:new Date().toISOString(),data:{}};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)data.data[k]=v}catch(e){}});
+  const txt=JSON.stringify(data),name=`horizon-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
+  try{if(window.HORIZON_ANDROID&&navigator.share){await navigator.share({title:'Sauvegarde Horizon',text:txt});$('bkMsg').textContent='Sauvegarde envoyée. Garde-la dans Drive ou dans tes mails.';return}}catch(e){}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.append(a);a.click();a.remove();$('bkMsg').textContent='Fichier '+name+' téléchargé.'}catch(e){$('bkMsg').textContent='Sauvegarde impossible : '+e.message}};
+$('bkImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{let t=await f.text();const i=t.indexOf('{');if(i>0)t=t.slice(i);const d=JSON.parse(t);if(d.app!=='Horizon'||!d.data)throw new Error('ce fichier n\'est pas une sauvegarde Horizon');
+    Object.entries(d.data).forEach(([k,v])=>{if(BK_KEYS.includes(k))try{localStorage.setItem(k,v)}catch(e){}});$('bkMsg').textContent=`Sauvegarde du ${new Date(d.date).toLocaleDateString('fr-FR')} restaurée. L'application redémarre…`;setTimeout(()=>location.reload(),1500)}
+  catch(e){$('bkMsg').textContent='Restauration impossible : '+e.message+'.'}ev.target.value=''};
 listRoutes();listWorkouts();showWord();renderProfile();calUI();edDraw();
 const saved=store.get('routes',[]);
 if(saved.length){$('rname').value=saved[0].name;setRoute(saved[0].pts,saved[0].name);map.fitBounds(line.getBounds())}
