@@ -183,7 +183,10 @@ button.mini{padding:5px 8px;font-size:12px}
 .wsp-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .wsp-head b{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.05em}
 button.mini{padding:6px 10px;font-size:13px}
-.wsp{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.wsp{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.ctl2{display:grid;grid-template-columns:62px 48px 1fr 48px;gap:6px;align-items:center}.ctl2>span{font:700 12px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.wsp .val[data-a]{cursor:pointer}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:6px}.seg button{border:0;border-radius:0;padding:9px 4px;font-size:14px;background:transparent}.seg button.on{background:var(--accent);color:#06281d;font-weight:700}
 .wsp:first-child{border-top:0}
 .wsp .nm{font-weight:600;line-height:1.2}.wsp .nm small{display:block;color:var(--muted);font-weight:400}
 .wsp .tp{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#94a3b8}
@@ -425,7 +428,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
       </div>
       <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
-      <div id="wspeeds" hidden><div class="wsp-head"><b>Vitesses de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle chaque phase une fois : le tapis les enchaîne tout seul. Horizon s'en souvient pour cette séance.</p><div id="wspList"></div></div>
+      <div id="wspeeds" hidden><div class="wsp-head"><b>Paramètres de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle la vitesse et la pente une fois : le tapis enchaîne tout seul. Une pente fixée sur les efforts simule des côtes ; « Parcours » suit le relief. Horizon s'en souvient pour cette séance.</p><div class="seg" id="wspMode"><button type="button" data-m="group">Par type de phase</button><button type="button" data-m="block">Bloc par bloc</button></div><div id="wspList"></div></div>
     </div>
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
@@ -694,13 +697,14 @@ function parseWorkout(text){
     let dur=0,dist=0;
     t=t.replace(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(mtr|km)(?=\s|$)/i,(a,n,u)=>{dist=parseFloat(n.replace(',','.'))*(u.toLowerCase()==='km'?1000:1);return ' '});
     t=t.replace(/(?:^|\s)((?:\d+h)?(?:\d+m(?!tr))?(?:\d+s)?)(?=\s|$)/,(a,g)=>{if(!g)return a;const h=g.match(/(\d+)h/),mm=g.match(/(\d+)m/),s=g.match(/(\d+)s/);dur=(h?+h[1]*3600:0)+(mm?+mm[1]*60:0)+(s?+s[1]:0);return ' '});
+    let inc=null;t=t.replace(/(?:^|\s)(?:pente|incline)\s*=\s*(-?\d+(?:[.,]\d+)?)\s*%?(?=\s|$)/i,(a,n)=>{inc=parseFloat(n.replace(',','.'));return ' '});
     let pv=0,pc=0,ramp=null;const isRamp=/\bramp\b/i.test(t);t=t.replace(/\bramp\b/i,' ');
     t=t.replace(/(\d+):(\d{2})(?:\s*-\s*(\d+):(\d{2}))?\s*\/\s*km(?:\s+Pace)?/i,(a,m1,s1,m2,s2)=>{const v1=3600/(+m1*60+ +s1),v2=m2?3600/(+m2*60+ +s2):v1;if(isRamp&&m2)ramp=[v1,v2];else pv=(v1+v2)/2;return ' '});
     t=t.replace(/(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d+(?:[.,]\d+)?))?\s*km\/h/i,(a,a1,a2)=>{const v1=parseFloat(a1.replace(',','.')),v2=a2?parseFloat(a2.replace(',','.')):v1;if(isRamp&&a2)ramp=[v1,v2];else pv=(v1+v2)/2;return ' '});
     t=t.replace(/(\d+)(?:\s*-\s*(\d+))?\s*%\s*Pace/i,(a,a1,a2)=>{const p1=+a1,p2=a2?+a2:p1;if(isRamp&&a2)ramp=['%',p1,p2];else pc=(p1+p2)/2;return ' '});
     t=t.replace(/\S+\s+Pace/i,'').replace(/(?:^|\s)(?:\d+(?:-\d+)?%(?:\s*(?:LTHR|HR|FTP|MMP))?|Z\d(?:-Z?\d)?(?:\s*(?:HR|Pace))?|freeride)(?=\s|$)/ig,' ').replace(/\s+/g,' ').trim();
     if(!dur&&!dist)continue;
-    const st={label:t||(type==='work'?'Effort':type==='rec'?'Récupération':type==='warm'?'Échauffement':type==='cool'?'Retour au calme':'Footing'),type,dur,dist};if(pv)st.pv=pv;if(pc)st.pc=pc;if(ramp)st.ramp=ramp;
+    const st={label:t||(type==='work'?'Effort':type==='rec'?'Récupération':type==='warm'?'Échauffement':type==='cool'?'Retour au calme':'Footing'),type,dur,dist};if(pv)st.pv=pv;if(pc)st.pc=pc;if(ramp)st.ramp=ramp;if(inc!=null)st.inc=inc;
     if(rep)block.push(st);else steps.push(st)}
   flush();return steps}
 function speedFor(s){const V=k=>+$(k).value;const L=s.label.toLowerCase();let v;
@@ -716,8 +720,11 @@ function speedFor(s){const V=k=>+$(k).value;const L=s.label.toLowerCase();let v;
   return Math.min(+$('spdMax').value,Math.round(v*10)/10)}
 const isHill=s=>/c[ôo]te/i.test(s.label);
 const gKey=s=>s.type+'|'+s.label.toLowerCase()+'|'+(s.dur||0)+'|'+(s.dist||0);
-const wspGet=n=>(store.get('wSpeeds',{})[n]||{});
-function progSteps(name,steps){const o=wspGet(name);return steps.map(s=>{const v=o[gKey(s)];return v!=null?{...s,v,ramp:null,prog:true}:{...s,v:speedFor(s)}})}
+function wpGet(n){const all=store.get('wParams',{});let o=all[n];if(!o){o={mode:'group',v:{...(store.get('wSpeeds',{})[n]||{})},i:{}}}o.v=o.v||{};o.i=o.i||{};return o}
+function wpPut(n,o){const all=store.get('wParams',{});all[n]=o;store.set('wParams',all)}
+const wpKey=(o,s,idx)=>o.mode==='block'?'b'+idx:gKey(s);
+function wpVal(o,s,idx){const kb='b'+idx,kg=gKey(s);return{v:o.mode==='block'&&o.v[kb]!=null?o.v[kb]:o.v[kg],i:o.mode==='block'&&o.i[kb]!=null?o.i[kb]:o.i[kg]}}
+function progSteps(name,steps){const o=wpGet(name);return steps.map((s,idx)=>{const r=wpVal(o,s,idx);const t={...s};if(r.v!=null){t.v=r.v;t.ramp=null;t.prog=true}else t.v=speedFor(s);if(r.i!=null)t.inc=r.i;return t})}
 const stepSec=s=>s.dur||s.dist/((s.v||speedFor(s))/3.6);
 const BUILTIN=[
  {name:"Fond et sprints",text:`Warmup\n- Échauffement 20m\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\n- Récupération entre les blocs 2m20s intensity=recovery\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\nCooldown\n- Retour au calme 9m20s`},
@@ -787,16 +794,29 @@ function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0
 const paceTxt=v=>{const sec=3600/v;return Math.floor(sec/60)+':'+String(Math.round(sec%60)).padStart(2,'0')+' /km'};
 function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts().find(o=>o.name===name);
   if(!w||name==='__test'){box.hidden=true;return}box.hidden=false;
-  const st=parseWorkout(w.text),o=wspGet(name),groups=new Map();
-  st.forEach(s=>{const k=gKey(s);if(!groups.has(k))groups.set(k,{s,n:0});groups.get(k).n++});
+  const st=parseWorkout(w.text),o=wpGet(name),rows=[];
+  if(o.mode==='block')st.forEach((s,idx)=>rows.push({s,idx,n:1,k:'b'+idx,lab:(idx+1)+'. '+s.label}));
+  else{const g=new Map();st.forEach((s,idx)=>{const k=gKey(s);if(!g.has(k))g.set(k,{s,idx,n:0,k,lab:s.label});g.get(k).n++});rows.push(...g.values())}
+  $('wspMode').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.m===o.mode));
   const L=$('wspList');L.innerHTML='';
-  groups.forEach((g,k)=>{const set=o[k]!=null,v=set?o[k]:speedFor(g.s);const row=document.createElement('div');row.className='wsp';
-    row.innerHTML=`<div class="nm"><span class="tp ${g.s.type}"></span>${esc(g.s.label)}<small>${durTxt(g.s)}${g.n>1?' · × '+g.n:''}${g.s.ramp&&!set?' · progressive':''}</small></div><button data-d="-0.5" aria-label="moins vite">−</button><div class="val${set?' set':''}">${fmt(v)}<small>${paceTxt(v)}</small></div><button data-d="0.5" aria-label="plus vite">+</button>`;
-    row.querySelectorAll('button').forEach(b=>b.onclick=()=>wspSet(name,k,Math.round((v+ +b.dataset.d)*10)/10));L.append(row)});
-  $('wspReset').onclick=()=>{const a=store.get('wSpeeds',{});delete a[name];store.set('wSpeeds',a);wspLive(name);renderWSpeeds();renderSteps()}}
-function wspSet(name,k,v){v=Math.max(1,Math.min(S().vmax||25,v));const a=store.get('wSpeeds',{});(a[name]=a[name]||{})[k]=v;store.set('wSpeeds',a);wspLive(name);renderWSpeeds();renderSteps()}
-function wspLive(name){if(!workout||workout.name!==name||run.state==='idle'||run.state==='done')return;const o=wspGet(name);
-  workout.steps.forEach((s,i)=>{const v=o[gKey(s)]??speedFor(s);if(i>run.step){s.v=v;s.ramp=o[gKey(s)]!=null?null:s.ramp}else if(i===run.step&&!s.manual&&s.v!==v){s.v=v;s.ramp=null;applySpeed(v)}})}
+  rows.forEach(r=>{const cur=wpVal(o,r.s,r.idx),vSet=cur.v!=null,iSet=cur.i!=null,v=vSet?cur.v:(r.s.inc!=null?speedFor(r.s):speedFor(r.s)),inc=iSet?cur.i:r.s.inc;
+    const row=document.createElement('div');row.className='wsp';
+    row.innerHTML=`<div class="nm"><span class="tp ${r.s.type}"></span>${esc(r.lab)}<small>${durTxt(r.s)}${r.n>1?' · × '+r.n:''}${r.s.ramp&&!vSet?' · progressive':''}</small></div>
+      <div class="ctl2"><span>Vitesse</span><button data-a="v" data-d="-0.5" aria-label="moins vite">−</button><div class="val${vSet?' set':''}">${fmt(v)}<small>${paceTxt(v)}</small></div><button data-a="v" data-d="0.5" aria-label="plus vite">+</button></div>
+      <div class="ctl2"><span>Pente</span><button data-a="i" data-d="-0.5" aria-label="moins de pente">−</button><div class="val${iSet?' set':''}" data-a="iauto">${inc==null?'Parcours':fmt(inc)+' %'}<small>${inc==null?'suit le relief':iSet?'toucher : parcours':'prévue'}</small></div><button data-a="i" data-d="0.5" aria-label="plus de pente">+</button></div>`;
+    row.querySelectorAll('[data-a]').forEach(bt=>bt.onclick=()=>{const A=bt.dataset.a,d=+bt.dataset.d,k=o.mode==='block'?'b'+r.idx:gKey(r.s);
+      if(A==='v')o.v[k]=Math.max(1,Math.min(S().vmax||25,Math.round((v+d)*10)/10));
+      else if(A==='i'){const base=inc==null?(d>0?0:0.5):inc;o.i[k]=Math.max(S().min,Math.min(S().max,Math.round((base+d)*2)/2))}
+      else if(A==='iauto'){if(!iSet)return;delete o.i[k]}
+      wpPut(name,o);wspLive(name);renderWSpeeds();renderSteps()});
+    L.append(row)});
+  $('wspMode').querySelectorAll('button').forEach(x=>x.onclick=()=>{if(o.mode===x.dataset.m)return;
+    if(x.dataset.m==='block'){st.forEach((s,idx)=>{const kg=gKey(s);if(o.v[kg]!=null&&o.v['b'+idx]==null)o.v['b'+idx]=o.v[kg];if(o.i[kg]!=null&&o.i['b'+idx]==null)o.i['b'+idx]=o.i[kg]})}
+    o.mode=x.dataset.m;wpPut(name,o);wspLive(name);renderWSpeeds();renderSteps()});
+  $('wspReset').onclick=()=>{const all=store.get('wParams',{});delete all[name];store.set('wParams',all);const ws=store.get('wSpeeds',{});delete ws[name];store.set('wSpeeds',ws);wspLive(name);renderWSpeeds();renderSteps()}}
+function wspLive(name){if(!workout||workout.name!==name||run.state==='idle'||run.state==='done')return;const w=workouts().find(x=>x.name===name);if(!w)return;
+  const fresh=progSteps(name,parseWorkout(w.text));
+  workout.steps.forEach((s,i)=>{const f=fresh[i];if(!f)return;if(i>run.step){s.v=f.v;s.ramp=f.ramp;s.inc=f.inc}else if(i===run.step){s.inc=f.inc;run.sentInc=null;run.sentAt=0;if(!s.manual&&s.v!==f.v){s.v=f.v;s.ramp=null;applySpeed(f.v)}}})}
 setTimeout(renderWSpeeds,0);$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
@@ -1009,7 +1029,7 @@ function resetRun(){Object.assign(run,{state:'idle',dist:0,time:0,gain:0,speed:0
   $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
 let incAdj=0;
-function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));let g=(route?gradeAt(x+10):0)*s.f+(st&&isHill(st)?s.hill:0)+incAdj;g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
+function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));if(st&&st.inc!=null)return Math.max(s.min,Math.min(s.max,Math.round((st.inc+incAdj)*2)/2));let g=(route?gradeAt(x+10):0)*s.f+(st&&isHill(st)?s.hill:0)+incAdj;g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
 function adjInc(d){incAdj=d===null?0:Math.max(-15,Math.min(15,Math.round((incAdj+d)*2)/2));run.sentAt=0;run.sentInc=null;if(run.state==='running')run.inc=targetInc(wrapX(run.dist));render()}
 function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
 function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
@@ -1325,7 +1345,7 @@ function parseVal(v){v=String(v).trim().replace(',','.');let m;
   if(m=v.match(/^(\d+)\s*s$/i))return{dur:+m[1]};return null}
 function valTxt(o){if(o.dist)return o.dist>=1000&&o.dist%100===0?(o.dist/1000+' km').replace('.',','):o.dist+' m';const m=Math.floor(o.dur/60),s=o.dur%60;return m+':'+String(s).padStart(2,'0')}
 function durTok(o){if(o.dist)return o.dist%1000===0?o.dist/1000+'km':o.dist+'mtr';const h=Math.floor(o.dur/3600),m=Math.floor(o.dur%3600/60),s=o.dur%60;return(h?h+'h':'')+(m?m+'m':'')+(s?s+'s':'')||'1m'}
-function lineOf(b){const o=parseVal(b.v);if(!o)return null;const [lab,int]=TY[b.t];return`- ${b.label&&b.lt===b.t?b.label:lab} ${durTok(o)} intensity=${int}`}
+function lineOf(b){const o=parseVal(b.v);if(!o)return null;const [lab,int]=TY[b.t];const pi=String(b.inc??'').trim().replace(',','.');return`- ${b.label&&b.lt===b.t?b.label:lab} ${durTok(o)}${pi!==''&&!isNaN(+pi)?' pente='+(+pi):''} intensity=${int}`}
 function edText(){const out=[];ed.forEach(b=>{if(b.rep){const ls=b.items.map(lineOf).filter(Boolean);if(ls.length)out.push(`${b.rep}x\n${ls.join('\n')}`)}else{const l=lineOf(b);if(l)out.push(l)}});return out.join('\n\n')}
 function typeOf(label,int){const L=label.toLowerCase();if(/sprint/.test(L))return'sprint';if(/c[ôo]te/.test(L))return'hill';if(/5 ?k/.test(L))return'w5';if(/10 ?k/.test(L))return'w10';
   if(/échauffement/.test(L)||int==='warmup')return'warm';if(/retour au calme/.test(L)||int==='cooldown')return'cool';if(/récup/.test(L)||int==='recovery')return'rec';if(int==='interval')return'work';return'foot'}
@@ -1334,18 +1354,19 @@ function edFromText(text){const res=[];let cur=null,section=null;
     if(!l){cur=null;section=null;continue}if(/^warm\s*up$/i.test(l)){section='warmup';continue}if(/^cool\s*down$/i.test(l)){section='cooldown';continue}
     const m=l.match(/^(\d+)\s*x$/i);if(m){cur={rep:+m[1],items:[]};res.push(cur);continue}if(!l.startsWith('-'))continue;
     const st=parseWorkout(l)[0];if(!st)continue;const im=l.match(/intensity=(\w+)/i),int=section||(im?im[1].toLowerCase():'');const t=typeOf(st.label,int);
-    const b={t,v:valTxt(st),label:st.label,lt:t};(cur?cur.items:res).push(b)}
+    const b={t,v:valTxt(st),label:st.label,lt:t};if(st.inc!=null)b.inc=String(st.inc).replace('.',',');(cur?cur.items:res).push(b)}
   return res}
 function edRow(b,list,i){const d=document.createElement('div');d.className='edrow';
   const sel=document.createElement('select');Object.entries(TY).forEach(([k,[lab]])=>{const o=document.createElement('option');o.value=k;o.textContent=lab;sel.append(o)});sel.value=b.t;
   sel.onchange=()=>{b.t=sel.value;edDraw()};
   const inp=document.createElement('input');inp.type='text';inp.value=b.v;inp.placeholder='5:00 ou 400 m';inp.style.width='92px';inp.onchange=()=>{b.v=inp.value;edDraw()};
+  const pin=document.createElement('input');pin.type='text';pin.inputMode='decimal';pin.value=b.inc??'';pin.placeholder='pente %';pin.title='Pente en % (vide : suit le parcours)';pin.style.width='76px';pin.onchange=()=>{b.inc=pin.value.trim();edDraw()};
   const o=parseVal(b.v);const info=document.createElement('span');info.className='hint';info.style.margin='0';
   info.textContent=o?fmt(speedFor({label:b.label&&b.lt===b.t?b.label:TY[b.t][0],type:{warm:'warm',cool:'cool',rec:'rec',foot:'foot'}[b.t]||'work',dur:o.dur||0,dist:o.dist||0}))+' km/h':'durée ?';
   const btn=(t,f)=>{const x=document.createElement('button');x.textContent=t;x.className='mini';x.onclick=f;return x};
-  d.append(sel,inp,info,btn('Haut',()=>{if(i>0){[list[i-1],list[i]]=[list[i],list[i-1]];edDraw()}}),btn('Bas',()=>{if(i<list.length-1){[list[i+1],list[i]]=[list[i],list[i+1]];edDraw()}}),btn('Suppr.',()=>{list.splice(i,1);edDraw()}));return d}
+  d.append(sel,inp,pin,info,btn('Haut',()=>{if(i>0){[list[i-1],list[i]]=[list[i],list[i-1]];edDraw()}}),btn('Bas',()=>{if(i<list.length-1){[list[i+1],list[i]]=[list[i],list[i+1]];edDraw()}}),btn('Suppr.',()=>{list.splice(i,1);edDraw()}));return d}
 function edDraw(){const box=$('edBlocks');box.innerHTML='';
-  if(!ed.length)box.innerHTML='<p class="hint" style="margin:0">Ajoute des blocs avec les boutons ci-dessous. Durée en minutes (10 ou 1:30) ou distance (400 m, 1 km).</p>';
+  if(!ed.length)box.innerHTML='<p class="hint" style="margin:0">Ajoute des blocs avec les boutons ci-dessous. Durée en minutes (10 ou 1:30) ou distance (400 m, 1 km). Pente en % si tu veux une côte, sinon laisse vide.</p>';
   ed.forEach((b,i)=>{if(b.rep){const g=document.createElement('div');g.className='edrep';
       const h=document.createElement('div');h.className='row';h.innerHTML='<b>Répéter</b>';const n=document.createElement('input');n.type='number';n.min=1;n.value=b.rep;n.style.width='64px';n.onchange=()=>{b.rep=Math.max(1,+n.value||1);edDraw()};
       const x=document.createElement('button');x.className='mini';x.textContent='Suppr. la répétition';x.onclick=()=>{ed.splice(i,1);edDraw()};h.append(n,document.createTextNode('fois'),x);g.append(h);
