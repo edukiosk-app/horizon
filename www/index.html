@@ -1932,5 +1932,10 @@ function drawProfileDecor(cv,g,w,h,x,gx){const D=planDist(),N=400,pad=18,ds=[],e
   const mark=(d,c)=>{d=Math.min(D,d);g.strokeStyle=c;g.lineWidth=2;g.beginPath();g.moveTo(X(d),pad/2);g.lineTo(X(d),h-pad);g.stroke();g.fillStyle=c;g.beginPath();g.arc(X(d),Y(eleAt(wrapX(d))),5,0,7);g.fill()};
   if(gx!=null)mark(gx,css('--ghost'));if(x>=0)mark(typeof replaying!=='undefined'&&replaying?x:run.dist,css('--climb'))}
 </script>
+<script>
+/* positions continues du point bleu et des autres coureurs, calculées à chaque image */
+window.trGhost=()=>{try{const g=run.ghost;if(!g||run.state==='idle'||(typeof replaying!=='undefined'&&replaying))return null;const t=run.time+(run.state==='running'?Math.min(1,(performance.now()-run.last)/1000):0);const d=gDistAt(g,t);return{x:wrapX(d),v:Math.max(0,gDistAt(g,t+1)-d)}}catch(e){return null}};
+window.trOthers=()=>{if(!LIVE.room||!LIVE.data||!LIVE.data.start||RM.kind!=='decor')return[];const ks=Object.keys(LIVE.data.p||{});return livePeople().filter(p=>!p.me).map(p=>({id:p.id,n:p.n||'Coureur',x:wrapX(p.f?LIVE.data.dist:p.d),c:LCOL[ks.indexOf(p.id)%LCOL.length]}))};
+</script>
 </body>
 </html>

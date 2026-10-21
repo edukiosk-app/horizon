@@ -351,7 +351,7 @@
       const sp = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(cv), depthWrite: false, transparent: true })); sp.scale.set(3.2, 0.8, 1); sp.position.y = 1.95; return sp; }
     function others(list) { const seen = new Set(); list.forEach((p) => { seen.add(p.id); let o = OTH.get(p.id);
         if (!o) { const g = dot(p.c); g.add(label(String(p.n).slice(0, 12), p.c)); o = { g, s: { x: null, v: 0, t: 0, init: false }, lane: LANES[OTH.size % LANES.length] }; OTH.set(p.id, o); }
-        track(o.s, p.x); });
+        o.tx = p.x; });
       for (const [id, o] of OTH) if (!seen.has(id)) { scene.remove(o.g); OTH.delete(id); } }
 
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
@@ -369,8 +369,9 @@
       const nowT = performance.now(), fdt = Math.min(0.1, (nowT - (S.lastF || nowT)) / 1000); S.lastF = nowT;
       const lv = window.trLive && window.trLive(); if (lv) S.me.v = lv.v;
       const xm = lv ? lv.x : (shown(S.me) ?? 0), A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
-      const xr = shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); if (FIG) animate(ref, S.ref.v, fdt); else pulse(ref, nowT); ref.visible = true; } else ref.visible = false;
-      OTH.forEach((o) => { const xo = shown(o.s); if (xo == null) { o.g.visible = false; return; } const C = at(xo, o.lane); o.g.position.copy(C.pos); o.g.visible = true; pulse(o.g, nowT); });
+      const gl = window.trGhost && window.trGhost(); if (gl) S.ref.v = gl.v; const xr = gl ? gl.x : shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); if (FIG) animate(ref, S.ref.v, fdt); else pulse(ref, nowT); ref.visible = true; } else ref.visible = false;
+      if (window.trOthers) { try { others(window.trOthers()); } catch (e) {} }
+      OTH.forEach((o) => { if (o.tx == null) { o.g.visible = false; return; } o.dx = o.dx == null || Math.abs(o.tx - o.dx) > 50 ? o.tx : o.dx + (o.tx - o.dx) * Math.min(1, fdt * 4); const xo = o.dx; const C = at(xo, o.lane); o.g.position.copy(C.pos); o.g.visible = true; pulse(o.g, nowT); });
       const lead = S.lead === 'me' ? me : S.lead === 'ref' && ref.visible ? ref : null; medal.visible = !!lead;
       if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
       let want, look;
@@ -391,7 +392,7 @@
     return {
       route, decor: k,
       place(x, gx, total) { track(S.me, x); track(S.ref, gx); S.lapDist = total; },
-      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v }; },
+      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v, ref: ref.visible ? ref.position.toArray().map((v) => Math.round(v * 100) / 100) : null }; },
       others,
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
