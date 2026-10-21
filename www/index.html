@@ -240,8 +240,14 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="pfhead"><b id="pfLvl">Niveau 1</b><span id="pfXp" class="hint" style="margin:0"></span></div>
       <div class="xpbar"><i id="pfBar"></i></div>
       <div class="pfstats" id="pfStats"></div>
+      <h3>Défis du mois</h3>
+      <div class="chals" id="pfChal"></div>
+      <div id="pfLeague" class="league"></div>
       <h3>Records</h3>
       <div class="tl" id="pfRecs"></div>
+      <h3>Ma forme</h3>
+      <div class="settings"><label>Âge<input id="refAge" type="number" min="12" max="95" step="1" placeholder="ex. 46"></label><label>Sexe<select id="refSex"><option value="">choisir</option><option value="h">homme</option><option value="f">femme</option></select></label><label>FC max<input id="hrMax" type="number" min="120" max="230" step="1"></label></div>
+      <p class="hint" id="pfForm" style="margin-top:6px"></p>
       <div class="row" style="margin-top:10px"><button id="pfReset" class="mini danger">Remettre mon profil à zéro</button><span id="pfResetMsg" class="hint" style="margin:0"></span></div>
       <details><summary style="cursor:pointer;margin-top:12px;font-weight:600">Badges</summary><div class="badges" id="pfBadges" style="margin-top:8px"></div></details>
     </div>
@@ -257,6 +263,15 @@ button.mini{padding:6px 10px;font-size:13px}
       <div id="wspSlotPrep"></div>
       <div class="row" style="margin-top:10px"><button class="primary" id="goRun">Courir ce parcours</button></div>
     </div>
+
+    <div class="panel" id="goalPanel">
+      <h2>Objectif course</h2>
+      <p class="hint" style="margin-top:0">Tu prépares une vraie course ? Importe son GPX (site de l'organisateur ou gpx.studio) dans « Parcours réel », puis indique ton temps visé. Treadverse crée la course complète avec les côtes au bon endroit, une séance à l'allure objectif et la côte la plus dure à répéter. Pendant la course complète, un point bleu court exactement ton objectif.</p>
+      <div class="settings"><label>Parcours<select id="goalRoute"></select></label><label>Temps visé<input id="goalTime" type="text" placeholder="ex. 1:45:00"></label><label>Stratégie<select id="goalMode"><option value="effort">Effort constant (plus lent en côte)</option><option value="flat">Allure constante</option></select></label></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="goalMake">Créer mes séances</button></div>
+      <p id="goalMsg" class="hint"></p>
+    </div>
+
 
     <div class="panel">
       <h2>Profil</h2>
@@ -458,11 +473,44 @@ button.mini{padding:6px 10px;font-size:13px}
       <p class="hint" id="bthint">Sans connexion, l'application fonctionne en simulation : tu règles la vitesse ici et la pente s'affiche pour que tu la mettes à la main.</p>
       <div class="settings" style="margin-top:10px">
         <label>Séance<select id="wsel" hidden></select><button type="button" id="wpick" class="wpick"><span>Course libre (pas de séance)</span><i>›</i></button></label>
-        <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
+        <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option><option value="ref">Coureur de référence</option><option value="goal">Mon objectif de course</option></select></label>
+        <label id="refLvlL" hidden>Niveau visé<select id="refLvl"></select></label>
+        <label>Coach cardio<select id="coach"><option value="off">Désactivé</option><option value="safe">Sécurité seulement</option><option value="auto">Zones de la séance</option><option value="z2">Endurance (zone 2)</option><option value="z3">Tempo (zone 3)</option><option value="z4">Seuil (zone 4)</option></select></label>
       </div>
-      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
+      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="vcoach" type="checkbox" checked> Coach vocal détaillé</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span><span id="coachInfo" class="hint" style="margin:0"></span></div>
       <div id="wspeeds" hidden><div class="wsp-head"><b>Paramètres de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle la vitesse et la pente une fois : le tapis enchaîne tout seul. Une pente fixée sur les efforts simule des côtes ; « Parcours » suit le relief. Treadverse s'en souvient pour cette séance.</p><div class="seg" id="wspMode"><button type="button" data-m="group">Par type de phase</button><button type="button" data-m="block">Bloc par bloc</button></div><div id="wspList"></div></div>
     </div>
+
+    <details class="panel" id="livePanel">
+      <summary class="real-sum"><h2 style="display:inline">Course en direct à plusieurs</h2></summary>
+      <div id="liveSetup">
+        <p class="hint">Chacun court sur son tapis, chez lui, dans le même décor : vous vous voyez avancer en direct. Il faut un petit serveur gratuit, à créer une seule fois :</p>
+        <ol class="hint xsteps">
+          <li>Sur console.firebase.google.com, « Créer un projet » (nom : treadverse, sans Google Analytics).</li>
+          <li>Menu Créer › Realtime Database › « Créer une base de données », emplacement Belgique (europe-west1), « Démarrer en mode verrouillé ».</li>
+          <li>Onglet « Règles » : remplace tout par le texte ci-dessous, puis « Publier ».<pre class="xpre">{
+  "rules": {
+    "rooms": { "$r": { ".read": true, ".write": true } },
+    "league": { "$m": { ".read": true, "$u": { ".write": true } } }
+  }
+}</pre></li>
+          <li>Copie l'adresse affichée en haut de l'onglet « Données » (https://…firebasedatabase.app) et colle-la ici. Ce n'est pas un mot de passe.</li>
+        </ol>
+        <div class="row"><input id="fbUrl" type="url" placeholder="https://…firebasedatabase.app" style="flex:1"><button id="fbSave">Activer</button></div>
+        <p id="fbMsg" class="hint"></p>
+      </div>
+      <div id="liveOff">
+        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="21097">Semi (21,1 km)</option></select></label></div>
+        <div id="liveJoinBox">
+          <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
+          <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
+        </div>
+      </div>
+      <div id="liveOn" hidden><b id="liveTitle"></b><p id="liveState" class="hint"></p><div id="livePeople" class="league"></div>
+        <div class="row" style="margin-top:8px"><button id="liveGo" class="primary">Lancer le départ</button><button id="liveQuit" class="danger">Quitter</button></div></div>
+      <p id="liveMsg" class="hint"></p>
+    </details>
+
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
 
@@ -489,6 +537,7 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="stat big"><span><small>À venir (200 m)</small><br><span id="sNext">–</span></span><span><small>Restant</small><br><span id="sLeft">–</span></span><span><small>Cardio</small><br><span id="sHr">–</span></span></div>
       <div class="stat big zenbox" id="zenbox" hidden><span><small>Prochain repère</small><br><b id="zMark">–</b></span><b id="zGap">–</b></div>
       <div class="ghostline big" id="ghostbox" hidden><span><small>Défi</small><br><span id="gLabel">–</span></span><b id="gGap">–</b></div>
+      <div class="ghostline big" id="livebox" hidden><span><small>Course en direct</small><br><span id="liveLines" class="livelines"></span></span><b id="liveRank">–</b></div>
     </div>
 
     <div class="panel">
@@ -670,12 +719,15 @@ $('gpx').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;
   let pts=[...xml.querySelectorAll('trkpt, rtept')].map(n=>{const e=n.querySelector('ele');return[+n.getAttribute('lat'),+n.getAttribute('lon'),e?+e.textContent:null]});
   if(pts.length<2){$('routeinfo').textContent='Ce fichier ne contient pas de tracé.';return}
   const name=(xml.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).trim();
+  let Lr=0;for(let i=1;i<pts.length;i++)Lr+=hav(pts[i-1],pts[i]);
+  if(pts.length<=300&&Lr/(pts.length-1)>150){$('routeinfo').textContent='Ce fichier ne contient que les points de passage : je recalcule le tracé le long des chemins…';
+    const out=[];for(let i=0;i<pts.length-1;i+=24){const r=await routeThrough(pts.slice(i,i+25).map(p=>[p[0],p[1]]));out.push(...(out.length?r.slice(1):r))}pts=out.map(p=>[p[0],p[1],null])}
   pts=resample(pts);
   if(pts.filter(p=>p[2]==null).length>pts.length/10){$('routeinfo').textContent='Récupération des altitudes…';try{pts=await addElevation(pts)}catch(e){pts=pts.map(p=>[p[0],p[1],p[2]??0])}}
   wps=[];$('rname').value=name;setRoute(pts,name);$('save').onclick();store.set('lastRoute','r:'+name);setTimeout(()=>{map.invalidateSize();line&&map.fitBounds(line.getBounds())},50);ev.target.value='';$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};
 
 /* ---------- parcours enregistrés ---------- */
-function listRoutes(){const rs=store.get('routes',[]),box=$('routes');box.innerHTML='';
+function listRoutes(){const rs=store.get('routes',[]),box=$('routes');box.innerHTML='';try{goalUI()}catch(e){}
   if(!rs.length){box.innerHTML='<p class="hint">Aucun parcours enregistré. Trace-en un puis touche « Enregistrer ».</p>';return}
   const runs=store.get('runs',{});
   rs.forEach((r,i)=>{const d=document.createElement('div');d.className='item';
@@ -827,7 +879,7 @@ $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()|
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
-$('wsel').onchange=()=>{const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
+$('wsel').onchange=()=>{try{goalPick()}catch(e){}const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
   updateGhostInfo();renderSteps();renderWSpeeds();wpickLabel()};
 document.body.append($('wpickSheet'));$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
 function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
@@ -910,13 +962,27 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
 /* ================= FANTÔME ================= */
 const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
 const de=n=>/^[aeiouyhàâéèêëîïôûù]/i.test(n)?"d'"+n:'de '+n;
+/* ---------- coureur de référence : niveaux de forme au 10 km (repères indicatifs, corrigés selon l'âge et le sexe) ---------- */
+const REF_LV=[['deb','Débutant',62],['forme','En forme',52],['conf','Confirmé',45],['tb','Très bon',40],['elite','Élite',35]]; // minutes au 10 km, homme de 20 à 34 ans
+function refFactor(){const a=+store.get('refAge',0),sx=store.get('refSex','');let f=sx==='f'?1.12:1;if(a>35)f*=1+0.005*(Math.min(a,50)-35)+(a>50?0.009*(a-50):0);return f}
+const refT10=id=>{const l=REF_LV.find(x=>x[0]===id)||REF_LV[1];return l[2]*60*refFactor()};
+const refKmh=id=>10/(refT10(id)/3600);
+function refRun(id){const v=refKmh(id)/3.6,s=[];for(let t=0;t<=6*3600;t+=10)s.push([t,Math.round(v*t),0]);return{date:new Date().toISOString(),time:6*3600,dist:Math.round(v*6*3600),done:false,s,ref:id}}
+function formLevel(){const P=prof(),r10=P.records[10000],r5=P.records[5000];let t=r10?r10.t:r5?r5.t*Math.pow(2,1.06):null;if(t==null)return null;
+  let lv=null;for(const l of REF_LV)if(t<=refT10(l[0])+1)lv=l;return{t,lv,src:r10?'ton record sur 10 km':'ton record sur 5 km'}}
+function refUI(){const sel=$('refLvl'),cur=store.get('refLvl','forme');sel.innerHTML=REF_LV.map(([id,n])=>`<option value="${id}">${n} · ${clock(refT10(id))} au 10 km (${fmt(refKmh(id))} km/h)</option>`).join('');sel.value=cur;
+  $('refLvlL').hidden=$('gsel').value!=='ref';const ok=store.get('refAge',0)&&store.get('refSex','');
+  const f=formLevel();$('pfForm').textContent=!ok?'Indique ton âge et ton sexe : Treadverse en déduit les repères de forme et le coureur de référence.':f?(f.lv?`Ton niveau d'après ${f.src} : « ${f.lv[1]} » (équivalent ${clock(f.t)} au 10 km).`:`D'après ${f.src} (équivalent ${clock(f.t)} au 10 km), le niveau « Débutant » est à ${clock(refT10('deb'))} : tu y es presque.`):`Repères pour toi : « En forme » = ${clock(refT10('forme'))} au 10 km, « Confirmé » = ${clock(refT10('conf'))}. Cours 5 ou 10 km pour connaître ton niveau.`}
 function refName(){const m=$('gsel').value,f=store.get('friend',null),by=(f&&f.by)||'';
+  if(m==='goal')return{fr:'ton objectif',Fr:'Ton objectif',en:'your target',En:'Your target',lab:'Objectif'};
+  if(m==='ref'){const l=REF_LV.find(x=>x[0]===$('refLvl').value)||REF_LV[1];return{fr:'le coureur '+l[1],Fr:'Le coureur '+l[1],en:'the '+l[1]+' pacer',En:'The '+l[1]+' pacer',lab:'Référence « '+l[1]+' »'}}
   if(m==='friend')return by?{fr:'le record '+de(by),Fr:'Le record '+de(by),en:by+"'s record",En:by+"'s record",lab:'Défi '+de(by)}:{fr:'le record de ton ami',Fr:'Le record de ton ami',en:"your friend's record",En:"Your friend's record",lab:"Défi d'un ami"};
   if(m==='watch')return{fr:'ta sortie dehors',Fr:'Ta sortie dehors',en:'your outdoor run',En:'Your outdoor run',lab:'Ta sortie dehors'};
   if(m==='last')return{fr:'ta dernière course',Fr:'Ta dernière course',en:'your last run',En:'Your last run',lab:'Ta dernière course'};
   return{fr:'ton record',Fr:'Ton record',en:'your record',En:'Your record',lab:'Ton record'}}
 const isSim=()=>run.state==='idle'||run.state==='done'?(!bt.ok&&$('simu').checked):!!run.sim;
 function ghostRun(){const mode=$('gsel').value;if(!mode||!route)return null;
+  if(mode==='ref')return refRun($('refLvl').value);if(mode==='goal')return goalGhost();
   if(mode==='friend'){const f=store.get('friend',null);return f&&f.route===route.name?f.run:null}
   if(mode==='watch'){const w=store.get('watchRuns',{})[route.name];return w||null}const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());if(!list.length)return null;
   if(mode==='last')return list[list.length-1];
@@ -924,7 +990,9 @@ function ghostRun(){const mode=$('gsel').value;if(!mode||!route)return null;
   return list.reduce((a,b)=>a.dist/a.time>=b.dist/b.time?a:b)}
 function gDistAt(g,t){const s=g.s;if(t<=0)return 0;if(t>=s[s.length-1][0])return s[s.length-1][1];let i=0;while(s[i+1][0]<t)i++;const a=s[i],b=s[i+1];return a[1]+(b[1]-a[1])*(t-a[0])/((b[0]-a[0])||1)}
 function gTimeAt(g,d){const s=g.s;if(d>s[s.length-1][1])return null;let i=0;while(s[i+1]&&s[i+1][1]<d)i++;const a=s[i],b=s[i+1]||a;return a[0]+(b[0]-a[0])*(d-a[1])/((b[1]-a[1])||1)}
-function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());
+function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());try{refUI()}catch(e){}
+  if($('gsel').value==='ref'){const id=$('refLvl').value;$('ginfo').textContent=(store.get('refAge',0)&&store.get('refSex','')?'':'Indique ton âge et ton sexe dans Mon profil pour des repères justes. ')+`Le point bleu court à ${fmt(refKmh(id))} km/h (${clock(refT10(id)/10)} /km) : c'est l'allure « ${(REF_LV.find(x=>x[0]===id)||REF_LV[1])[1]} » sur 10 km.`;return}
+  if($('gsel').value==='goal'){let g=null;try{g=goalGhost()}catch(e){}$('ginfo').textContent=g?`Le point bleu court ton objectif : ${clock(g.time)} pour ${fmt(g.dist/1000,2)} km, en suivant les allures prévues kilomètre par kilomètre.`:'Choisis une séance « Course objectif » (Préparer › Objectif course).';return}
   if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${clock(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
   if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${clock(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
   $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
@@ -963,7 +1031,7 @@ const isPremium=()=>store.get('premium',true)!==false;
 const RM={fixed:store.get('mapFixed',true),fitFor:null,kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
   teardown(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,kind:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null,line:null});$('mapstyles').hidden=false;$('btn3d').hidden=false;$('btnFix').hidden=false},
   init(){const dec=!!(route&&route.decor&&window.THREE&&window.VR);if(this.map&&(dec!==(this.kind==='decor')||(dec&&this.map.route!==route)))this.teardown();if(this.map)return;
-    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=false;$('btnFix').hidden=true;$('btn3d').textContent='Vue';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
+    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=false;$('btnFix').hidden=true;$('btn3d').textContent='Caméra : derrière';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
     if(window.maplibregl){try{this.initGL();return}catch(e){log('Carte 3D indisponible sur cet appareil, carte 2D à la place')}}
     this.initLeaf()},
   styleName:null,userUntil:0,
@@ -1004,16 +1072,22 @@ const RM={fixed:store.get('mapFixed',true),fitFor:null,kind:null,map:null,me:nul
     ['dragstart','rotatestart','pitchstart','zoomstart'].forEach(ev=>m.on(ev,hold));
     m.on('error',e=>{const msg=String(e?.error?.message||'');if(!this.warned&&/terrarium|elevation|openfreemap|arcgis/i.test(msg+(e?.sourceId||''))){this.warned=true;log('Une partie de la carte (relief, bâtiments ou satellite) ne répond pas')}});
     document.querySelectorAll('#mapstyles button').forEach(b=>{b.classList.toggle('on',b.dataset.s===n);b.onclick=()=>this.setStyle(b.dataset.s)});
-    $('recenter').onclick=()=>{this.userUntil=0;this.lastPlace=null;$('recenter').hidden=true;lastMap=0;render()};
-    $('btn3d').textContent=this.three?'2D':'3D'},
+    $('recenter').onclick=()=>{this.userUntil=0;this.lastPlace=null;this.fitFor=null;$('recenter').hidden=true;lastMap=0;render()};
+    this.viewUI()},
   initLeaf(){const m=L.map('runmap',{zoomControl:false});tiles().addTo(m);this.map=m;this.kind='leaf';this.three=false;$('btn3d').hidden=true;$('mapstyles').hidden=true;
     const ic=html=>L.divIcon({className:'ghost-ic',iconSize:[30,40],iconAnchor:[15,20],html});
     this.icon=ic;this.me=L.marker([49.0486,1.6011],{icon:ic(dotHTML(ME_C)),zIndexOffset:600,interactive:false}).addTo(m);
     this.ref=L.marker([49.0486,1.6011],{icon:ic(dotHTML(REF_C)),zIndexOffset:500,interactive:false});this.ready=true;this.drawRoute()},
+  viewUI(){if(this.kind==='decor')return;$('btn3d').textContent=this.three?'Vue : 3D':'Vue : 2D';$('btnFix').textContent=this.fixed?'Caméra : fixe':'Caméra : suit'},
+  setView(){const m=this.map;if(!m||this.kind==='decor')return;try{m.stop&&m.stop()}catch(e){}
+    if(this.kind==='gl'&&this.ready){try{m.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null)}catch(e){}}
+    this.fitFor=null;this.lastPlace=null;this.userUntil=0;$('recenter').hidden=true;this.viewUI();lastMap=0;render()},
   fitAll(){if(!route||!this.map)return;const la=route.pts.map(p=>p[0]),lo=route.pts.map(p=>p[1]);
-    if(this.kind==='gl'){this.map.fitBounds([[Math.min(...lo),Math.min(...la)],[Math.max(...lo),Math.max(...la)]],{padding:{top:50,bottom:50,left:40,right:40},pitch:this.three?45:0,bearing:0,duration:0})}
+    if(this.kind==='gl'){const m=this.map,b=[[Math.min(...lo),Math.min(...la)],[Math.max(...lo),Math.max(...la)]];let cam=null;
+      try{cam=m.cameraForBounds(b,{padding:{top:60,bottom:60,left:40,right:40}})}catch(e){}
+      if(cam&&cam.center)m.jumpTo({center:cam.center,zoom:cam.zoom-(this.three?0.5:0),bearing:0,pitch:this.three?50:0});else m.fitBounds(b,{padding:40,duration:0})}
     else if(this.kind==='leaf'){this.map.fitBounds(L.latLngBounds(route.pts.map(p=>[p[0],p[1]])).pad(0.1),{animate:false})}this.fitFor=route},
-  setFixed(f){this.fixed=f;store.set('mapFixed',f);$('btnFix').textContent=f?'Suivre':'Vue fixe';this.lastPlace=null;this.fitFor=null;$('recenter').hidden=true;lastMap=0;render()},
+  setFixed(f){this.fixed=f;store.set('mapFixed',f);this.setView()},
   drawRoute(){if(!route||!this.ready||this.kind==='decor')return;this.fitFor=null;const ll=route.pts.map(p=>[p[1],p[0]]);
     if(this.kind==='gl'){this.map.getSource('route')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:ll}})}
     else{if(this.line)this.map.removeLayer(this.line);this.line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(this.map)}},
@@ -1024,7 +1098,7 @@ const RM={fixed:store.get('mapFixed',true),fitFor:null,kind:null,map:null,me:nul
   place(p,gp,x){if(!this.map)return;if(this.kind==='decor'){this.map.place(x,lastGx!=null?wrapX(lastGx):null,replaying?x:run.dist);return}const sig=p[0].toFixed(6)+p[1].toFixed(6)+(gp?gp[0].toFixed(6)+gp[1].toFixed(6):'')+this.three;if(sig===this.lastPlace)return;this.lastPlace=sig;
     if(this.kind==='gl'){this.me.setLngLat([p[1],p[0]]);if(!this.me._map)this.me.addTo(this.map);
       if(gp){this.ref.setLngLat([gp[1],gp[0]]);if(!this.refOn){this.ref.addTo(this.map);this.refOn=true}}else if(this.refOn){this.ref.remove();this.refOn=false}
-      if(this.fixed){if(this.fitFor!==route&&this.ready)this.fitAll();return}
+      if(this.fixed){if(Date.now()<this.userUntil)return;if(this.fitFor!==route&&this.ready)this.fitAll();return}
       const ahead=posAt(Math.min(total(),x+60)),brg=hav(p,ahead)>5?bearing(p,ahead):this.map.getBearing();
       if(Date.now()<this.userUntil){this.lastPlace=null;return}$('recenter').hidden=true;
       const far=gp&&hav(p,gp)>120,c=far?[(p[1]+gp[1])/2,(p[0]+gp[0])/2]:[p[1],p[0]];
@@ -1032,9 +1106,8 @@ const RM={fixed:store.get('mapFixed',true),fitFor:null,kind:null,map:null,me:nul
     else{this.me.setLatLng([p[0],p[1]]);if(gp){this.ref.setLatLng([gp[0],gp[1]]);if(!this.ref._map)this.ref.addTo(this.map)}else if(this.ref._map)this.ref.remove();
       if(this.fixed){if(this.fitFor!==route)this.fitAll();return}
       if(gp&&hav(p,gp)>120)this.map.fitBounds(L.latLngBounds([[p[0],p[1]],[gp[0],gp[1]]]).pad(0.35),{maxZoom:16,animate:false});else this.map.setView([p[0],p[1]],16,{animate:false})}},
-  toggle3d(){if(this.kind==='decor'){this.map.toggleView();return}if(this.kind!=='gl')return;if(this.fixed){this.three=!this.three;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);$('btn3d').textContent=this.three?'2D':'3D';this.fitAll();return}this.three=!this.three;this.lastPlace=null;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
-    this.map.easeTo({pitch:this.three?62:0,bearing:this.three?this.map.getBearing():0,duration:600});$('btn3d').textContent=this.three?'2D':'3D'}};
-$('btn3d').onclick=()=>RM.toggle3d();$('btnFix').onclick=()=>RM.setFixed(!RM.fixed);$('btnFix').textContent=RM.fixed?'Suivre':'Vue fixe';
+  toggle3d(){if(this.kind==='decor'){const v=this.map.toggleView();$('btn3d').textContent=v==='top'?'Caméra : dessus':'Caméra : derrière';return}if(this.kind!=='gl')return;this.three=!this.three;this.setView()}};
+$('btn3d').onclick=()=>RM.toggle3d();$('btnFix').onclick=()=>RM.setFixed(!RM.fixed);
 // garde-fou : si la carte 3D se bloque (tâche interne en erreur), on la relance
 setInterval(()=>{const m=RM.map;if(RM.kind!=='gl'||!m||$('view-run').hidden)return;const q=m._renderTaskQueue;if(q&&q._currentlyRunning){log('Carte bloquée : relance automatique');RM.rebuild()}},3000);
 function setLeader(l){RM.setLeader(l)}
@@ -1124,7 +1197,7 @@ function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connect�
 
 /* ================= COURSE ================= */
 const run={state:'idle',dist:0,time:0,gain:0,speed:0,target:8,hr:null,inc:0,sentInc:null,sentAt:0,last:0,step:-1,stepT:0,stepD:0,samples:[],sampAt:0,ghost:null,hillSaid:0};
-function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0});
+function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0,hrAdj:0,coachAt:0,coachHold:0,coachSaid:-999,coachAlarm:-99,kmSaid:0,kmT:0,vert:0,nextSaid:-1,halfSaid:-1,lastMin:false,ghLead:0,ghSaid:-99});
   $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
   $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
@@ -1135,7 +1208,7 @@ function incUI(){const p=PTS();document.querySelectorAll('.incU').forEach(e=>e.t
   document.querySelectorAll('.fs-ctl').forEach(c=>c.style.gridTemplateColumns=c.querySelector('[data-v=auto]')&&p?'64px repeat(3,1fr)':'');['incMin','incMax','incHill'].forEach(i=>$(i).step=p?1:0.5)}
 function adjInc(d){incAdj=d===null?0:Math.max(-20,Math.min(20,Math.round((incAdj+d)/ISTEP())*ISTEP()));run.sentAt=0;run.sentInc=null;if(run.state==='running')run.inc=targetInc(wrapX(run.dist));render()}
 function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
-function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
+function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;run.hrAdj=0;
   if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
   const s=workout.steps[i];if(s.ramp){const V=k=>+$(k).value,r=s.ramp[0]==='%'?[V('v10k')*s.ramp[1]/100,V('v10k')*s.ramp[2]/100]:s.ramp;s.v=Math.round(r[0]*10)/10}applySpeed(s.v);run.sentAt=0;
   say(`${s.label}, ${durWords(s)}, ${fmt(s.v)} kilomètres heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
@@ -1145,7 +1218,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
   keepAwake();
   const first=run.state==='idle';
   if(first){run.startedAt=Date.now();run.sim=!bt.ok;$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
-    workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:progSteps(w.name,parseWorkout(w.text))}:null;
+    workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,goal:!!w.goal,steps:progSteps(w.name,parseWorkout(w.text))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;wpickLabel();if(workout)run.target=workout.steps[0].v}
   if(bt.ok){if(!first)await cmd([0x00]);await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
@@ -1205,8 +1278,8 @@ function renderFS(){if($('fs').hidden)return;if(RM.map&&!RM.map._fsPad){RM.map._
   $('fsGain').textContent='D+ '+$('sGain').textContent+' m';$('fsHr').textContent=run.hr||'–';
   const st=!$('steppanel').hidden&&run.state!=='idle';$('fsStep').hidden=!st;if(st){$('fsNow').textContent=$('stNow').textContent;$('fsLeft').textContent=$('stLeft').textContent;$('fsNext').textContent=$('stNext').textContent;$('fsStep').classList.toggle('work',$('steppanel').classList.contains('work'))}
   const g=!$('ghostbox').hidden;$('fsGap').hidden=!g;if(g){$('fsGap').textContent=$('gGap').textContent;$('fsGap').className='fs-gap '+$('gGap').className}
-  $('fsPause').textContent=run.state==='paused'?'Reprendre':'Pause';$('fsSkip').disabled=!workout||run.state!=='running'}
-function bump(dv){const cs=curStep();if(cs)cs.manual=true;const base=run.state==='running'?(realSpeed()||run.target):run.target;
+  try{xtFS()}catch(e){}$('fsPause').textContent=run.state==='paused'?'Reprendre':'Pause';$('fsSkip').disabled=!workout||run.state!=='running'}
+function bump(dv){run.coachHold=run.time+60;const cs=curStep();if(cs)cs.manual=true;const base=run.state==='running'?(realSpeed()||run.target):run.target;
   run.target=Math.max(1,Math.min(S().vmax,Math.round((base+dv)*10)/10));
   if(run.state==='running'){if(bt.ok)setSpeed(run.target);else run.speed=run.target}render()}
 $('im1').onclick=()=>adjInc(-1);$('im05').onclick=()=>adjInc(-.5);$('ip05').onclick=()=>adjInc(.5);$('ip1').onclick=()=>adjInc(1);$('iauto').onclick=()=>adjInc(null);
@@ -1228,6 +1301,7 @@ function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);r
       if(st.ramp&&!st.manual){const V=k=>+$(k).value,r=st.ramp[0]==='%'?[V('v10k')*st.ramp[1]/100,V('v10k')*st.ramp[2]/100]:st.ramp;const f=Math.min(1,st.dur?run.stepT/st.dur:run.stepD/(st.dist||1));const v=Math.round((r[0]+(r[1]-r[0])*f)*10)/10;if(Math.abs(v-run.target)>=0.1){run.target=v;if(bt.ok)setSpeed(v);else run.speed=v}}
       if(st.dur){const after=st.dur-run.stepT;for(const n of[3,2,1])if(before>n&&after<=n&&st.dur>8)say(String(n),['','one','two','three'][n])}
       if((st.dur&&run.stepT>=st.dur)||(st.dist&&run.stepD>=st.dist)){if(st.test)finishTest();enterStep(run.step+1)}}
+    try{xtTick(dt,dd)}catch(e){}
     // annonce des côtes du parcours
     const up=(eleAt(x1+150)-eleAt(x1+50))/100*100;
     if($('zen').checked){const nm=nextMark(x1);if(nm&&nm.gap<=150&&markSaid!==nm.i){markSaid=nm.i;const g=Math.round(nm.gap/10)*10;say(`${nm.m.fr} dans ${g} mètres`,`${nm.m.en} in ${g} metres`)}}
@@ -1261,12 +1335,12 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
   const x=route?wrapX(run.dist):0;
   $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+IU()+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
   $('sPace').textContent=sp>0.5?clock(3600/sp):'–';$('sDist').textContent=fmt(run.dist/1000,2);$('sTime').textContent=clock(run.time);$('sGain').textContent=Math.round(run.gain);
-  $('sHr').textContent=run.hr?run.hr+' bpm':'–';
+  $('sHr').textContent=run.hr?run.hr+' bpm':'–';try{xtRender()}catch(e){}
   if(workout&&run.step!==lastBar){lastBar=run.step;renderSteps()}renderLeft();
   let gx=null;const g=run.ghost||(run.state==='idle'?ghostRun():null);
   $('ghostbox').hidden=!g;$('legGhost').hidden=!g;$('legMedal').hidden=!g;$('legRef').textContent=refName().lab;
   if(g){gx=gDistAt(g,run.time);const when=new Date(g.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
-    $('gLabel').textContent=`${['friend','watch'].includes($('gsel').value)?refName().lab:$('gsel').value==='best'?'Record':'Dernière'} du ${when} · ${fmt(gx/1000,2)} km`;
+    $('gLabel').textContent=['ref','goal'].includes($('gsel').value)?`${refName().lab} · ${fmt(gx/1000,2)} km`:`${['friend','watch'].includes($('gsel').value)?refName().lab:$('gsel').value==='best'?'Record':'Dernière'} du ${when} · ${fmt(gx/1000,2)} km`;
     const gt=gTimeAt(g,run.dist),el=$('gGap');
     if(run.time<1){el.textContent='Prêt';el.className=''}
     else if(gt==null){el.textContent='Plus loin que jamais';el.className='ahead'}
@@ -1287,6 +1361,9 @@ window.trLive=()=>{if(replaying||!route||!route.decor)return null;const now=perf
 try{$('vrHQ').checked=localStorage.getItem('vrHQ')==='1'}catch(e){}$('vrHQ').onchange=()=>{try{localStorage.setItem('vrHQ',$('vrHQ').checked?'1':'0')}catch(e){}if(RM.kind==='decor')RM.teardown()};
 $('pfReset').onclick=()=>{const b=$('pfReset');if(!b.dataset.ok){b.dataset.ok=1;b.textContent='Confirmer : tout effacer ?';$('pfResetMsg').textContent='Niveau, kilomètres, badges et records repartent de zéro. Tes parcours, séances et courses de défi sont gardés.';setTimeout(()=>{delete b.dataset.ok;b.textContent='Remettre mon profil à zéro';$('pfResetMsg').textContent=''},6000);return}
   delete b.dataset.ok;store.set('profile',{xp:0,km:0,runs:0,badges:{},records:{},dates:[],routes:[]});renderProfile();b.textContent='Remettre mon profil à zéro';$('pfResetMsg').textContent='Profil remis à zéro.'};
+$('refAge').value=store.get('refAge','')||'';$('refSex').value=store.get('refSex','');
+$('refAge').onchange=()=>{store.set('refAge',+$('refAge').value||0);updateGhostInfo()};$('refSex').onchange=()=>{store.set('refSex',$('refSex').value);updateGhostInfo()};
+$('refLvl').onchange=()=>{store.set('refLvl',$('refLvl').value);updateGhostInfo()};setTimeout(()=>{try{refUI()}catch(e){}},0);
 setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */
@@ -1357,8 +1434,8 @@ function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((rou
 function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
   if(run.sim)$('afterGain').innerHTML='<span>Course simulée : elle ne compte ni dans tes kilomètres, ni dans ton niveau, tes badges ou tes records. Elle reste utilisable comme défi en simulation.</span>';
   const g=grantRun(done);if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
-    g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('afterGain').innerHTML=L.join('');
-    const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
+    g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});(g.chal||[]).forEach(n=>L.push(`<span>Défi réussi : <b>${esc(n)}</b></span>`));$('afterGain').innerHTML=L.join('');
+    const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),...(g.chal||[]).map(n=>'Défi réussi : '+n),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
     if(spoken)setTimeout(()=>say(spoken,(g.recs.length?'New personal best. ':'')+(g.news.length?g.news.length+' new badge'+(g.news.length>1?'s':''):'')+(g.up?'. Level '+g.up:'')),2500)}
   $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${clock(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
 $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
@@ -1434,16 +1511,17 @@ function grantRun(done){if(run.time<60||run.sim)return null;const P=prof(),km=ru
   const t5=bestTime(run.samples,5000),t10=bestTime(run.samples,10000);
   if(t5){g('f5_30',t5<1800);g('f5_25',t5<1500);g('f5_20',t5<1200);g('pb5',!!(P.records[5000]&&t5<P.records[5000].t))}
   if(t10){g('f10_60',t10<3600);g('f10_50',t10<3000);g('f10_45',t10<2700);g('f10_40',t10<2400);g('pb10',!!(P.records[10000]&&t10<P.records[10000].t))}
+  let chal=[];try{const c=chalRecord(P);xp+=c.xp;chal=c.done}catch(e){}
   RECS.forEach(([D,lab])=>{const t=bestTime(run.samples,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
   const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
-  return{xp,news,recs,up:lv>lv0?lv:0}}
+  return{xp,news,recs,chal,up:lv>lv0?lv:0}}
 function badgeSVG(on){return`<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="${on?'#f5c542':'#30353b'}" stroke="${on?'#ffffff':'#3a4047'}" stroke-width="2"/><path d="M17 9.5l2.3 4.7 5.2.8-3.8 3.6.9 5.1-4.6-2.4-4.6 2.4.9-5.1-3.8-3.6 5.2-.8z" fill="${on?'#b8860b':'#4b5259'}"/></svg>`}
 function renderProfile(){const P=prof(),lv=levelOf(P.xp),a=xpFor(lv),b=xpFor(lv+1),n=Object.keys(P.badges||{}).length;
   $('lvlPill').textContent=`Niveau ${lv}`;$('pfLvl').textContent=`Niveau ${lv}`;$('pfXp').textContent=`${P.xp} XP · encore ${b-P.xp} XP pour le niveau ${lv+1}`;
   $('pfBar').style.width=Math.round((P.xp-a)/(b-a)*100)+'%';
   $('pfStats').innerHTML=`<span>${fmt(P.km,1)} km</span><span>${P.runs} course${P.runs>1?'s':''}</span><span>${n}/${BADGES.length} badges</span>`;
   $('pfRecs').innerHTML=RECS.map(([D,lab])=>`<span>${lab}</span><span>${P.records[D]?clock(P.records[D].t)+' · '+new Date(P.records[D].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'–'}</span>`).join('');
-  $('pfBadges').innerHTML=BADGES.map(([id,name,how])=>{const on=!!P.badges[id];return`<div class="badge${on?' on':''}" title="${esc(how)}">${badgeSVG(on)}<b>${esc(name)}</b><small>${esc(how)}</small></div>`}).join('')}
+  $('pfBadges').innerHTML=BADGES.map(([id,name,how])=>{const on=!!P.badges[id];return`<div class="badge${on?' on':''}" title="${esc(how)}">${badgeSVG(on)}<b>${esc(name)}</b><small>${esc(how)}</small></div>`}).join('');try{refUI()}catch(e){}try{chalUI()}catch(e){}}
 
 /* ================= MODE ZEN ET REPÈRES DU PARCOURS ================= */
 let marks=[],markSaid=-1;
@@ -1626,7 +1704,7 @@ $('oUpload').onclick=async()=>{const m=$('oMsg');m.textContent='Envoi…';
 
 if(window.HORIZON_ANDROID){$('tab-out').hidden=true;$('oGpsNote').textContent=''}
 /* ---------- sauvegarde et restauration ---------- */
-const BK_KEYS=['routes','runs','watchRuns','workouts','settings','profile','friend','calib','me','lang','voice','zen','mapStyle','ivId'];
+const BK_KEYS=['refAge','refSex','refLvl','hrMax','coach','vcoach','hist','liveName','fbUrl','goalRoute','routes','runs','watchRuns','workouts','settings','profile','friend','calib','me','lang','voice','zen','mapStyle','ivId'];
 $('bkExport').onclick=async()=>{const data={app:'Treadverse',version:1,date:new Date().toISOString(),data:{}};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)data.data[k]=v}catch(e){}});
   const txt=JSON.stringify(data),name=`horizon-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
   try{if(window.HORIZON_ANDROID&&navigator.share){await navigator.share({title:'Sauvegarde Treadverse',text:txt});$('bkMsg').textContent='Sauvegarde envoyée. Garde-la dans Drive ou dans tes mails.';return}}catch(e){}
@@ -1641,6 +1719,200 @@ if(!location.hash.startsWith('#defi=')){const lr=store.get('lastRoute','d:track'
   else if(window.VR){const k=lr.startsWith('d:')&&VR.DEFS[lr.slice(2)]?lr.slice(2):'track';$('rname').value=VR.DEFS[k].name;setRoute(VR.routePts(k),VR.DEFS[k].name,k);drawPrep()}}
 resetRun();
 importChallenge();
+</script>
+<style>
+.chals{display:grid;gap:8px}.chal{border:1px solid var(--line,#334155);border-radius:10px;padding:8px 10px}.chal>div:first-child{display:flex;flex-direction:column;gap:2px}.chal small{opacity:.75}
+.chal.on{border-color:#22c55e}.chal.on b::after{content:" ✓";color:#22c55e}.chal.season{background:rgba(251,146,60,.08)}.chal .xpbar{margin-top:6px}
+.league{display:grid;gap:2px;margin-top:8px}.lrow{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(148,163,184,.15);font-size:.92em}.lrow.me{font-weight:700;color:#fb923c}
+.livelines{display:flex;flex-direction:column;font-size:.85em}.livelines .me{font-weight:700;color:#fb923c}
+.xpre{white-space:pre;overflow-x:auto;background:rgba(15,23,42,.6);color:#e2e8f0;border-radius:8px;padding:8px;font-size:.78em;margin:6px 0;user-select:all}.xsteps{padding-left:1.2em}.xsteps li{margin:4px 0}
+</style>
+<script>
+/* Treadverse : coach cardio, coach vocal, course objectif, défis du mois, courses en direct */
+const FB_DEFAULT='';
+const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+
+/* ---------- 1. Coach cardio ---------- */
+const ZN=[[50,60],[60,70],[70,80],[80,90],[90,100]];
+function hrMax(){const m=+store.get('hrMax',0);if(m>100)return m;const a=+store.get('refAge',0);return a?Math.round(208-0.7*a):185}
+function hrZone(h){if(!h)return 0;const p=h/hrMax()*100;return p<60?1:p<70?2:p<80?3:p<90?4:5}
+function coachBand(st){const m=$('coach')?.value||'off';if(m==='off')return null;
+  const short=st&&st.type==='work'&&((st.dur&&st.dur<240)||(st.dist&&st.dist<1000));
+  if(m==='safe'||short)return{lo:0,hi:97,safe:true};
+  if(st&&st.type==='rec')return{lo:0,hi:78};
+  if(m==='z2'||m==='z3'||m==='z4'){if(st&&(st.type==='warm'||st.type==='cool'))return{lo:0,hi:75};const z=ZN[+m[1]-1];return{lo:z[0],hi:z[1]}}
+  if(!st)return{lo:65,hi:80};
+  if(st.type==='warm')return{lo:0,hi:75};if(st.type==='cool')return{lo:0,hi:72};if(st.type==='work')return{lo:0,hi:92};
+  return{lo:65,hi:80}}
+function coachSet(dv){run.hrAdj=(run.hrAdj||0)+dv;const v=Math.max(3,Math.min(S().vmax,Math.round((run.target+dv)*10)/10));run.target=v;if(bt.ok)setSpeed(v);else run.speed=v;return v}
+function coachTick(st){const b=coachBand(st);if(!b||!run.hr||run.state!=='running')return;
+  const p=run.hr/hrMax()*100;
+  if(p>=97){if(run.time-(run.coachAlarm??-99)>45){run.coachAlarm=run.time;const v=coachSet(-1);say(`Cardio très haut, ${run.hr}. Je ralentis à ${fmt(v)}.`,`Heart rate very high, ${run.hr}. Slowing down to ${fmtEn(v)}.`)}return}
+  if(b.safe||(st&&st.ramp&&!st.manual))return;
+  if(run.time<(run.coachHold||0))return;
+  if((st?run.stepT:run.time)<90)return;
+  if(run.time-(run.coachAt||0)<20)return;run.coachAt=run.time;
+  let dv=0;if(p>b.hi+1)dv=p>b.hi+5?-0.5:-0.3;else if(b.lo&&p<b.lo-1)dv=0.2;
+  if(!dv||(dv>0&&(run.hrAdj||0)>=1.5)||(dv<0&&(run.hrAdj||0)<=-3))return;
+  const v=coachSet(dv);
+  if(run.time-(run.coachSaid??-999)>90){run.coachSaid=run.time;
+    if(dv<0)say(`Cardio ${run.hr}, au-dessus de ta zone. Je ralentis à ${fmt(v)}.`,`Heart rate ${run.hr}, above your zone. Slowing to ${fmtEn(v)}.`);
+    else say(`Cardio ${run.hr}, tu as de la marge. J'accélère à ${fmt(v)}.`,`Heart rate ${run.hr}, you have room. Speeding up to ${fmtEn(v)}.`)}}
+function coachTxt(){const b=coachBand(curStep());if(!b)return'';const M=hrMax();
+  return b.safe?`Sécurité au-delà de ${Math.round(M*0.97)}`:`Zone visée ${b.lo?Math.round(M*b.lo/100)+'–':'moins de '}${Math.round(M*b.hi/100)}`}
+
+/* ---------- 6. Coach vocal ---------- */
+const minWords=t=>{t=Math.round(t);const m=Math.floor(t/60),s=t%60;return m?`${m} minute${m>1?'s':''}${s?' '+s:''}`:`${s} secondes`};
+const minEn=t=>{t=Math.round(t);const m=Math.floor(t/60),s=t%60;return m?`${m} minute${m>1?'s':''}${s?' '+s:''}`:`${s} seconds`};
+const CHEER=[['Mi-bloc. Tu tiens le rythme.','Halfway through this block. Holding the pace.'],['La moitié est faite. Relâche les épaules.','Half done. Relax your shoulders.'],['Mi-parcours du bloc. Respire, reste régulier.','Halfway. Breathe and stay steady.'],['Tu es à mi-chemin. Belle foulée.','Halfway there. Nice stride.']];
+function voiceTick(st){if(!$('vcoach')?.checked||run.state!=='running')return;
+  // kilomètres
+  const km=Math.floor(run.dist/1000);if(km>(run.kmSaid||0)){run.kmSaid=km;const t=run.time-(run.kmT||0);run.kmT=run.time;
+    if(!(workout&&workout.goal)&&!LIVE.room){let g='',ge='';const G=run.ghost;if(G){const gt=gTimeAt(G,run.dist);if(gt!=null){const d=Math.round(gt-run.time);if(Math.abs(d)>=2){g=d>0?`, ${d} secondes d'avance`:`, ${-d} secondes de retard`;ge=d>0?`, ${d} seconds ahead`:`, ${-d} seconds behind`}}}
+      say(`Kilomètre ${km} en ${minWords(t)}${g}.`,`Kilometre ${km} in ${minEn(t)}${ge}.`)}}
+  // le fantôme passe devant ou derrière
+  const G=run.ghost;if(G&&run.time>20){const gx=gDistAt(G,run.time),lead=run.dist-gx>3?1:run.dist-gx<-3?-1:0;
+    if(lead&&lead!==run.ghLead&&run.time-(run.ghSaid??-99)>30){if(run.ghLead){const R=refName();say(lead>0?`Tu passes devant ${R.fr}.`:`${R.Fr} repasse devant.`,lead>0?`You pass ${R.en}.`:`${R.En} is back in front.`)}run.ghSaid=run.time;run.ghLead=lead}}
+  if(!st||!workout)return;
+  const nx=workout.steps[run.step+1];
+  const pre=nx?[`Dans 10 secondes : ${nx.label}, ${fmt(nx.v)} kilomètres heure.`,`In 10 seconds: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 10 secondes, fin de la séance.','In 10 seconds, the workout is over.'];
+  if(run.nextSaid!==run.step){
+    if(st.dur>=40&&st.dur-run.stepT<=10){run.nextSaid=run.step;say(...pre)}
+    else if(!st.dur&&st.dist>=400&&st.dist-run.stepD<=40){run.nextSaid=run.step;say(...(nx?[`Dans 40 mètres : ${nx.label}, ${fmt(nx.v)} kilomètres heure.`,`In 40 metres: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 40 mètres, fin de la séance.','In 40 metres, the workout is over.']))}}
+  const len=stepSec(st),f=st.dur?run.stepT/st.dur:run.stepD/(st.dist||1);
+  if(st.type==='work'&&len>=240&&f>=0.5&&run.halfSaid!==run.step){run.halfSaid=run.step;const c=CHEER[Math.floor(Math.random()*CHEER.length)];say(c[0],c[1])}
+  const left=workout.steps.slice(run.step).reduce((a,s)=>a+stepSec(s),0)-(st.dur?run.stepT:run.stepD/(st.v/3.6));
+  if(!run.lastMin&&workout.steps.length>2&&left<=60&&left>45){run.lastMin=true;say('Dernière minute de la séance.','Last minute of the workout.')}}
+
+/* ---------- 3. Course objectif ---------- */
+function parseClock(t){const p=String(t||'').trim().split(/[:h']/).filter(x=>x!=='').map(Number);if(!p.length||p.some(isNaN))return 0;return p.length===3?p[0]*3600+p[1]*60+p[2]:p.length===2?(p[0]>=10&&!/h/.test(t)?p[0]*60+p[1]:p[0]*3600+p[1]*60):p[0]*60}
+function goalPlan(r,T,mode){const pts=r.pts,d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+hav(pts[i-1],pts[i]));const L=d[d.length-1];
+  const ele=x=>{let i=0;while(i<d.length-2&&d[i+1]<x)i++;const f=(x-d[i])/((d[i+1]-d[i])||1);return pts[i][2]+(pts[i+1][2]-pts[i][2])*Math.max(0,Math.min(1,f))};
+  const seg=[];for(let a=0;a<L-20;a+=1000){const b=Math.min(L,a+1000);seg.push({a,len:b-a,g:(ele(b)-ele(a))/(b-a)*100})}
+  const k=g=>mode==='flat'?1:g>0?1/(1+0.033*Math.min(10,g)):1/(1+0.018*Math.max(-8,g));
+  const v0=seg.reduce((s,x)=>s+x.len/k(x.g),0)/T;seg.forEach(x=>x.v=Math.min(S().vmax,Math.round(v0*k(x.g)*3.6*10)/10));return{L,seg}}
+function goalCreate(){const msg=$('goalMsg'),rs=store.get('routes',[]),r=rs.find(x=>x.name===$('goalRoute').value),T=parseClock($('goalTime').value);
+  if(!r){msg.textContent='Choisis le parcours de ta course (importe son GPX dans « Parcours réel »).';return}
+  if(!T){msg.textContent='Indique ton temps visé, par exemple 1:45:00 ou 50:00.';return}
+  const mode=$('goalMode').value,{L,seg}=goalPlan(r,T,mode),avg=Math.round(L/T*3.6*10)/10,tl=clock(T),folder='Objectif · '+r.name;
+  const gw=g=>g>=0.5?`montée ${fmt(Math.round(g*10)/10)} %`:g<=-0.5?`descente ${fmt(Math.round(-g*10)/10)} %`:'plat';
+  const main=`Main set\n`+seg.map((x,i)=>`- Kilomètre ${i+1}, ${gw(x.g)} ${x.len>=999?'1km':Math.round(x.len)+'mtr'} ${x.v}km/h intensity=interval`).join('\n');
+  const hard=seg.filter(x=>x.len>=999).reduce((a,b)=>!a||b.g>a.g?b:a,null);
+  const toU=g=>PTS()?Math.max(0,Math.round(g/IR())):Math.max(0,Math.round(g*2)/2);
+  const W=[{name:`Course objectif · ${r.name} en ${tl}`,folder,goal:{t:T,route:r.name},text:main},
+    {name:`Allure objectif · ${fmt(avg)} km/h`,folder,text:`Warmup\n- Échauffement 15m\n\n3x\n- Allure de course 2km ${avg}km/h intensity=interval\n- Récupération 3m intensity=recovery\n\nCooldown\n- Retour au calme 10m`}];
+  if(hard&&hard.g>=1)W.push({name:`Côtes de la course · km ${seg.indexOf(hard)+1}`,folder,text:`Warmup\n- Échauffement 12m\n\n4x\n- Côte du kilomètre ${seg.indexOf(hard)+1} 1km ${hard.v}km/h pente=${toU(hard.g)} intensity=interval\n- Récupération à plat 3m pente=0 intensity=recovery\n\nCooldown\n- Retour au calme 8m`});
+  const all=store.get('workouts',[]).filter(w=>w.folder!==folder);store.set('workouts',[...all,...W]);listWorkouts();
+  msg.textContent=`${W.length} séances créées dans le dossier « Objectif › ${r.name} » : la course complète (${fmt(L/1000,2)} km, ${fmt(avg)} km/h de moyenne${mode==='flat'?'':', plus lent en côte, plus vite en descente'}), l'allure objectif${W[2]?' et la côte la plus dure répétée 4 fois':''}. Pendant la course complète, le point bleu court exactement ton objectif.`}
+function goalUI(){const sel=$('goalRoute');if(!sel)return;const cur=sel.value||store.get('goalRoute','');const rs=store.get('routes',[]);
+  sel.innerHTML=rs.length?rs.map(r=>`<option value="${esc(r.name)}">${esc(r.name)} · ${fmt(r.km,1)} km · D+ ${r.gain} m</option>`).join(''):'<option value="">Aucun parcours GPX enregistré</option>';
+  if(rs.some(r=>r.name===cur))sel.value=cur}
+function goalW(){const w=workouts().find(o=>o.name===$('wsel').value);return w&&w.goal?w:null}
+function goalGhost(){const w=goalW();if(!w)return null;const st=progSteps(w.name,parseWorkout(w.text));let t=0,d=0;const s=[[0,0,0]];
+  st.forEach(x=>{const L=x.dist||x.dur*x.v/3.6;t+=L/(x.v/3.6);d+=L;s.push([Math.round(t),Math.round(d),0])});return{date:new Date().toISOString(),time:t,dist:d,done:true,s,goal:true}}
+function goalPick(){const w=goalW();if(!w||run.state!=='idle')return;const r=store.get('routes',[]).find(x=>x.name===w.goal.route);
+  if(r&&(!route||route.name!==r.name)){$('rname').value=r.name;setRoute(r.pts,r.name);store.set('lastRoute','r:'+r.name);if(!$('view-run').hidden)RM.init()}
+  if(!$('gsel').querySelector('option[value="goal"]'))return;$('gsel').value='goal'}
+
+/* ---------- 7. Défis du mois et saisons ---------- */
+const SEASONS=['d’hiver','de printemps','d’été','d’automne'];
+const CLIMBS=[['L’Alpe d’Huez',1100],['Le Tourmalet',1400],['Le mont Ventoux',1600]];
+function chalList(dt=new Date()){const m=dt.getMonth(),y=dt.getFullYear(),mk=`${y}-${String(m+1).padStart(2,'0')}`,q=Math.floor(m/3),c=CLIMBS[m%3];
+  const end=new Date(y,m+1,1),qs=new Date(y,q*3,1),qe=new Date(y,q*3+3,1),ms=new Date(y,m,1);
+  return[{id:mk+'-km',name:`${[40,50,60][m%3]} km en ${MOIS[m]}`,goal:[40,50,60][m%3],u:'km',f:h=>h.km,from:ms,to:end,xp:300},
+    {id:mk+'-runs',name:`${[8,10,12][m%3]} courses en ${MOIS[m]}`,goal:[8,10,12][m%3],u:'courses',f:()=>1,from:ms,to:end,xp:300},
+    {id:mk+'-up',name:`${c[0]} : ${c[1].toLocaleString('fr-FR')} m de D+ en ${MOIS[m]}`,goal:c[1],u:'m D+',f:h=>h.up,from:ms,to:end,xp:300},
+    {id:`${y}-S${q}`,name:`Saison ${SEASONS[q]} : 150 km`,goal:150,u:'km',f:h=>h.km,from:qs,to:qe,xp:800,season:true}]}
+function chalVal(c){return store.get('hist',[]).filter(h=>{const d=new Date(h.d);return d>=c.from&&d<c.to}).reduce((a,h)=>a+c.f(h),0)}
+function chalRecord(P){const up=Math.round(Math.max(run.gain||0,run.vert||0));const h=store.get('hist',[]);h.push({d:new Date().toISOString(),km:Math.round(run.dist)/1000,up,t:Math.round(run.time)});while(h.length>400)h.shift();store.set('hist',h);
+  P.chal=P.chal||{};let xp=0;const done=[];chalList().forEach(c=>{if(!P.chal[c.id]&&chalVal(c)>=c.goal){P.chal[c.id]=new Date().toISOString();xp+=c.xp;done.push(c.name)}});
+  try{leaguePush()}catch(e){}return{xp,done}}
+function chalUI(){const box=$('pfChal');if(!box)return;const P=prof(),now=new Date();
+  box.innerHTML=chalList().map(c=>{const v=chalVal(c),ok=!!(P.chal||{})[c.id]||v>=c.goal,pc=Math.min(100,Math.round(v/c.goal*100)),days=Math.ceil((c.to-now)/864e5);
+    return`<div class="chal${ok?' on':''}${c.season?' season':''}"><div><b>${esc(c.name)}</b><small>${ok?'Réussi':`${c.u==='km'?fmt(v,1):Math.round(v).toLocaleString('fr-FR')} / ${c.goal.toLocaleString('fr-FR')} ${c.u} · encore ${days} jour${days>1?'s':''}`} · +${c.xp} XP</small></div><div class="xpbar"><i style="width:${pc}%"></i></div></div>`}).join('');
+  leagueUI()}
+async function leaguePush(){if(!LIVE.url())return;const c=chalList()[0],mk=c.id.slice(0,7),hs=store.get('hist',[]).filter(h=>{const d=new Date(h.d);return d>=c.from&&d<c.to});
+  await fb(`league/${mk}/${LIVE.id}`,'PUT',{n:liveName(),km:Math.round(hs.reduce((a,h)=>a+h.km,0)*10)/10,up:hs.reduce((a,h)=>a+h.up,0),runs:hs.length})}
+let leagueAt=0;
+async function leagueUI(){const box=$('pfLeague');if(!box)return;if(!LIVE.url()){box.innerHTML='<small class="hint">Le classement entre coureurs s’affiche une fois les courses en direct activées (onglet Tapis).</small>';return}
+  if(Date.now()-leagueAt<60000)return;leagueAt=Date.now();const mk=chalList()[0].id.slice(0,7);
+  try{const d=await fb(`league/${mk}`)||{};const L=Object.entries(d).map(([id,v])=>({id,...v})).sort((a,b)=>b.km-a.km).slice(0,10);
+    box.innerHTML=L.length?`<b>Classement de ${MOIS[new Date().getMonth()]}</b>`+L.map((p,i)=>`<div class="lrow${p.id===LIVE.id?' me':''}"><span>${i+1}. ${esc(p.n||'Coureur')}</span><span>${fmt(p.km,1)} km · ${p.runs} course${p.runs>1?'s':''}</span></div>`).join(''):'<small class="hint">Personne n’a encore couru ce mois-ci : sois le premier.</small>'}catch(e){box.innerHTML='<small class="hint">Classement indisponible (pas de connexion).</small>'}}
+
+/* ---------- 2. Courses en direct ---------- */
+const LIVE={url:()=>(store.get('fbUrl','')||FB_DEFAULT).trim().replace(/\/+$/,''),id:store.get('liveId','')||(()=>{const i=Math.random().toString(36).slice(2,10);store.set('liveId',i);return i})(),
+  room:null,data:null,es:null,off:0,lastSend:0,said:{},rank:0,rankAt:0,fin:false,prev:{}};
+const LCOL=[0x22c55e,0xa855f7,0xec4899,0xeab308,0x06b6d4,0xf43f5e,0x84cc16];
+function liveName(){return(store.get('liveName','')||'').trim()||'Coureur'}
+async function fb(path,method='GET',body){const r=await fetch(`${LIVE.url()}/${path}.json`,{method,headers:{'Content-Type':'application/json'},body:body!==undefined?JSON.stringify(body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
+async function liveClock(){const t0=Date.now();let v=await fb('rooms/_clk/'+LIVE.id,'PUT',{'.sv':'timestamp'});const t1=Date.now();if(typeof v!=='number')v=await fb('rooms/_clk/'+LIVE.id);if(typeof v==='number')LIVE.off=v-(t0+t1)/2}
+const srvNow=()=>Date.now()+LIVE.off;
+function liveApply(path,data){const k=path.split('/').filter(Boolean);if(!k.length){LIVE.data=data||{};return}LIVE.data=LIVE.data||{};let o=LIVE.data;
+  for(let i=0;i<k.length-1;i++){if(!o[k[i]]||typeof o[k[i]]!=='object')o[k[i]]={};o=o[k[i]]}const last=k[k.length-1];if(data===null)delete o[last];else o[last]=data}
+function liveListen(){if(LIVE.es)LIVE.es.close();const es=new EventSource(`${LIVE.url()}/rooms/${LIVE.room}.json`);LIVE.es=es;
+  const on=patch=>e=>{try{const m=JSON.parse(e.data);if(patch)Object.entries(m.data||{}).forEach(([c,v])=>liveApply(m.path.replace(/\/$/,'')+'/'+c,v));else liveApply(m.path,m.data);liveUI()}catch(err){}};
+  es.addEventListener('put',on(false));es.addEventListener('patch',on(true));es.onerror=()=>{$('liveMsg').textContent='Connexion au serveur interrompue, nouvelle tentative…'}}
+function liveCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s}
+function liveSetDecor(k){if(!k||!window.VR||!VR.DEFS[k])return;if(route&&route.decor===k)return;const d=VR.DEFS[k];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();if(!$('view-run').hidden)RM.init()}
+async function liveCreate(){const msg=$('liveMsg');if(!LIVE.url()){msg.textContent='Active d’abord le serveur (étape ci-dessus).';return}
+  if(!route||!route.decor){msg.textContent='Choisis d’abord un décor virtuel dans Préparer : tout le monde court dans le même.';return}
+  if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return}
+  store.set('liveName',$('liveName').value.trim());msg.textContent='Création…';
+  try{await liveClock();const code=liveCode();await fb('rooms/'+code,'PUT',{host:LIVE.id,decor:route.decor,dname:route.name,dist:+$('liveDist').value,start:0,created:{'.sv':'timestamp'},p:{[LIVE.id]:{n:liveName(),d:0,t:0,at:{'.sv':'timestamp'}}}});
+    LIVE.room=code;LIVE.fin=false;LIVE.prev={};liveListen();msg.textContent=`Course créée. Donne le code ${code} aux autres coureurs.`}catch(e){msg.textContent='Impossible de joindre le serveur : '+e.message}}
+async function liveJoin(){const msg=$('liveMsg'),code=$('liveCodeIn').value.trim().toUpperCase();if(!LIVE.url()){msg.textContent='Active d’abord le serveur (étape ci-dessus).';return}
+  if(code.length!==4){msg.textContent='Le code fait 4 lettres.';return}if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return}
+  store.set('liveName',$('liveName').value.trim());msg.textContent='Connexion…';
+  try{const r=await fb('rooms/'+code);if(!r||!r.decor){msg.textContent='Code inconnu.';return}if(r.start&&r.start<srvNow()-5000){msg.textContent='Cette course a déjà commencé.';return}
+    await liveClock();liveSetDecor(r.decor);await fb(`rooms/${code}/p/${LIVE.id}`,'PUT',{n:liveName(),d:0,t:0,at:{'.sv':'timestamp'}});
+    LIVE.room=code;LIVE.fin=false;LIVE.prev={};liveListen();msg.textContent='Tu es inscrit. Le départ est donné par le créateur de la course.'}catch(e){msg.textContent='Impossible de joindre le serveur : '+e.message}}
+async function liveGo(){if(!LIVE.room||!LIVE.data)return;try{await fb(`rooms/${LIVE.room}`,'PATCH',{start:Math.round(srvNow()+15000)})}catch(e){$('liveMsg').textContent='Départ impossible : '+e.message}}
+async function liveLeave(){const r=LIVE.room;if(LIVE.es)LIVE.es.close();LIVE.es=null;LIVE.room=null;LIVE.data=null;liveUI();if(!r)return;
+  try{if(run.state==='idle')await fb(`rooms/${r}/p/${LIVE.id}`,'DELETE')}catch(e){}}
+function livePeople(){const P=(LIVE.data&&LIVE.data.p)||{},now=srvNow();return Object.entries(P).map(([id,p])=>{
+    if(id===LIVE.id)return{id,n:p.n,me:true,d:run.dist,f:LIVE.fin?LIVE.fin:null};
+    const pv=LIVE.prev[id];if(!pv||pv.at!==p.at){const v=pv&&p.at>pv.at?Math.max(0,Math.min(7,(p.d-pv.d)/((p.at-pv.at)/1000))):(p.t?p.d/p.t:0);LIVE.prev[id]={at:p.at,d:p.d,v:isFinite(v)?v:0}}
+    const q=LIVE.prev[id],ex=p.f||!p.at?0:Math.max(0,Math.min(6,(now-p.at)/1000));return{id,n:p.n,d:(p.d||0)+(p.t&&LIVE.data.start&&now>LIVE.data.start?q.v*ex:0),f:p.f||null}})
+  .sort((a,b)=>(a.f&&b.f)?a.f-b.f:a.f?-1:b.f?1:b.d-a.d)}
+function liveUI(){const on=!!LIVE.room,R=LIVE.data||{};$('liveOff').hidden=on;$('liveOn').hidden=!on;$('liveSetup').hidden=!!LIVE.url();$('liveJoinBox').hidden=!LIVE.url();
+  if(!on){$('livebox').hidden=true;return}
+  const P=livePeople(),host=R.host===LIVE.id,now=srvNow();
+  $('liveTitle').textContent=`Course ${LIVE.room} · ${R.dname||''} · ${fmt((R.dist||0)/1000,R.dist%1000?1:0)} km`;
+  $('liveGo').hidden=!host||!!R.start;
+  $('liveState').textContent=!R.start?(host?`${P.length} coureur${P.length>1?'s':''} inscrit${P.length>1?'s':''}. Lance le départ quand tout le monde est prêt (tapis connecté) : un compte à rebours de 15 secondes démarre chez tous.`:'En attente du départ donné par le créateur.'):now<R.start?`Départ dans ${Math.ceil((R.start-now)/1000)} s`:'Course en cours';
+  $('livePeople').innerHTML=P.map((p,i)=>`<div class="lrow${p.me?' me':''}"><span>${R.start?i+1+'. ':''}${esc(p.n||'Coureur')}${p.me?' (toi)':''}</span><span>${p.f?clock(p.f):R.start?fmt(p.d/1000,2)+' km':'prêt'}</span></div>`).join('');
+  const box=$('livebox');box.hidden=!(R.start&&run.state!=='idle');if(!box.hidden){const i=P.findIndex(p=>p.me),me=P[i];
+    $('liveRank').textContent=`${i+1}e / ${P.length}`;$('liveLines').innerHTML=P.slice(0,5).map((p,k)=>`<span class="${p.me?'me':''}">${k+1}. ${esc(p.n||'Coureur')} ${p.f?clock(p.f):p.me?fmt(p.d/1000,2)+' km':(p.d>=me.d?'+':'−')+Math.round(Math.abs(p.d-me.d))+' m'}</span>`).join('')}}
+function liveTick(){if(!LIVE.room||!LIVE.data)return;const R=LIVE.data,now=srvNow();
+  if(R.start&&run.state==='idle'&&!LIVE.fin){const left=(R.start-now)/1000;
+    for(const n of[10,5,3,2,1])if(left<=n&&left>n-1&&!LIVE.said[n]){LIVE.said[n]=1;say(n===10?'Départ dans 10 secondes.':String(n),n===10?'Start in 10 seconds.':String(n))}
+    if(left<=0&&left>-20&&!LIVE.said.go){LIVE.said.go=1;if(!bt.ok&&!$('simu').checked){$('liveMsg').textContent='Départ donné, mais ton tapis n’est pas connecté.';say('Connecte ton tapis.','Connect your treadmill.');return}
+      liveSetDecor(R.decor);workout=null;$('wsel').value='';say('Partez !','Go!');$('start').onclick()}}
+  if(run.state==='running'&&R.start){
+    if(!LIVE.fin&&run.dist>=R.dist){LIVE.fin=Math.round(run.time);fb(`rooms/${LIVE.room}/p/${LIVE.id}`,'PATCH',{d:R.dist,t:LIVE.fin,f:LIVE.fin,at:{'.sv':'timestamp'}}).catch(()=>{});
+      setTimeout(()=>{const P=livePeople(),i=P.findIndex(p=>p.me);say(`Arrivée ! Tu termines ${i===0?'premier':(i+1)+'e'} sur ${P.length}.`,`Finish! You are number ${i+1} of ${P.length}.`);$('stop').onclick()},800);return}
+    if(now-LIVE.lastSend>2000){LIVE.lastSend=now;fb(`rooms/${LIVE.room}/p/${LIVE.id}`,'PATCH',{n:liveName(),d:Math.round(run.dist),t:Math.round(run.time),hr:run.hr||0,at:{'.sv':'timestamp'}}).catch(()=>{})}
+    const P=livePeople(),i=P.findIndex(p=>p.me)+1;if(P.length>1&&i!==LIVE.rank){if(LIVE.rank&&run.time-LIVE.rankAt>15){say(i===1?'Tu passes en tête !':`Tu es ${i}e.`,i===1?'You take the lead!':`You are number ${i}.`)}LIVE.rank=i;LIVE.rankAt=run.time}}
+  liveUI()}
+function liveDots(){if(!LIVE.room||!LIVE.data||!LIVE.data.start||RM.kind!=='decor'||!RM.map||!RM.map.others)return;
+  RM.map.others(livePeople().filter(p=>!p.me).map((p,i)=>({id:p.id,n:p.n||'Coureur',x:wrapX(p.f?LIVE.data.dist:p.d),c:LCOL[Object.keys(LIVE.data.p).indexOf(p.id)%LCOL.length]})))}
+
+/* ---------- branchements ---------- */
+function xtTick(dt,dd){const st=curStep();run.vert=(run.vert||0)+dd*Math.max(0,run.inc||0)*IR()/100;try{coachTick(st)}catch(e){}try{voiceTick(st)}catch(e){}}
+function xtRender(){const z=hrZone(run.hr);$('sHr').textContent=run.hr?`${run.hr} bpm${z?' · Z'+z:''}`:'–';const c=$('coachInfo');if(c)c.textContent=coachTxt()?coachTxt()+` (FC max ${hrMax()})`:'';liveDots()}
+function xtFS(){$('fsHr').textContent=run.hr||'–';const z=hrZone(run.hr);$('fsHr').nextElementSibling.textContent=z?'bpm · Z'+z:'bpm';
+  if(!$('livebox').hidden){$('fsGap').hidden=false;$('fsGap').className='fs-gap '+($('liveRank').textContent.startsWith('1e')?'ahead':'');$('fsGap').textContent='Course en direct : '+$('liveRank').textContent}}
+setInterval(()=>{try{liveTick()}catch(e){}},500);
+(()=>{const sel=$('coach');sel.value=store.get('coach','off');sel.onchange=()=>{store.set('coach',sel.value);render()};
+  const vc=$('vcoach');vc.checked=store.get('vcoach',true);vc.onchange=()=>store.set('vcoach',vc.checked);
+  const hm=$('hrMax');hm.value=store.get('hrMax','')||'';const ph=()=>{const a=+store.get('refAge',0);hm.placeholder=a?'auto : '+Math.round(208-0.7*a):'ex. 176'};ph();hm.onchange=()=>{store.set('hrMax',+hm.value||'');render()};$('refAge').addEventListener('change',ph);
+  $('goalMake').onclick=goalCreate;$('goalRoute').onchange=()=>store.set('goalRoute',$('goalRoute').value);goalUI();
+  $('liveName').value=store.get('liveName','');$('fbUrl').value=store.get('fbUrl','');
+  $('fbSave').onclick=async()=>{const u=$('fbUrl').value.trim().replace(/\/+$/,'');if(!/^https:\/\/[\w.-]+\.(firebaseio\.com|firebasedatabase\.app)$/.test(u)){$('fbMsg').textContent='L’adresse doit ressembler à https://treadverse-xxxx-default-rtdb.europe-west1.firebasedatabase.app';return}
+    store.set('fbUrl',u);$('fbMsg').textContent='Test…';try{await liveClock();$('fbMsg').textContent='Serveur activé. Écart d’horloge : '+Math.round(LIVE.off)+' ms.';liveUI();leagueAt=0;chalUI()}catch(e){store.set('fbUrl','');$('fbMsg').textContent='Le serveur refuse : vérifie les règles (étape 3). '+e.message}};
+  $('liveNew').onclick=liveCreate;$('liveJoin').onclick=liveJoin;$('liveGo').onclick=liveGo;$('liveQuit').onclick=liveLeave;
+  liveUI();chalUI()})();
+
 </script>
 </body>
 </html>
