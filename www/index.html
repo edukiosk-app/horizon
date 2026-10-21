@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Horizon</title>
+<link rel="stylesheet" href="lib/leaflet.css">
+<link rel="stylesheet" href="lib/maplibre-gl.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;700&display=swap">
+<style>
+/* Layout : deux vues (Préparer / Courir), gros chiffres lisibles depuis le tapis. Thème unique graphite. */
+:root{
+  --bg:#1c1f23; --panel:#262a2f; --tile:#30353b; --fg:#eef1f4; --muted:#9aa3ad; --line:#3a4047;
+  --accent:#34d399; --accent-fg:#0e1a14; --climb:#fb923c; --warn:#f87171; --ghost:#60a5fa;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--body)}
+body{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding-block:12px 32px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font:700 26px/1 var(--display);letter-spacing:.02em;margin:0;text-transform:uppercase}
+h1 span{color:var(--accent)}
+h2{font:700 18px/1.2 var(--display);text-transform:uppercase;letter-spacing:.05em;margin:0 0 8px;color:var(--muted)}
+.tabs{display:flex;gap:6px}
+.tab{border:1px solid var(--line);background:var(--tile);color:var(--fg);padding:8px 14px;border-radius:999px;font:600 14px var(--body);cursor:pointer}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+#map{height:46vh;min-height:280px;border-radius:8px;overflow:hidden}
+#runmap{height:30vh;min-height:200px;border-radius:8px;overflow:hidden}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,.btn,select{border:1px solid var(--line);background:var(--tile);color:var(--fg);padding:9px 12px;border-radius:8px;font:600 14px var(--body);cursor:pointer}
+select{min-width:0;max-width:100%}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.danger{color:var(--warn)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=number],input[type=password],input[type=date],textarea{border:1px solid var(--line);background:var(--tile);color:var(--fg);padding:8px;border-radius:8px;font:15px var(--body);min-width:0}
+textarea{width:100%;min-height:120px;font:13px/1.4 ui-monospace,monospace}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.check{flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-size:14px}
+.hint{color:var(--muted);font-size:13px;margin:6px 0 0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--tile);border-radius:10px;padding:8px 10px;min-width:0}
+.stat b{display:block;font:700 clamp(28px,8vw,48px)/1 var(--display);font-variant-numeric:tabular-nums}
+.stat small{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat.climb b{color:var(--climb)}
+.big{grid-column:span 3;display:flex;justify-content:space-between;align-items:end;gap:8px;flex-wrap:wrap}
+.big span{font:600 18px var(--body)}
+canvas{width:100%;height:140px;display:block}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:6px}
+.item>span{min-width:0;overflow-wrap:anywhere}
+#log{font:12px/1.4 ui-monospace,monospace;color:var(--muted);max-height:90px;overflow:auto;white-space:pre-wrap}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--tile);border:1px solid var(--line)}
+.pill.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.leaflet-container{background:var(--bg)}
+.ghost-ic{background:none;border:none}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:13px;color:var(--muted)}
+.legend>span{white-space:nowrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+/* bloc séance en cours */
+.step{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:end}
+.step .now{font:700 clamp(22px,6vw,32px)/1.1 var(--display);text-transform:uppercase;letter-spacing:.02em;min-width:0;overflow-wrap:anywhere}
+.step .left{font:700 clamp(34px,10vw,56px)/1 var(--display);font-variant-numeric:tabular-nums;color:var(--accent)}
+.step .next{grid-column:1/-1;color:var(--muted);font-size:14px}
+.step.work .now,.step.work .left{color:var(--climb)}
+.bar{grid-column:1/-1;height:8px;border-radius:99px;background:var(--tile);overflow:hidden;display:flex;gap:2px}
+.bar i{display:block;height:100%;background:var(--line)}
+.bar i.w{background:#7a4a2a}.bar i.done{background:var(--accent)}.bar i.w.done{background:var(--climb)}.bar i.cur{outline:2px solid var(--fg)}
+.ghostline{display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--tile);border-radius:10px;padding:10px 12px;border-left:4px solid var(--ghost)}
+.ghostline b{font:700 24px var(--display);font-variant-numeric:tabular-nums}
+.word{display:grid;gap:2px;border-left:4px solid var(--accent)}
+.word small{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.word b{font:700 30px/1.1 var(--display);color:var(--accent)}
+.word em{color:var(--muted);font-size:14px}
+.defi{border-left:4px solid #f5c542;display:grid;gap:8px}
+.defi b{font:700 20px var(--display);text-transform:uppercase;letter-spacing:.03em}
+.tl{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-variant-numeric:tabular-nums}
+.tl span:nth-child(even){font-weight:600;text-align:right}
+#sharebox input{width:100%;margin-top:6px}
+.mapwrap{position:relative}
+.mapbtn{position:absolute;top:8px;right:8px;z-index:500;padding:6px 10px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.mapbtn.recenter{top:auto;bottom:12px;left:50%;right:auto;transform:translateX(-50%);background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.mapstyles{position:absolute;top:8px;left:8px;z-index:500;display:flex;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.mapstyles button{border-radius:0;border:0;padding:6px 10px;font-size:13px;background:var(--panel)}
+.mapstyles button.on{background:var(--accent);color:var(--accent-fg)}
+#runmap{height:42vh;min-height:260px}
+.maplibregl-ctrl-attrib{font-size:10px}
+.replaybar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.replaybar button.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.acts .item small{display:block}
+.sendrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+h3{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 6px}
+.pfhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.pfhead b{font:700 30px var(--display);color:#f5c542}
+.xpbar{height:10px;border-radius:99px;background:var(--tile);overflow:hidden;margin:6px 0}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,#f5c542,#fb923c);width:0}
+.pfstats{display:flex;gap:16px;flex-wrap:wrap;font-weight:600}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.badge{display:grid;grid-template-columns:34px 1fr;gap:0 8px;align-items:center;background:var(--tile);border-radius:10px;padding:8px;opacity:.55}
+.badge.on{opacity:1;outline:1px solid #f5c54255}
+.badge svg{grid-row:span 2}.badge b{font-size:13px}.badge small{font-size:11px;color:var(--muted);line-height:1.25}
+#lvlPill{background:#f5c542;color:#1c1f23;border-color:#f5c542}
+.edrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.edrow select{padding:7px 8px}
+.edrep{border:1px dashed var(--line);border-radius:10px;padding:8px;margin:6px 0;display:grid;gap:4px}
+button.mini{padding:5px 8px;font-size:12px}
+.zenbox b#zMark{font:700 22px var(--display);color:var(--fg)}
+.zenbox #zGap{font:700 clamp(30px,9vw,48px) var(--display);color:var(--accent)}
+.tapbtn{font:700 22px var(--display);padding:18px 24px}
+.gains{display:grid;gap:4px;margin:6px 0 10px}
+.gains span{background:var(--tile);border-radius:8px;padding:6px 10px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.duo>div{background:var(--tile);border-radius:12px;padding:10px 12px;min-width:0}
+.duo small{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;gap:6px;min-height:22px}
+.duo b{display:block;font:700 clamp(40px,13vw,72px)/1 var(--display);font-variant-numeric:tabular-nums}
+.duo-me{border-left:4px solid #fb923c}.duo-me b{color:#fb923c}
+.duo-ref{border-left:4px solid #60a5fa}.duo-ref b{color:#60a5fa}
+.duo-gap{text-align:center;font:700 clamp(26px,8vw,40px) var(--display);margin-top:8px}
+.mini-medal svg{width:16px;height:21px;vertical-align:middle}
+.tabs{flex-wrap:wrap}
+.ahead{color:var(--accent)}.behind{color:var(--climb)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Hori<span>zon</span> <span id="lvlPill" class="pill" style="font:600 12px var(--body);vertical-align:middle">Niveau 1</span></h1>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-prep" aria-selected="true">Préparer</button>
+      <button class="tab" role="tab" id="tab-run" aria-selected="false">Tapis</button>
+      <button class="tab" role="tab" id="tab-out" aria-selected="false">Dehors</button>
+    </div>
+  </header>
+
+  <!-- ============ VUE PRÉPARER ============ -->
+  <section id="view-prep" class="wrap" style="padding:0">
+    <div class="panel defi" id="defibanner" hidden></div>
+
+    <div class="panel" id="pfPanel">
+      <h2>Mon profil</h2>
+      <div class="pfhead"><b id="pfLvl">Niveau 1</b><span id="pfXp" class="hint" style="margin:0"></span></div>
+      <div class="xpbar"><i id="pfBar"></i></div>
+      <div class="pfstats" id="pfStats"></div>
+      <h3>Records</h3>
+      <div class="tl" id="pfRecs"></div>
+      <details><summary style="cursor:pointer;margin-top:12px;font-weight:600">Badges</summary><div class="badges" id="pfBadges" style="margin-top:8px"></div></details>
+    </div>
+    <div class="panel">
+      <h2>Tracer le parcours</h2>
+      <div id="map"></div>
+      <p class="hint">Touche la carte pour ajouter des points : le tracé suit les chemins piétons. Ou importe un fichier GPX.</p>
+      <div class="row" style="margin-top:8px">
+        <button id="undo">Annuler le dernier point</button>
+        <button id="loop">Revenir au départ</button>
+        <button id="clear" class="danger">Tout effacer</button>
+        <label class="btn" style="flex-direction:row;color:var(--fg)">Importer un GPX<input id="gpx" type="file" accept=".gpx,application/gpx+xml" hidden></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Profil</h2>
+      <span id="routeinfo" class="hint" style="margin:0">Aucun parcours.</span>
+      <canvas id="profile"></canvas>
+      <div class="row" style="margin-top:8px">
+        <input id="rname" type="text" placeholder="Nom du parcours" style="flex:1">
+        <button id="save">Enregistrer</button>
+        <button id="go" class="primary">Courir ce parcours</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Mes parcours</h2>
+      <div id="routes" class="list"></div>
+      <div id="sharebox" class="hint" hidden></div>
+    </div>
+
+    <div class="panel">
+      <h2>Montre et Intervals.icu</h2>
+      <p class="hint" style="margin-top:0">Ta montre envoie tes courses à Intervals.icu, et Intervals.icu envoie tes séances à ta montre. En reliant Horizon à ton compte, tout circule dans les deux sens.</p>
+      <div class="settings">
+        <label>Identifiant athlète<input id="ivId" type="text" placeholder="i597195"></label>
+        <label>Clé API<input id="ivKey" type="password" placeholder="Clé API personnelle" autocomplete="off"></label>
+      </div>
+      <p class="hint">La clé se trouve dans Intervals.icu : Réglages, tout en bas, « Developer Settings », puis « API Key ». Elle reste sur cet appareil et ne part jamais dans un lien de défi.</p>
+      <div class="row" style="margin-top:8px">
+        <button id="ivTest">Tester la connexion</button>
+        <button id="ivImport">Importer mes séances</button>
+        <button id="ivActs">Mes dernières sorties</button>
+      </div>
+      <p id="ivMsg" class="hint"></p>
+      <div id="acts" class="list acts"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Séances guidées</h2>
+      <input id="wsearch" type="text" placeholder="Chercher une séance (côtes, 10k, sprint…)" style="width:100%;margin-bottom:8px">
+      <div id="wlist" class="list"></div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:600">Ajouter une séance d'Intervals.icu</summary>
+        <p class="hint">Ouvre une séance dans Intervals.icu, copie toute sa description et colle-la ici. Les étapes sont reconnues automatiquement.</p>
+        <input id="wname" type="text" placeholder="Nom de la séance" style="width:100%;margin-top:6px">
+        <textarea id="wtext" style="margin-top:6px" placeholder="Warmup&#10;- Échauffement 30m&#10;&#10;6x&#10;- Effort 40s intensity=interval&#10;- Récupération 20s intensity=recovery"></textarea>
+        <div class="row" style="margin-top:6px"><button id="wadd" class="primary">Ajouter la séance</button><span id="wmsg" class="hint" style="margin:0"></span></div>
+      </details>
+    </div>
+
+    <div class="panel" id="edPanel">
+      <h2>Créer une séance</h2>
+      <input id="edName" type="text" placeholder="Nom de la séance" style="width:100%">
+      <div id="edBlocks" style="margin-top:8px"></div>
+      <div class="row" id="edAdd" style="margin-top:8px">
+        <button class="mini" data-t="warm">+ Échauffement</button><button class="mini" data-t="foot">+ Footing</button><button class="mini" data-t="work">+ Effort</button>
+        <button class="mini" data-t="w10">+ Allure 10k</button><button class="mini" data-t="hill">+ Côte</button><button class="mini" data-t="rec">+ Récup</button>
+        <button class="mini" data-t="rep">+ Répétition</button><button class="mini" data-t="cool">+ Retour au calme</button>
+      </div>
+      <div class="bar" id="edBar" style="margin-top:10px"></div>
+      <p id="edTotal" class="hint"></p>
+      <div class="row"><button id="edSave" class="primary">Enregistrer la séance</button><button id="edClear">Vider</button><span id="edMsg" class="hint" style="margin:0"></span></div>
+    </div>
+
+    <div class="panel">
+      <h2>Mes allures</h2>
+      <div class="settings">
+        <label>Échauffement (km/h)<input id="vWarm" type="number" step="0.1" value="8"></label>
+        <label>Footing (km/h)<input id="vFoot" type="number" step="0.1" value="8.5"></label>
+        <label>Récupération (km/h)<input id="vRec" type="number" step="0.1" value="7"></label>
+        <label>Retour au calme (km/h)<input id="vCool" type="number" step="0.1" value="7.5"></label>
+        <label>Allure 10k (km/h)<input id="v10k" type="number" step="0.1" value="11"></label>
+        <label>Allure 5k (km/h)<input id="v5k" type="number" step="0.1" value="11.8"></label>
+        <label>Effort court (km/h)<input id="vShort" type="number" step="0.1" value="13.5"></label>
+        <label>Sprint (km/h)<input id="vSprint" type="number" step="0.1" value="15"></label>
+      </div>
+      <p class="hint">« Allure 10k plus vingt » ralentit l'allure 10k de 20 secondes au km. L'effort court sert aux efforts d'une minute ou moins. Pour les régler automatiquement, lance le « Test d'allures » dans Courir.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Réglages du tapis</h2>
+      <div class="settings">
+        <label>Pente minimale (%)<input id="incMin" type="number" step="0.5" value="0"></label>
+        <label>Pente maximale (%)<input id="incMax" type="number" step="0.5" value="12"></label>
+        <label>Intensité des côtes (%)<input id="incFactor" type="number" step="10" value="100"></label>
+        <label>Pente des « côtes » (%)<input id="incHill" type="number" step="0.5" value="6"></label>
+        <label>Vitesse maximale (km/h)<input id="spdMax" type="number" step="0.1" value="15.9"></label>
+        <label>Ton prénom (pour les défis)<input id="me" type="text" placeholder="Prénom"></label>
+      </div>
+      <h3>Calibrage du tapis</h3>
+      <p class="hint" style="margin-top:0">Beaucoup de tapis n'avancent pas exactement à la vitesse affichée. Colle un bout de scotch sur la bande, mesure la longueur totale de la bande (le tour complet, en cm), lance le test et touche le bouton à chaque passage du scotch pendant 60 s.</p>
+      <div class="row"><label>Longueur de la bande (cm)<input id="calLen" type="number" step="1" placeholder="ex. 290" style="width:120px"></label><button id="calStart">Lancer le calibrage</button><button id="calReset" class="mini">Effacer</button></div>
+      <div class="row" style="margin-top:8px"><button id="calTap" class="primary tapbtn" disabled>Repère passé (0)</button></div>
+      <p id="calMsg" class="hint"></p><p id="calInfo" class="hint"></p>
+      <p class="hint">Un tapis ne descend pas : les descentes passent à la pente minimale. « Intensité » à 50 % divise les côtes du parcours par deux. La pente des « côtes » s'ajoute pendant les étapes nommées « Côte » dans une séance.</p>
+    </div>
+  </section>
+
+  <!-- ============ VUE COURIR ============ -->
+  <!-- ============ VUE DEHORS ============ -->
+  <section id="view-out" class="wrap" style="padding:0" hidden>
+    <div class="panel">
+      <h2>Course dehors</h2>
+      <div class="settings">
+        <label>Parcours<select id="oRoute"></select></label>
+        <label>Défi<select id="oRef">
+          <option value="">Aucun</option>
+          <option value="dist">Mon meilleur temps sur une distance</option>
+          <option value="route">Mon record sur ce parcours</option>
+          <option value="watch">Ma sortie importée de la montre</option>
+          <option value="friend">Défi reçu d'un ami</option></select></label>
+        <label id="oDistBox">Distance visée (km)<input id="oDist" type="number" step="0.5" value="5"></label>
+      </div>
+      <p id="oInfo" class="hint"></p>
+      <div class="row" style="justify-content:space-between;margin-top:8px">
+        <span id="oHrPill" class="pill">Montre non connectée</span>
+        <button id="oHr">Connecter la montre (cardio)</button>
+      </div>
+      <p class="hint">Toutes les montres et ceintures qui diffusent le cardio en Bluetooth fonctionnent : Amazfit, Garmin, Polar, Coros, Suunto, Wahoo… Le GPS est celui du téléphone. Garde l'écran allumé pendant la course : Chrome coupe le GPS quand l'écran s'éteint.</p>
+    </div>
+
+    <div class="panel duo-panel">
+      <div class="duo">
+        <div class="duo-me"><small>Toi <span id="oMeMedal"></span></small><b id="oMe">0:00</b></div>
+        <div class="duo-ref" id="oRefBox"><small><span id="oRefLab">Record</span> <span id="oRefMedal"></span></small><b id="oRec">–</b></div>
+      </div>
+      <div class="duo-gap" id="oGap">Prêt</div>
+    </div>
+
+    <div class="panel stats">
+      <div class="stat"><small>Distance km</small><b id="oDistV">0,00</b></div>
+      <div class="stat"><small>Allure /km</small><b id="oPace">–</b></div>
+      <div class="stat"><small>Cardio</small><b id="oHrV">–</b></div>
+      <div class="stat"><small>Moyenne /km</small><b id="oAvg">–</b></div>
+      <div class="stat"><small>Dernier km</small><b id="oSplit">–</b></div>
+      <div class="stat"><small>GPS</small><b id="oGps" style="font-size:22px">–</b></div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <button id="oStart" class="primary">Démarrer</button>
+        <button id="oPause" disabled>Pause</button>
+        <button id="oStop" class="danger" disabled>Terminer</button>
+      </div>
+      <div id="omap" style="height:38vh;min-height:240px;border-radius:8px;overflow:hidden;margin-top:10px"></div>
+    </div>
+
+    <div class="panel" id="oAfter" hidden>
+      <h2>Après la course</h2>
+      <div id="oGain" class="gains"></div>
+      <p id="oAfterTxt" class="hint" style="margin-top:0"></p>
+      <div class="row">
+        <input id="oName" type="text" placeholder="Nom du parcours" style="flex:1">
+        <button id="oSaveRoute">Enregistrer comme parcours</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button id="oUpload">Envoyer à Intervals.icu</button></div>
+      <p id="oMsg" class="hint"></p>
+    </div>
+  </section>
+
+  <section id="view-run" class="wrap" style="padding:0" hidden>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <span id="bt" class="pill">Tapis non connecté</span>
+        <button id="connect">Connecter le tapis</button>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px">
+        <span id="hrpill" class="pill">Montre non connectée</span>
+        <button id="hrconnect">Connecter la montre (cardio)</button>
+      </div>
+      <p class="hint" id="bthint">Sans connexion, l'application fonctionne en simulation : tu règles la vitesse ici et la pente s'affiche pour que tu la mettes à la main.</p>
+      <div class="settings" style="margin-top:10px">
+        <label>Séance<select id="wsel"></select></label>
+        <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
+      </div>
+      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
+    </div>
+
+    <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
+
+    <div class="panel" id="testres" hidden>
+      <h2>Résultat du test</h2>
+      <div id="testtxt"></div>
+      <div class="row" style="margin-top:8px"><button id="testapply" class="primary">Appliquer ces allures</button><span id="testmsg" class="hint" style="margin:0"></span></div>
+    </div>
+
+    <div class="panel step" id="steppanel" hidden>
+      <div class="now" id="stNow">–</div>
+      <div class="left" id="stLeft">0:00</div>
+      <div class="next" id="stNext">–</div>
+      <div class="bar" id="stBar"></div>
+    </div>
+
+    <div class="panel stats">
+      <div class="stat"><small>Vitesse km/h</small><b id="sSpeed">0,0</b></div>
+      <div class="stat climb"><small>Pente %</small><b id="sInc">0,0</b></div>
+      <div class="stat"><small>Allure /km</small><b id="sPace">–</b></div>
+      <div class="stat"><small>Distance km</small><b id="sDist">0,00</b></div>
+      <div class="stat"><small>Temps</small><b id="sTime">0:00</b></div>
+      <div class="stat climb"><small>D+ m</small><b id="sGain">0</b></div>
+      <div class="stat big"><span><small>À venir (200 m)</small><br><span id="sNext">–</span></span><span><small>Restant</small><br><span id="sLeft">–</span></span><span><small>Cardio</small><br><span id="sHr">–</span></span></div>
+      <div class="stat big zenbox" id="zenbox" hidden><span><small>Prochain repère</small><br><b id="zMark">–</b></span><b id="zGap">–</b></div>
+      <div class="ghostline big" id="ghostbox" hidden><span><small>Défi</small><br><span id="gLabel">–</span></span><b id="gGap">–</b></div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <button id="sm1">−1</button><button id="sm05">−0,5</button>
+        <button id="sp05">+0,5</button><button id="sp1">+1</button>
+        <span class="hint" style="margin:0">vitesse</span>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button id="start" class="primary">Démarrer</button>
+        <button id="pause" disabled>Pause</button>
+        <button id="skip" disabled>Étape suivante</button>
+        <button id="stop" class="danger" disabled>Terminer</button>
+        <a id="sv" class="btn" href="#" target="_blank" rel="noopener">Voir la rue ici</a>
+      </div>
+      <p class="hint">Avant de démarrer, accroche la clé de sécurité du tapis. Tu peux toujours changer la vitesse sur le tapis lui-même : l'application suit jusqu'à l'étape suivante.</p>
+    </div>
+
+    <div class="panel">
+      <div class="mapwrap"><div id="runmap"></div><div class="mapstyles" id="mapstyles"><button data-s="plan">Plan</button><button data-s="sat">Satellite</button><button data-s="dark">Sombre</button></div><button class="mapbtn" id="btn3d">2D</button><button class="mapbtn recenter" id="recenter" hidden>Recentrer</button></div>
+      <div class="legend"><span><i style="background:var(--climb)"></i>Toi</span><span id="legGhost" hidden><i style="background:var(--ghost)"></i><span id="legRef">Ton record</span></span><span id="legMedal" hidden>La médaille montre qui est en tête</span></div>
+      <canvas id="runprofile" style="margin-top:8px"></canvas>
+    </div>
+
+    <div class="panel" id="after" hidden>
+      <h2>Après la course</h2>
+      <div id="afterGain" class="gains"></div>
+      <p id="afterTxt" class="hint" style="margin-top:0"></p>
+      <div class="row">
+        <button id="replay" class="primary">Revoir en 3D</button>
+        <button id="ivUpload">Envoyer à Intervals.icu</button>
+      </div>
+      <div class="replaybar" id="replaybar" hidden>
+        <span class="hint" style="margin:0">Vitesse</span>
+        <button data-x="10">×10</button><button data-x="30" class="on">×30</button><button data-x="60">×60</button>
+        <button id="replayStop" class="danger">Arrêter</button>
+        <span id="replayClock" class="hint" style="margin:0"></span>
+      </div>
+      <p id="upMsg" class="hint"></p>
+      <div class="row"><button id="fixWatch">Accorder la montre et le tapis</button></div>
+      <p id="fixMsg" class="hint">Ta montre a aussi enregistré la course ? Horizon compare sa distance à celle du tapis et corrige la montre dans Intervals.icu.</p>
+    </div>
+
+    <div class="panel"><h2>Journal</h2><div id="log"></div></div>
+  </section>
+</div>
+
+<script src="native.js"></script>
+<script>window.SHARE_BASE="";/*SHARE_BASE*/</script>
+<script src="lib/leaflet.js"></script>
+<script src="lib/maplibre-gl.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fmt=(n,d=1)=>(+n).toFixed(d).replace('.',',');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const STEP=20; // un point de parcours tous les 20 m
+const log=m=>{const el=$('log');el.textContent=(new Date().toLocaleTimeString()+'  '+m+'\n'+el.textContent).slice(0,4000)};
+const clock=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){log('Stockage plein ou bloqué')}}};
+
+/* ================= GÉOMÉTRIE ================= */
+function hav(a,b){const R=6371000,r=Math.PI/180;const dl=(b[0]-a[0])*r,dn=(b[1]-a[1])*r;
+  const x=Math.sin(dl/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function resample(pts){
+  if(pts.length<2)return pts.map(p=>[p[0],p[1],p[2]??null]);
+  const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+hav(pts[i-1],pts[i]));
+  const tot=cum[cum.length-1],out=[];let j=0;
+  for(let d=0;d<=tot;d+=STEP){while(j<cum.length-2&&cum[j+1]<d)j++;
+    const seg=cum[j+1]-cum[j]||1,t=(d-cum[j])/seg,a=pts[j],b=pts[j+1];
+    const e=(a[2]!=null&&b[2]!=null)?a[2]+(b[2]-a[2])*t:null;
+    out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,e])}
+  const l=pts[pts.length-1];out.push([l[0],l[1],l[2]??null]);return out}
+function smooth(arr,w=3){return arr.map((_,i)=>{let s=0,n=0;for(let k=-w;k<=w;k++){const v=arr[i+k];if(v!=null){s+=v;n++}}return n?s/n:arr[i]})}
+
+/* ================= PARCOURS ================= */
+let route=null;
+function setRoute(pts,name){
+  const e=smooth(pts.map(p=>p[2]??0));const p2=pts.map((p,i)=>[p[0],p[1],e[i]]);
+  const dist=[0];for(let i=1;i<p2.length;i++)dist.push(dist[i-1]+hav(p2[i-1],p2[i]));
+  route={name:name||'Parcours',pts:p2,dist};buildMarks();markSaid=-1;drawPrep();drawProfile($('profile'),-1);updateGhostInfo()}
+const total=()=>route?route.dist[route.dist.length-1]:0;
+function idxAt(x){const d=route.dist;let lo=0,hi=d.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(d[m]<=x)lo=m;else hi=m}return lo}
+function posAt(x){x=Math.max(0,Math.min(total(),x));const d=route.dist,i=idxAt(x),j=Math.min(i+1,d.length-1),seg=d[j]-d[i]||1,t=Math.min(1,Math.max(0,(x-d[i])/seg)),a=route.pts[i],b=route.pts[j];
+  return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]}
+const wrapX=x=>{const T=total();return T>0?((x%T)+T)%T:0};
+const eleAt=x=>posAt(x)[2];
+const gradeAt=x=>(eleAt(x+40)-eleAt(x-40))/80*100;
+function gain(){let g=0;for(let i=1;i<route.pts.length;i++){const d=route.pts[i][2]-route.pts[i-1][2];if(d>0)g+=d}return g}
+
+async function addElevation(pts){
+  const out=pts.map(p=>[p[0],p[1],null]);
+  for(let i=0;i<pts.length;i+=100){const ch=pts.slice(i,i+100);
+    const u=`https://api.open-meteo.com/v1/elevation?latitude=${ch.map(p=>p[0].toFixed(5)).join(',')}&longitude=${ch.map(p=>p[1].toFixed(5)).join(',')}`;
+    const r=await fetch(u);if(!r.ok)throw new Error('altitude indisponible');const j=await r.json();
+    j.elevation.forEach((e,k)=>out[i+k][2]=e)}
+  return out}
+async function routeThrough(wps){
+  const c=wps.map(w=>w[1].toFixed(6)+','+w[0].toFixed(6)).join(';');
+  try{const r=await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/driving/${c}?overview=full&geometries=geojson`);
+    const j=await r.json();if(j.code!=='Ok')throw 0;return j.routes[0].geometry.coordinates.map(p=>[p[1],p[0],null])}
+  catch(e){log('Itinéraire indisponible, tracé en ligne droite');return wps.map(w=>[w[0],w[1],null])}}
+
+/* ---------- carte de préparation ---------- */
+const tiles=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'});
+const map=L.map('map').setView([49.0486,1.6011],14);tiles().addTo(map);
+let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
+function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
+  if(line)map.removeLayer(line);line=null;
+  if(route){line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(map);
+    $('routeinfo').textContent=`${route.name} · ${fmt(total()/1000,2)} km · D+ ${Math.round(gain())} m · temps à 10 km/h : ${Math.round(total()/1000/10*60)} min`}
+  else $('routeinfo').textContent='Aucun parcours.'}
+let busy=false;
+async function rebuild(){if(wps.length<2){route=null;drawPrep();drawProfile($('profile'),-1);return}
+  if(busy)return;busy=true;$('routeinfo').textContent='Calcul du parcours…';
+  try{let p=await routeThrough(wps);p=resample(p);p=await addElevation(p);setRoute(p,$('rname').value||'Mon parcours')}
+  catch(e){$('routeinfo').textContent='Erreur : '+e.message+'. Vérifie la connexion internet.'}
+  busy=false}
+map.on('click',e=>{wps.push([e.latlng.lat,e.latlng.lng]);drawPrep();rebuild()});
+$('undo').onclick=()=>{wps.pop();rebuild()};
+$('loop').onclick=()=>{if(wps.length>1){wps.push(wps[0]);rebuild()}};
+$('clear').onclick=()=>{wps=[];route=null;drawPrep();drawProfile($('profile'),-1)};
+$('gpx').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;
+  const xml=new DOMParser().parseFromString(await f.text(),'application/xml');
+  let pts=[...xml.querySelectorAll('trkpt, rtept')].map(n=>{const e=n.querySelector('ele');return[+n.getAttribute('lat'),+n.getAttribute('lon'),e?+e.textContent:null]});
+  if(pts.length<2){$('routeinfo').textContent='Ce fichier ne contient pas de tracé.';return}
+  const name=(xml.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).trim();
+  pts=resample(pts);
+  if(pts.filter(p=>p[2]==null).length>pts.length/10){$('routeinfo').textContent='Récupération des altitudes…';try{pts=await addElevation(pts)}catch(e){pts=pts.map(p=>[p[0],p[1],p[2]??0])}}
+  wps=[];$('rname').value=name;setRoute(pts,name);map.fitBounds(line.getBounds());ev.target.value=''};
+
+/* ---------- parcours enregistrés ---------- */
+function listRoutes(){const rs=store.get('routes',[]),box=$('routes');box.innerHTML='';
+  if(!rs.length){box.innerHTML='<p class="hint">Aucun parcours enregistré. Trace-en un puis touche « Enregistrer ».</p>';return}
+  const runs=store.get('runs',{});
+  rs.forEach((r,i)=>{const d=document.createElement('div');d.className='item';
+    const mine=Object.keys(runs).filter(k=>k.startsWith(r.name+'|')).reduce((n,k)=>n+runs[k].length,0);
+    d.innerHTML=`<span><b>${esc(r.name)}</b><br><small class="hint">${fmt(r.km,2)} km · D+ ${r.gain} m${mine?' · '+mine+' course'+(mine>1?'s':''):''}</small></span>`;
+    const b=document.createElement('div');b.className='row';
+    const o=document.createElement('button');o.textContent='Ouvrir';o.onclick=()=>{wps=[];$('rname').value=r.name;setRoute(r.pts,r.name);map.fitBounds(line.getBounds())};
+    const x=document.createElement('button');x.textContent='Supprimer';x.className='danger';x.onclick=()=>{if(x.dataset.ok){rs.splice(i,1);store.set('routes',rs);listRoutes()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}};
+    const c=document.createElement('button');c.textContent='Défier un ami';c.onclick=()=>shareChallenge(r);
+    b.append(o,c,x);d.append(b);box.append(d)})}
+async function pack(obj){const st=new Blob([JSON.stringify(obj)]).stream().pipeThrough(new CompressionStream('deflate-raw'));const u=new Uint8Array(await new Response(st).arrayBuffer());let b='';for(let i=0;i<u.length;i+=8192)b+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function unpack(str){const b=atob(str.replace(/-/g,'+').replace(/_/g,'/'));const u=Uint8Array.from(b,c=>c.charCodeAt(0));const st=new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate-raw'));return JSON.parse(await new Response(st).text())}
+async function shareChallenge(r){const box=$('sharebox');box.hidden=false;const runs=store.get('runs',{});let best=null,bk=null;
+  Object.keys(runs).filter(k=>k.startsWith(r.name+'|')).forEach(k=>runs[k].filter(x=>x.done).forEach(x=>{if(!best||x.dist/x.time>best.dist/best.time){best=x;bk=k}}));
+  if(!best){box.textContent=`Cours d'abord « ${r.name} » jusqu'au bout une fois : ta course servira de défi.`;return}
+  const wn=bk.split('|').slice(1).join('|'),w=wn!=='libre'&&wn!=='__test'?workouts().find(o=>o.name===wn):null;
+  const payload={v:1,n:r.name,by:store.get('me','')||'',p:r.pts.map(q=>[+q[0].toFixed(5),+q[1].toFixed(5),Math.round(q[2])]),w:w?w.name:'',wt:w?w.text:'',
+    run:{date:best.date,time:best.time,dist:best.dist,done:true,s:best.s.filter((_,i)=>i%5===0||i===best.s.length-1)}};
+  const base=window.SHARE_BASE||(window.HORIZON_ANDROID?'':location.href.split('#')[0]);const url=base+'#defi='+await pack(payload);
+  const by=payload.by||'Je';const text=`${by} te lance un défi sur Horizon : « ${r.name} », ${fmt(r.km,2)} km${w?', séance '+w.name:''}. Temps à battre : ${clock(best.time)}.`;
+  box.innerHTML=`<b>Défi prêt</b> (${clock(best.time)} à battre). Envoie ce lien à ton ami :<input type="text" readonly id="shareurl">`+(location.protocol==='file:'||!base?'<br>Le lien ne fonctionnera qu\'une fois Horizon mis en ligne.':'');
+  $('shareurl').value=url;$('shareurl').onclick=e=>e.target.select();
+  if(!payload.by)box.insertAdjacentHTML('beforeend','<br>Astuce : indique ton prénom dans les réglages pour qu\'il apparaisse dans le défi.');
+  {const P=prof();if(!P.badges.sender){P.badges.sender=new Date().toISOString();P.xp+=200;store.set('profile',P);renderProfile()}}
+  try{if(navigator.share){await navigator.share({title:'Défi Horizon',text,url});return}}catch(e){}
+  try{await navigator.clipboard.writeText(text+' '+url);box.insertAdjacentHTML('beforeend','<br>Lien copié : colle-le dans WhatsApp ou un SMS.')}catch(e){}}
+async function importChallenge(){const h=location.hash;if(!h.startsWith('#defi='))return;let d;try{d=await unpack(h.slice(6))}catch(e){log('Lien de défi illisible');return}
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+  const name=d.n,by=d.by||'Un ami';const pts=d.p.map(q=>[q[0],q[1],q[2]]);
+  const rs=store.get('routes',[]).filter(x=>x.name!==name);setRoute(pts,name);
+  rs.unshift({name,km:total()/1000,gain:Math.round(gain()),pts});store.set('routes',rs);
+  if(d.wt){const ws=store.get('workouts',[]).filter(x=>x.name!==d.w);ws.push({name:d.w,text:d.wt});store.set('workouts',ws)}
+  store.set('friend',{route:name,by:d.by||'',run:d.run});listRoutes();listWorkouts();$('rname').value=name;map.fitBounds(line.getBounds());
+  const b=$('defibanner');b.hidden=false;
+  b.innerHTML=`<b>${esc(by)} te lance un défi</b><span>Parcours « ${esc(name)} », ${fmt(total()/1000,2)} km, D+ ${Math.round(gain())} m${d.w?', séance « '+esc(d.w)+' »':''}. Temps à battre : <b style="font-size:18px">${clock(d.run.time)}</b>.</span><div class="row"><button class="primary" id="takeDefi">Relever le défi</button></div>`;
+  $('takeDefi').onclick=()=>{$('wsel').value=d.w||'';$('gsel').value='friend';b.hidden=true;resetRun();updateGhostInfo();show('run')}}
+$('save').onclick=()=>{if(!route)return;const name=$('rname').value.trim()||route.name;route.name=name;
+  const rs=store.get('routes',[]).filter(r=>r.name!==name);
+  rs.unshift({name,km:total()/1000,gain:Math.round(gain()),pts:route.pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),Math.round(p[2]*10)/10])});
+  store.set('routes',rs);listRoutes();drawPrep();updateGhostInfo()};
+
+/* ================= SÉANCES ================= */
+/* Lit la syntaxe des séances Intervals.icu : Warmup / Cooldown, Nx, « - Libellé 30s intensity=interval », 400mtr, 1km */
+function parseWorkout(text){
+  const lines=text.replace(/\r/g,'').split('\n');const steps=[];let section=null,rep=0,block=[];
+  const flush=()=>{if(rep){for(let k=0;k<rep;k++)block.forEach(s=>steps.push({...s}));rep=0;block=[]}};
+  for(const raw of lines){const l=raw.trim();
+    if(!l){flush();section=null;continue}
+    if(/^warm\s*up$/i.test(l)){flush();section='warm';continue}
+    if(/^cool\s*down$/i.test(l)){flush();section='cool';continue}
+    const m=l.match(/^(\d+)\s*x$/i);if(m){flush();rep=+m[1];continue}
+    if(!l.startsWith('-'))continue;
+    let t=l.slice(1).trim(),type=section==='warm'?'warm':section==='cool'?'cool':'foot';
+    const im=t.match(/intensity=(\w+)/i);if(im){t=t.replace(im[0],'');if(!section){const v=im[1].toLowerCase();type=v==='interval'?'work':v==='recovery'?'rec':v==='warmup'?'warm':v==='cooldown'?'cool':'foot'}}
+    let dur=0,dist=0;
+    t=t.replace(/(?:^|\s)(\d+(?:[.,]\d+)?)\s*(mtr|km)(?=\s|$)/i,(a,n,u)=>{dist=parseFloat(n.replace(',','.'))*(u.toLowerCase()==='km'?1000:1);return ' '});
+    t=t.replace(/(?:^|\s)((?:\d+h)?(?:\d+m(?!tr))?(?:\d+s)?)(?=\s|$)/,(a,g)=>{if(!g)return a;const h=g.match(/(\d+)h/),mm=g.match(/(\d+)m/),s=g.match(/(\d+)s/);dur=(h?+h[1]*3600:0)+(mm?+mm[1]*60:0)+(s?+s[1]:0);return ' '});
+    t=t.replace(/\S+\s+Pace/i,'').replace(/\s+/g,' ').trim();
+    if(!dur&&!dist)continue;
+    const st={label:t||(type==='work'?'Effort':type==='rec'?'Récupération':'Footing'),type,dur,dist};
+    if(rep)block.push(st);else steps.push(st)}
+  flush();return steps}
+function speedFor(s){const V=k=>+$(k).value;const L=s.label.toLowerCase();let v;
+  if(s.type==='warm')v=V('vWarm');else if(s.type==='cool')v=V('vCool');else if(s.type==='rec')v=V('vRec');
+  else if(/sprint/.test(L))v=V('vSprint');
+  else if(/5 ?k/.test(L)||/10 ?k/.test(L)){let pace=3600/(/5 ?k/.test(L)?V('v5k'):V('v10k'));
+    if(/plus une minute vingt/.test(L))pace+=80;else if(/plus une minute/.test(L))pace+=60;else if(/plus trente/.test(L))pace+=30;else if(/plus vingt/.test(L))pace+=20;else if(/plus dix/.test(L))pace+=10;
+    v=3600/pace}
+  else if(s.type==='work')v=(s.dur&&s.dur<=60)||(s.dist&&s.dist<=300)?V('vShort'):V('v10k');
+  else v=V('vFoot');
+  return Math.min(+$('spdMax').value,Math.round(v*10)/10)}
+const isHill=s=>/c[ôo]te/i.test(s.label);
+const stepSec=s=>s.dur||s.dist/(speedFor(s)/3.6);
+const BUILTIN=[
+ {name:"Fond et sprints",text:`Warmup\n- Échauffement 20m\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\n- Récupération entre les blocs 2m20s intensity=recovery\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\nCooldown\n- Retour au calme 9m20s`},
+ {name:"Fractionné 40-30-20",text:`Warmup\n- Échauffement 30m\n\n6x\n- Effort 40s intensity=interval\n- Récupération 20s intensity=recovery\n\n- Récupération 3m intensity=recovery\n\n6x\n- Effort 30s intensity=interval\n- Récupération 30s intensity=recovery\n\n- Récupération 3m intensity=recovery\n\n6x\n- Effort 20s intensity=interval\n- Récupération 40s intensity=recovery`},
+ {name:"Pyramide allure 10k",text:`Warmup\n- Échauffement 30m\n\n- Allure 10k plus vingt 8m intensity=interval\n- Récupération 2m intensity=recovery\n- Allure 10k plus dix 6m intensity=interval\n- Récupération 2m intensity=recovery\n- Allure 10k 4m intensity=interval\n- Récupération 2m intensity=recovery\n- Allure 5k 2m intensity=interval\n- Récupération 2m intensity=recovery\n- Allure 10k plus vingt 8m intensity=interval`},
+ {name:"10 côtes toniques",text:`Warmup\n- Échauffement 30m\n\n10x\n- Côte tonique 30s intensity=interval\n- Récupération 3m intensity=recovery`},
+ {name:"Footing long avec bloc soutenu",text:`- Footing cool 40m intensity=active\n\n- Allure 10k plus une minute vingt 30m intensity=interval\n\n- Footing cool 10m intensity=active`}];
+const workouts=()=>[...BUILTIN.map(w=>({...w,builtin:true})),...store.get('workouts',[])];
+function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsearch')?.value||'').trim().toLowerCase();let shown=0,hidden=0;const sel=$('wsel'),cur=sel.value;sel.innerHTML='<option value="">Course libre (pas de séance)</option><option value="__test">Test d\'allures (25 min)</option>';
+  {const d=document.createElement('div');d.className='item';d.innerHTML=`<span><b>Test d'allures</b><br><small class="hint">10 min d'échauffement, 10 min au plus vite que tu peux tenir, 5 min de retour au calme. Calcule toutes tes allures.</small></span>`;
+   const u=document.createElement('button');u.textContent='Choisir';u.onclick=()=>{sel.value='__test';updateGhostInfo();renderSteps();show('run')};d.append(u);box.append(d)}
+  workouts().forEach((w,i)=>{
+    const st=parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0);
+    const vis=(!qy||(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))&&shown<40;if(vis)shown++;else hidden++;
+    const d=document.createElement('div');d.className='item';if(!vis)d.hidden=true;
+    d.innerHTML=`<span><b>${esc(w.name)}</b><br><small class="hint">${w.folder?esc(w.folder)+' · ':''}${st.length} étapes · ${clock(sec)}${w.builtin?' · déjà fournie':''}</small></span>`;
+    const b=document.createElement('div');b.className='row';
+    const u=document.createElement('button');u.textContent='Choisir';u.onclick=()=>{sel.value=w.name;updateGhostInfo();show('run')};b.append(u);
+    const mw=document.createElement('button');mw.textContent='Sur la montre';mw.onclick=()=>sendToWatch(w,d,mw);b.append(mw);
+    const me=document.createElement('button');me.textContent='Modifier';me.onclick=()=>{show('prep');editWorkout(w)};b.append(me);
+    if(!w.builtin){const x=document.createElement('button');x.textContent='Supprimer';x.className='danger';
+      x.onclick=()=>{if(x.dataset.ok){store.set('workouts',store.get('workouts',[]).filter(o=>o.name!==w.name));listWorkouts()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}};b.append(x)}
+    d.append(b);box.append(d);
+    const o=document.createElement('option');o.value=w.name;o.textContent=w.name;sel.append(o)});
+  if(hidden&&qy)box.insertAdjacentHTML('beforeend',`<p class="hint">${hidden} autre${hidden>1?'s':''} séance${hidden>1?'s':''} non affichée${hidden>1?'s':''}. Précise ta recherche.</p>`);
+  else if(hidden)box.insertAdjacentHTML('beforeend',`<p class="hint">${hidden} autres séances : utilise la recherche.</p>`);
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:''}
+$('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()||(text.match(/^[^\n:-]{1,20}:\s*(.{0,40})/)?.[1]?.trim())||'Ma séance';
+  const st=parseWorkout(text);if(!st.length){$('wmsg').textContent="Je n'ai trouvé aucune étape. Vérifie que les lignes commencent par « - ».";return}
+  const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
+  $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
+let workout=null;
+$('wsel').onchange=()=>{updateGhostInfo();renderSteps()};
+
+/* ================= FANTÔME ================= */
+const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
+const de=n=>/^[aeiouyhàâéèêëîïôûù]/i.test(n)?"d'"+n:'de '+n;
+function refName(){const m=$('gsel').value,f=store.get('friend',null),by=(f&&f.by)||'';
+  if(m==='friend')return by?{fr:'le record '+de(by),Fr:'Le record '+de(by),en:by+"'s record",En:by+"'s record",lab:'Défi '+de(by)}:{fr:'le record de ton ami',Fr:'Le record de ton ami',en:"your friend's record",En:"Your friend's record",lab:"Défi d'un ami"};
+  if(m==='watch')return{fr:'ta sortie dehors',Fr:'Ta sortie dehors',en:'your outdoor run',En:'Your outdoor run',lab:'Ta sortie dehors'};
+  if(m==='last')return{fr:'ta dernière course',Fr:'Ta dernière course',en:'your last run',En:'Your last run',lab:'Ta dernière course'};
+  return{fr:'ton record',Fr:'Ton record',en:'your record',En:'Your record',lab:'Ton record'}}
+function ghostRun(){const mode=$('gsel').value;if(!mode||!route)return null;
+  if(mode==='friend'){const f=store.get('friend',null);return f&&f.route===route.name?f.run:null}
+  if(mode==='watch'){const w=store.get('watchRuns',{})[route.name];return w||null}const list=store.get('runs',{})[runKey()]||[];if(!list.length)return null;
+  if(mode==='last')return list[list.length-1];
+  const done=list.filter(r=>r.done);if(done.length)return done.reduce((a,b)=>a.time<=b.time?a:b);
+  return list.reduce((a,b)=>a.dist/a.time>=b.dist/b.time?a:b)}
+function gDistAt(g,t){const s=g.s;if(t<=0)return 0;if(t>=s[s.length-1][0])return s[s.length-1][1];let i=0;while(s[i+1][0]<t)i++;const a=s[i],b=s[i+1];return a[1]+(b[1]-a[1])*(t-a[0])/((b[0]-a[0])||1)}
+function gTimeAt(g,d){const s=g.s;if(d>s[s.length-1][1])return null;let i=0;while(s[i+1]&&s[i+1][1]<d)i++;const a=s[i],b=s[i+1]||a;return a[0]+(b[0]-a[0])*(d-a[1])/((b[1]-a[1])||1)}
+function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]);
+  if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${clock(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
+  if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${clock(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
+  $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
+$('gsel').onchange=updateGhostInfo;
+function saveRun(done){if(run.time<60||!route)return;const all=store.get('runs',{}),k=runKey(),list=all[k]||[];
+  run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0]);
+  list.push({date:new Date().toISOString(),time:Math.round(run.time),dist:Math.round(run.dist),done,s:run.samples});
+  while(list.length>10)list.shift();all[k]=list;store.set('runs',all);updateGhostInfo();listRoutes();log('Course enregistrée pour tes prochains défis')}
+
+/* ================= PROFIL ================= */
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function drawProfile(cv,x,gx){const dpr=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;cv.width=w*dpr;cv.height=h*dpr;
+  const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+  if(!route){g.fillStyle=css('--muted');g.font='14px sans-serif';g.fillText('Trace un parcours pour voir le profil.',8,h/2);return}
+  const es=route.pts.map(p=>p[2]),mn=Math.min(...es),mx=Math.max(...es),T=total(),pad=18;
+  const X=d=>pad+(w-2*pad)*d/T,Y=e=>h-pad-(h-2*pad)*((e-mn)/((mx-mn)||1));
+  g.beginPath();g.moveTo(X(0),h-pad);route.pts.forEach((p,i)=>g.lineTo(X(route.dist[i]),Y(p[2])));g.lineTo(X(T),h-pad);g.closePath();
+  g.fillStyle=css('--accent')+'33';g.fill();
+  g.beginPath();route.pts.forEach((p,i)=>i?g.lineTo(X(route.dist[i]),Y(p[2])):g.moveTo(X(0),Y(p[2])));g.strokeStyle=css('--accent');g.lineWidth=2;g.stroke();
+  g.fillStyle=css('--muted');g.font='11px sans-serif';g.fillText(Math.round(mx)+' m',pad,11);g.fillText(Math.round(mn)+' m',pad,h-4);
+  g.textAlign='right';g.fillText(fmt(T/1000,1)+' km',w-pad,h-4);
+  const mark=(d,c)=>{g.strokeStyle=c;g.lineWidth=2;g.beginPath();g.moveTo(X(d),pad/2);g.lineTo(X(d),h-pad);g.stroke();g.fillStyle=c;g.beginPath();g.arc(X(d),Y(eleAt(d)),5,0,7);g.fill()};
+  if(gx!=null)mark(wrapX(gx),css('--ghost'));
+  if(x>=0)mark(x,css('--climb'))}
+let lastGx=null;
+addEventListener('resize',()=>{drawProfile($('profile'),-1);drawProfile($('runprofile'),wrapX(run.dist),lastGx)});
+
+/* ================= ONGLETS ================= */
+const dotHTML=c=>`<svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="${c}" stroke="#ffffff" stroke-width="3"/></svg>`;
+const medalHTML=c=>`<svg width="30" height="40" viewBox="0 0 30 40" aria-label="En tête"><path d="M6 0h7l5 14h-7z" fill="${c}"/><path d="M24 0h-7l-5 14h7z" fill="${c}"/><circle cx="15" cy="26" r="11" fill="#f5c542" stroke="#ffffff" stroke-width="2.5"/><circle cx="15" cy="26" r="7" fill="none" stroke="#b8860b" stroke-width="1.5"/><path d="M15 21.3l1.5 3 3.2.5-2.3 2.2.5 3.2-2.9-1.5-2.9 1.5.5-3.2-2.3-2.2 3.2-.5z" fill="#b8860b"/></svg>`;
+const ME_C='#fb923c',REF_C='#60a5fa';
+function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return(Math.atan2(y,x)/r+360)%360}
+/* Carte de course : 3D avec relief (MapLibre) si possible, sinon carte 2D (Leaflet) */
+const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
+  init(){if(this.map)return;
+    if(window.maplibregl){try{this.initGL();return}catch(e){log('Carte 3D indisponible sur cet appareil, carte 2D à la place')}}
+    this.initLeaf()},
+  styleName:null,userUntil:0,
+  styleFor(n){const OFM='https://tiles.openfreemap.org';
+    if(n==='plan')return OFM+'/styles/liberty';
+    const ofm={type:'vector',url:OFM+'/planet'};
+    if(n==='sat')return{version:8,glyphs:OFM+'/fonts/{fontstack}/{range}.pbf',sources:{
+        sat:{type:'raster',tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],tileSize:256,maxzoom:19,attribution:'Imagerie © Esri, Maxar, Earthstar Geographics'},ofm},
+      layers:[{id:'bg',type:'background',paint:{'background-color':'#1c1f23'}},{id:'sat',type:'raster',source:'sat'},
+        {id:'b3d',type:'fill-extrusion',source:'ofm','source-layer':'building',minzoom:14,paint:{'fill-extrusion-color':'#e7e5e4','fill-extrusion-height':['coalesce',['get','render_height'],6],'fill-extrusion-base':['coalesce',['get','render_min_height'],0],'fill-extrusion-opacity':0.75}},
+        {id:'roads-lbl',type:'symbol',source:'ofm','source-layer':'transportation_name',minzoom:14,layout:{'symbol-placement':'line','text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':12},paint:{'text-color':'#ffffff','text-halo-color':'#000000','text-halo-width':1.5}},
+        {id:'place-lbl',type:'symbol',source:'ofm','source-layer':'place',layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],'text-size':14},paint:{'text-color':'#ffffff','text-halo-color':'#000000','text-halo-width':2}}]};
+    return{version:8,glyphs:OFM+'/fonts/{fontstack}/{range}.pbf',sources:{
+        base:{type:'raster',tiles:['a','b','c','d'].map(sd=>`https://${sd}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png`),tileSize:256,attribution:'© OpenStreetMap © CARTO'},ofm},
+      layers:[{id:'bg',type:'background',paint:{'background-color':'#1c1f23'}},{id:'base',type:'raster',source:'base'},
+        {id:'b3d',type:'fill-extrusion',source:'ofm','source-layer':'building',minzoom:14,paint:{'fill-extrusion-color':'#3a4047','fill-extrusion-height':['coalesce',['get','render_height'],6],'fill-extrusion-opacity':0.8}}]}},
+  decorate(){const m=this.map;
+    if(!m.getSource('dem'))m.addSource('dem',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14,attribution:'Relief : Mapzen / AWS'});
+    if(!m.getLayer('hs')){try{const first=m.getStyle().layers.find(l=>l.type==='symbol'||l.type==='fill-extrusion');m.addLayer({id:'hs',type:'hillshade',source:'dem',paint:{'hillshade-exaggeration':this.styleName==='sat'?0.15:0.3,'hillshade-shadow-color':'#000000'}},first?.id)}catch(e){}}
+    m.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
+    try{m.setSky&&m.setSky({'sky-color':'#7fb2e5','horizon-color':'#dbe7f3','fog-color':'#dbe7f3','sky-horizon-blend':0.5,'horizon-fog-blend':0.6,'fog-ground-blend':0.4})}catch(e){}
+    if(!m.getSource('route'))m.addSource('route',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    if(!m.getLayer('route-glow'))m.addLayer({id:'route-glow',type:'line',source:'route',paint:{'line-color':'#34d399','line-width':12,'line-opacity':0.25,'line-blur':4}});
+    if(!m.getLayer('route'))m.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':this.styleName==='plan'?'#0f9d58':'#34d399','line-width':5}});
+    this.ready=true;this.drawRoute()},
+  setStyle(n){this.styleName=n;store.set('mapStyle',n);document.querySelectorAll('#mapstyles button').forEach(b=>b.classList.toggle('on',b.dataset.s===n));
+    if(this.kind!=='gl')return;this.ready=false;this.map.setStyle(this.styleFor(n))},
+  initGL(){const n=store.get('mapStyle','plan');this.styleName=n;
+    const m=new maplibregl.Map({container:'runmap',attributionControl:{compact:true},center:[1.6011,49.0486],zoom:15.5,pitch:62,maxPitch:75,style:this.styleFor(n)});
+    this.map=m;this.kind='gl';m.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
+    const mk=html=>{const el=document.createElement('div');el.innerHTML=html;el.style.lineHeight='0';return el};
+    this.meEl=mk(dotHTML(ME_C));this.refEl=mk(dotHTML(REF_C));
+    this.me=new maplibregl.Marker({element:this.meEl});this.ref=new maplibregl.Marker({element:this.refEl});
+    m.on('style.load',()=>this.decorate());
+    setTimeout(()=>{if(!this.ready&&this.styleName==='plan'){log('Le plan ne répond pas, passage en vue satellite');this.setStyle('sat')}},8000);
+    const hold=e=>{if(e.originalEvent){this.userUntil=Date.now()+12000;$('recenter').hidden=false}};
+    ['dragstart','rotatestart','pitchstart','zoomstart'].forEach(ev=>m.on(ev,hold));
+    m.on('error',e=>{const msg=String(e?.error?.message||'');if(!this.warned&&/terrarium|elevation|openfreemap|arcgis/i.test(msg+(e?.sourceId||''))){this.warned=true;log('Une partie de la carte (relief, bâtiments ou satellite) ne répond pas')}});
+    document.querySelectorAll('#mapstyles button').forEach(b=>{b.classList.toggle('on',b.dataset.s===n);b.onclick=()=>this.setStyle(b.dataset.s)});
+    $('recenter').onclick=()=>{this.userUntil=0;$('recenter').hidden=true;lastMap=0}},
+  initLeaf(){const m=L.map('runmap',{zoomControl:false});tiles().addTo(m);this.map=m;this.kind='leaf';this.three=false;$('btn3d').hidden=true;$('mapstyles').hidden=true;
+    const ic=html=>L.divIcon({className:'ghost-ic',iconSize:[30,40],iconAnchor:[15,20],html});
+    this.icon=ic;this.me=L.marker([49.0486,1.6011],{icon:ic(dotHTML(ME_C)),zIndexOffset:600,interactive:false}).addTo(m);
+    this.ref=L.marker([49.0486,1.6011],{icon:ic(dotHTML(REF_C)),zIndexOffset:500,interactive:false});this.ready=true;this.drawRoute()},
+  drawRoute(){if(!route||!this.ready)return;const ll=route.pts.map(p=>[p[1],p[0]]);
+    if(this.kind==='gl'){this.map.getSource('route')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:ll}})}
+    else{if(this.line)this.map.removeLayer(this.line);this.line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(this.map)}},
+  resize(){if(!this.map)return;this.kind==='gl'?this.map.resize():this.map.invalidateSize()},
+  setLeader(l){if(l===this.lead)return;this.lead=l;
+    if(this.kind==='gl'){this.meEl.innerHTML=l==='me'?medalHTML(ME_C):dotHTML(ME_C);this.refEl.innerHTML=l==='ref'?medalHTML(REF_C):dotHTML(REF_C)}
+    else{this.me.setIcon(this.icon(l==='me'?medalHTML(ME_C):dotHTML(ME_C)));this.ref.setIcon(this.icon(l==='ref'?medalHTML(REF_C):dotHTML(REF_C)))}},
+  place(p,gp,x){if(!this.map)return;
+    if(this.kind==='gl'){this.me.setLngLat([p[1],p[0]]);if(!this.me._map)this.me.addTo(this.map);
+      if(gp){this.ref.setLngLat([gp[1],gp[0]]);if(!this.refOn){this.ref.addTo(this.map);this.refOn=true}}else if(this.refOn){this.ref.remove();this.refOn=false}
+      const ahead=posAt(Math.min(total(),x+60)),brg=hav(p,ahead)>5?bearing(p,ahead):this.map.getBearing();
+      if(Date.now()<this.userUntil)return;$('recenter').hidden=true;
+      const far=gp&&hav(p,gp)>120,c=far?[(p[1]+gp[1])/2,(p[0]+gp[0])/2]:[p[1],p[0]];
+      this.map.easeTo({center:c,zoom:far?Math.max(13.5,16.4-Math.log2(hav(p,gp)/120)):16.4,bearing:this.three?brg:0,pitch:this.three?62:0,duration:900})}
+    else{this.me.setLatLng([p[0],p[1]]);if(gp){this.ref.setLatLng([gp[0],gp[1]]);if(!this.ref._map)this.ref.addTo(this.map)}else if(this.ref._map)this.ref.remove();
+      if(gp&&hav(p,gp)>120)this.map.fitBounds(L.latLngBounds([[p[0],p[1]],[gp[0],gp[1]]]).pad(0.35),{maxZoom:16,animate:false});else this.map.setView([p[0],p[1]],16,{animate:false})}},
+  toggle3d(){if(this.kind!=='gl')return;this.three=!this.three;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
+    this.map.easeTo({pitch:this.three?62:0,bearing:this.three?this.map.getBearing():0,duration:600});$('btn3d').textContent=this.three?'2D':'3D'}};
+$('btn3d').onclick=()=>RM.toggle3d();
+function setLeader(l){RM.setLeader(l)}
+function show(v){$('view-prep').hidden=v!=='prep';$('view-run').hidden=v!=='run';$('view-out').hidden=v!=='out';$('tab-out').setAttribute('aria-selected',v==='out');
+  if(v==='out'){oRoutes();setTimeout(()=>{oInitMap();O.map.invalidateSize();oInfo();oRender()},50)}
+  $('tab-prep').setAttribute('aria-selected',v==='prep');$('tab-run').setAttribute('aria-selected',v==='run');
+  if(v==='run'){RM.init();
+    setTimeout(()=>{RM.resize();RM.drawRoute();lastMap=0;renderSteps();render()},50)}
+  else setTimeout(()=>{map.invalidateSize();drawProfile($('profile'),-1)},50)}
+$('tab-prep').onclick=()=>show('prep');$('tab-run').onclick=()=>show('run');$('tab-out').onclick=()=>show('out');
+$('go').onclick=()=>{if(route){resetRun();show('run')}};
+
+/* ================= RÉGLAGES ================= */
+const setIds=['incMin','incMax','incFactor','incHill','spdMax','vWarm','vFoot','vRec','vCool','v10k','v5k','vShort','vSprint'];
+const sv=store.get('settings',{});setIds.forEach(k=>{if(sv[k]!=null)$(k).value=sv[k];$(k).onchange=()=>{const o={};setIds.forEach(i=>o[i]=+$(i).value);store.set('settings',o);listWorkouts()}});
+if(store.get('voice',true)===false)$('voice').checked=false;$('voice').onchange=()=>store.set('voice',$('voice').checked);
+$('lang').value=store.get('lang','fr');$('lang').onchange=()=>{store.set('lang',$('lang').value);showWord()};
+$('me').value=store.get('me','');$('me').onchange=()=>store.set('me',$('me').value.trim());
+const S=()=>({min:+$('incMin').value,max:+$('incMax').value,f:+$('incFactor').value/100,hill:+$('incHill').value,vmax:+$('spdMax').value});
+
+/* ================= VOIX ================= */
+let frVoice=null,enVoice=null;try{const pick=()=>{const vs=speechSynthesis.getVoices();frVoice=vs.find(v=>/^fr/i.test(v.lang))||null;enVoice=vs.find(v=>/^en-GB/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null};pick();speechSynthesis.onvoiceschanged=pick}catch(e){}
+const EN=()=>$('lang').value==='en';
+function say(fr,en){if(!$('voice').checked)return;if(window.NativeTTS){const e=EN()&&en!=null;window.NativeTTS.speak(e?en:fr,e?'en-GB':'fr-FR',1.05);return}if(!window.speechSynthesis)return;try{const e=EN()&&en!=null;const u=new SpeechSynthesisUtterance(e?en:fr);u.lang=e?'en-GB':'fr-FR';const v=e?enVoice:frVoice;if(v)u.voice=v;u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+function enLabel(l){let t=' '+l.toLowerCase()+' ';
+  [[/retour au calme/g,'cool-down'],[/échauffement/g,'warm-up'],[/récupération entre les blocs/g,'recovery between sets'],[/récupération/g,'recovery'],[/allure soutenue/g,'tempo pace'],[/allure (\d+) ?k/g,'$1K pace'],
+   [/plus une minute vingt/g,'plus one minute twenty'],[/plus une minute/g,'plus one minute'],[/plus trente/g,'plus thirty seconds'],[/plus vingt/g,'plus twenty seconds'],[/plus dix/g,'plus ten seconds'],
+   [/côte tonique/g,'strong hill'],[/côte/g,'hill'],[/footing cool/g,'easy run'],[/footing/g,'easy run'],[/effort/g,'hard effort'],[/test, tiens ta vitesse la plus rapide/g,'test, hold your fastest steady speed'],[/ cool /g,' easy ']]
+  .forEach(([a,b])=>t=t.replace(a,b));return t.trim()}
+const fmtEn=n=>(+n).toFixed(1).replace(/\.0$/,'');
+const durEn=s=>{if(s.dist)return s.dist>=1000?fmtEn(s.dist/1000)+' kilometre'+(s.dist>1000?'s':''):s.dist+' metres';const m=Math.floor(s.dur/60),x=s.dur%60;return (m?m+' minute'+(m>1?'s':''):'')+(m&&x?' ':'')+(x?x+' seconds':'')};
+/* mot anglais de la séance */
+const WORDS=[
+ {w:'stride',fr:'la foulée',ex:'Keep your stride short and quick on the hills.'},
+ {w:'pace',fr:"l'allure",ex:'Find a pace you can hold for the whole run.'},
+ {w:'to warm up',fr:"s'échauffer",ex:'Always warm up before a hard session.'},
+ {w:'to cool down',fr:'récupérer en fin de séance',ex:'Walk for a few minutes to cool down.'},
+ {w:'stamina',fr:"l'endurance",ex:'Long easy runs build your stamina.'},
+ {w:'uphill',fr:'en montée',ex:'Running uphill makes your legs stronger.'},
+ {w:'to keep up',fr:'tenir le rythme',ex:'Try to keep up with your record today.'},
+ {w:'breathless',fr:'essoufflé',ex:'If you are breathless, slow down a little.'},
+ {w:'to push through',fr:'tenir bon',ex:'The last minute is hard, push through.'},
+ {w:'personal best',fr:'le record personnel',ex:'Every session is a chance to beat your personal best.'},
+ {w:'recovery',fr:'la récupération',ex:'Recovery is part of training.'},
+ {w:'steady',fr:'régulier',ex:'Keep a steady pace from start to finish.'},
+ {w:'cadence',fr:'la cadence',ex:'A higher cadence means shorter, faster steps.'},
+ {w:'to slow down',fr:'ralentir',ex:'Slow down during the recovery.'},
+ {w:'finish line',fr:"la ligne d'arrivée",ex:'Imagine the finish line in front of you.'}];
+const dayWord=()=>WORDS[Math.floor(Date.now()/864e5)%WORDS.length];
+function showWord(){const on=EN();$('wordcard').hidden=!on;if(!on)return;const w=dayWord();$('wWord').textContent=w.w;$('wFr').textContent=w.fr;$('wEx').textContent=w.ex}
+const durWords=s=>{if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' kilomètre'+(s.dist>=2000?'s':''):s.dist+' mètres';
+  const m=Math.floor(s.dur/60),x=s.dur%60;return (m?m+' minute'+(m>1?'s':''):'')+(m&&x?' ':'')+(x?x+' secondes':'')};
+
+/* ================= BLUETOOTH FTMS ================= */
+const FTMS=0x1826,TDATA=0x2acd,CP=0x2ad9,SRANGE=0x2ad4,IRANGE=0x2ad5;
+let bt={dev:null,cp:null,ok:false},q=Promise.resolve();
+function cmd(bytes,label){if(!bt.cp)return Promise.resolve();q=q.then(()=>bt.cp.writeValueWithResponse(new Uint8Array(bytes))).then(()=>label&&log(label)).catch(e=>log('Commande refusée ('+(label||bytes[0])+') : '+e.message)).then(()=>new Promise(r=>setTimeout(r,250)));return q}
+const setSpeedRaw=v=>{const n=Math.round(v*100);return cmd([0x02,n&255,(n>>8)&255],'Vitesse tapis '+fmt(v)+' km/h')};
+const setSpeed=v=>setSpeedRaw(v/((bt.ok?(+store.get('calib',1)||1):1)));
+const setIncline=p=>{const n=Math.round(p*10)&0xffff;return cmd([0x03,n&255,(n>>8)&255],'Pente '+fmt(p)+' %')};
+function parseTD(dv){const r={};let o=0;try{const f=dv.getUint16(o,true);o+=2;
+  if(!(f&1)){r.speed=dv.getUint16(o,true)/100;o+=2}
+  if(f&2)o+=2; if(f&4){r.dist=dv.getUint16(o,true)|(dv.getUint8(o+2)<<16);o+=3}
+  if(f&8){r.inc=dv.getInt16(o,true)/10;o+=4} if(f&16)o+=4; if(f&32)o+=1; if(f&64)o+=1; if(f&128)o+=5;
+  if(f&256){r.hr=dv.getUint8(o);o+=1} }catch(e){} return r}
+$('connect').onclick=async()=>{
+  if(!navigator.bluetooth){$('bthint').textContent="Ce navigateur ne sait pas parler au tapis en Bluetooth. Utilise Chrome sur ton téléphone Android ou ton ordinateur. En attendant, la simulation fonctionne.";return}
+  try{const dev=await navigator.bluetooth.requestDevice({filters:[{services:[FTMS]}]});
+    dev.addEventListener('gattserverdisconnected',()=>{bt.ok=false;bt.cp=null;setBt();log('Tapis déconnecté')});
+    const srv=await(await dev.gatt.connect()).getPrimaryService(FTMS);
+    try{const ir=await(await srv.getCharacteristic(IRANGE)).readValue();const lo=ir.getInt16(0,true)/10,hi=ir.getInt16(2,true)/10;log(`Pente du tapis : ${fmt(lo)} à ${fmt(hi)} %`);
+      if(+$('incMax').value>hi)$('incMax').value=hi;if(+$('incMin').value<lo)$('incMin').value=lo}catch(e){}
+    try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
+    const td=await srv.getCharacteristic(TDATA);await td.startNotifications();
+    td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null)run.speed=r.speed;if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
+    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications()}catch(e){}
+    await cmd([0x00],'Contrôle du tapis obtenu');bt.dev=dev;bt.ok=true;setBt();log('Connecté à '+(dev.name||'tapis'))}
+  catch(e){log('Connexion impossible : '+e.message)}};
+function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connecté';$('bt').className='pill'+(bt.ok?' on':'');
+  $('bthint').textContent=bt.ok?"L'application règle la vitesse et la pente. Tu peux toujours les changer sur le tapis.":"Sans connexion, l'application fonctionne en simulation : tu règles la vitesse ici et la pente s'affiche pour que tu la mettes à la main."}
+
+/* ================= COURSE ================= */
+const run={state:'idle',dist:0,time:0,gain:0,speed:0,target:8,hr:null,inc:0,sentInc:null,sentAt:0,last:0,step:-1,stepT:0,stepD:0,samples:[],sampAt:0,ghost:null,hillSaid:0};
+function resetRun(){Object.assign(run,{state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0});
+  $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
+  $('wsel').disabled=false;$('gsel').disabled=false;renderSteps();render()}
+function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
+function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1));let g=gradeAt(x+10)*s.f+(st&&isHill(st)?s.hill:0);g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
+function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
+function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
+  if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
+  const s=workout.steps[i];applySpeed(s.v);run.sentAt=0;
+  say(`${s.label}, ${durWords(s)}, ${fmt(s.v)} kilomètres heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
+let wake=null;async function keepAwake(){try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
+$('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='running')return;keepAwake();
+  const first=run.state==='idle';
+  if(first){run.startedAt=Date.now();$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
+    workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
+    run.ghost=ghostRun();
+    $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
+  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target)}else run.speed=run.target;
+  run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;
+  if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
+$('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(bt.ok)await cmd([0x08,0x02],'Tapis en pause');else run.speed=0;
+  $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;say('Pause','Paused')};
+$('skip').onclick=()=>{if(workout&&run.state==='running'){if(curStep()?.test)finishTest();enterStep(run.step+1)}};
+function testWorkout(){const V=k=>+$(k).value;return{name:"Test d'allures",test:true,steps:[
+  {label:'Échauffement',type:'warm',dur:600,dist:0,v:V('vWarm')},
+  {label:'Test, tiens ta vitesse la plus rapide',type:'work',test:true,dur:600,dist:0,v:V('v5k')},
+  {label:'Retour au calme',type:'cool',dur:300,dist:0,v:V('vCool')}]}}
+let testRes=null;
+function finishTest(){const t=run.stepT,d=run.stepD;if(t<180||d<300){log('Test trop court pour calculer tes allures');say('Test trop court pour calculer tes allures.','The test was too short.');return}
+  const vmax=+$('spdMax').value,r1=x=>Math.round(x*10)/10;
+  const T=D=>t*Math.pow(D/d,1.06);            // formule de Riegel
+  const p10=T(10000)/10,p5=T(5000)/5;          // secondes par km
+  const res={vFoot:3600/(p10+80),v10k:3600/p10,v5k:3600/p5,vShort:3600/(p5-25)};
+  res.vSprint=res.vShort+1.5;res.vWarm=res.vFoot-0.5;res.vCool=res.vFoot-1;res.vRec=res.vFoot-1.5;
+  Object.keys(res).forEach(k=>res[k]=Math.max(4,Math.min(vmax,r1(res[k]))));
+  testRes=res;const avg=d/t*3.6;
+  const L={vWarm:'Échauffement',vFoot:'Footing',vRec:'Récupération',vCool:'Retour au calme',v10k:'Allure 10k',v5k:'Allure 5k',vShort:'Effort court',vSprint:'Sprint'};
+  $('testtxt').innerHTML=`<p class="hint" style="margin:0 0 8px">${Math.round(d)} m en ${clock(t)}, soit ${fmt(avg)} km/h de moyenne. Estimations : 5 km en ${clock(T(5000))}, 10 km en ${clock(T(10000))}.</p><div class="tl">`+
+    Object.keys(L).map(k=>`<span>${L[k]}</span><span>${fmt(res[k])} km/h · ${clock(3600/res[k])}/km</span>`).join('')+'</div>';
+  $('testres').hidden=false;$('testmsg').textContent='';
+  say(`Test terminé. Ta vitesse moyenne : ${fmt(avg)} kilomètres heure. Tes allures sont prêtes.`,`Test complete. Your average speed was ${fmtEn(r1(avg))} kilometres per hour.`);log('Test : '+Math.round(d)+' m en '+clock(t))}
+$('testapply').onclick=()=>{if(!testRes)return;Object.keys(testRes).forEach(k=>$(k).value=testRes[k]);const o={};setIds.forEach(i=>o[i]=+$(i).value);store.set('settings',o);listWorkouts();$('testmsg').textContent='Allures enregistrées dans « Mes allures ».'};
+$('stop').onclick=async()=>{if(run.state==='done')return;const done=workout?run.step>=workout.steps.length:run.dist>=total()-5;
+  if(bt.ok){await setIncline(S().min);await cmd([0x08,0x01],'Tapis arrêté')}
+  run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();
+  saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${clock(run.time)}, D+ ${Math.round(run.gain)} m`);
+  const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo, tu bats ${R.fr} de ${d} secondes.`:`${R.Fr} garde ${d} secondes d'avance. La prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
+  $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver};
+const startOrig=$('start').onclick;
+function startOver(){$('start').onclick=startOrig;resetRun()}
+function bump(dv){const base=run.state==='running'?(realSpeed()||run.target):run.target;
+  run.target=Math.max(1,Math.min(S().vmax,Math.round((base+dv)*10)/10));
+  if(run.state==='running'){if(bt.ok)setSpeed(run.target);else run.speed=run.target}render()}
+$('sm1').onclick=()=>bump(-1);$('sm05').onclick=()=>bump(-.5);$('sp05').onclick=()=>bump(.5);$('sp1').onclick=()=>bump(1);
+
+function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);run.last=now;
+  if(run.state==='running'&&route){
+    const x0=wrapX(run.dist),dd=realSpeed()/3.6*dt;run.dist+=dd;run.time+=dt;const x1=wrapX(run.dist);
+    const e0=eleAt(x0),e1=eleAt(x1);if(x1>=x0&&e1>e0&&!(workout&&workout.test))run.gain+=e1-e0;
+    if(run.time-run.sampAt>=2){run.sampAt=run.time;run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0])}
+    // séance
+    const st=curStep();
+    if(st){const before=st.dur?st.dur-run.stepT:0;run.stepT+=dt;run.stepD+=dd;
+      if(st.dur){const after=st.dur-run.stepT;for(const n of[3,2,1])if(before>n&&after<=n&&st.dur>8)say(String(n),['','one','two','three'][n])}
+      if((st.dur&&run.stepT>=st.dur)||(st.dist&&run.stepD>=st.dist)){if(st.test)finishTest();enterStep(run.step+1)}}
+    // annonce des côtes du parcours
+    const up=(eleAt(x1+150)-eleAt(x1+50))/100*100;
+    if($('zen').checked){const nm=nextMark(x1);if(nm&&nm.gap<=150&&markSaid!==nm.i){markSaid=nm.i;const g=Math.round(nm.gap/10)*10;say(`${nm.m.fr} dans ${g} mètres`,`${nm.m.en} in ${g} metres`)}}
+    else if(up>=3&&gradeAt(x1)<2&&run.time-run.hillSaid>90){run.hillSaid=run.time;say(`Montée dans 50 mètres, ${Math.round(up)} pour cent`,`Hill in 50 metres, ${Math.round(up)} percent`)}
+    // pente
+    run.inc=targetInc(x1);
+    if(bt.ok&&(run.sentInc===null||Math.abs(run.inc-run.sentInc)>=0.5)&&now-run.sentAt>4000){run.sentInc=run.inc;run.sentAt=now;setIncline(run.inc)}
+    // fin du parcours : on boucle pendant une séance, on s'arrête en course libre
+    if(!workout&&run.dist>=total()){run.dist=total();say('Parcours terminé','Route complete');$('stop').onclick()}
+  }
+  render()}
+
+/* ---------- affichage ---------- */
+let lastMap=0;
+function renderSteps(){const sel=$('wsel').value,box=$('steppanel');
+  let steps=workout&&run.state!=='idle'?workout.steps:null;
+  if(!steps&&sel){if(sel==='__test')steps=testWorkout().steps;else{const w=workouts().find(o=>o.name===sel);if(w)steps=parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}}
+  if(!steps){box.hidden=true;return}box.hidden=false;
+  const totalSec=steps.reduce((a,s)=>a+stepSec(s),0)||1,i=run.step;
+  $('stBar').innerHTML=steps.map((s,k)=>`<i class="${s.type==='work'?'w':''} ${k<i?'done':''} ${k===i?'cur':''}" style="flex:${stepSec(s)/totalSec}"></i>`).join('');
+  const s=steps[i],n=steps[i+1]??(i<0?steps[0]:null);
+  box.classList.toggle('work',!!s&&s.type==='work');
+  $('stNow').textContent=s?`${s.label} · ${fmt(s.v)} km/h`:(i>=steps.length?'Séance terminée':'Prêt : '+steps.length+' étapes, '+clock(totalSec));
+  $('stNext').textContent=n?`Ensuite : ${n.label}, ${n.dist?(n.dist>=1000?fmt(n.dist/1000,1)+' km':n.dist+' m'):clock(n.dur)} à ${fmt(n.v)} km/h`:(s?'Dernière étape':'');
+  renderLeft()}
+function renderLeft(){const s=curStep();if(!s){$('stLeft').textContent=run.step<0?'':'✓';return}
+  $('stLeft').textContent=s.dur?clock(s.dur-run.stepT):Math.max(0,Math.round(s.dist-run.stepD))+' m'}
+let lastBar=-2;
+function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
+  $('sTime').parentElement.hidden=zen;$('sPace').parentElement.hidden=zen;$('zenbox').hidden=!zen||!route;
+  const x=route?wrapX(run.dist):0;
+  $('sSpeed').textContent=fmt(sp);$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
+  $('sPace').textContent=sp>0.5?clock(3600/sp):'–';$('sDist').textContent=fmt(run.dist/1000,2);$('sTime').textContent=clock(run.time);$('sGain').textContent=Math.round(run.gain);
+  $('sHr').textContent=run.hr?run.hr+' bpm':'–';
+  if(workout&&run.step!==lastBar){lastBar=run.step;renderSteps()}renderLeft();
+  let gx=null;const g=run.ghost||(run.state==='idle'?ghostRun():null);
+  $('ghostbox').hidden=!g;$('legGhost').hidden=!g;$('legMedal').hidden=!g;$('legRef').textContent=refName().lab;
+  if(g){gx=gDistAt(g,run.time);const when=new Date(g.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+    $('gLabel').textContent=`${['friend','watch'].includes($('gsel').value)?refName().lab:$('gsel').value==='best'?'Record':'Dernière'} du ${when} · ${fmt(gx/1000,2)} km`;
+    const gt=gTimeAt(g,run.dist),el=$('gGap');
+    if(run.time<1){el.textContent='Prêt';el.className=''}
+    else if(gt==null){el.textContent='Plus loin que jamais';el.className='ahead'}
+    else{const d=gt-run.time,a=Math.abs(d),txt=a<60?Math.round(a)+' s':clock(a);el.textContent=d>=0?txt+" d'avance":txt+' de retard';el.className=d>=0?'ahead':'behind'}}
+  if(zen&&route){const nm=nextMark(x);$('zMark').textContent=nm?nm.m.fr:'–';$('zGap').textContent=nm?(nm.gap>=1000?fmt(nm.gap/1000,1)+' km':Math.round(nm.gap/10)*10+' m'):'–'}
+  if(route){const g2=(eleAt(x+200)-eleAt(x))/2;$('sNext').textContent=(g2>=0.5?'Montée ':g2<=-0.5?'Descente ':'Plat ')+fmt(g2)+' %';
+    $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
+    const p=posAt(x);$('sv').href=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p[0].toFixed(6)},${p[1].toFixed(6)}`;
+    const now=performance.now();if(RM.map&&!replaying&&!$('view-run').hidden&&now-lastMap>1000){lastMap=now;
+      lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
+      setLeader(gx==null||run.time<1?null:(run.dist>=gx?'me':'ref'));
+      RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
+setInterval(tick,500);
+
+/* ================= DÉMARRAGE ================= */
+/* ================= INTERVALS.ICU ================= */
+$('ivId').value=store.get('ivId','');$('ivKey').value=store.get('ivKey','');
+$('ivId').onchange=()=>store.set('ivId',$('ivId').value.trim());$('ivKey').onchange=()=>store.set('ivKey',$('ivKey').value.trim());
+const ivMsg=t=>$('ivMsg').textContent=t;
+const ivAth=()=>{const v=($('ivId').value||'').trim();return v?(/^\d+$/.test(v)?'i'+v:v):'0'};
+async function iv(path,opt={}){const key=($('ivKey').value||'').trim();if(!key)throw new Error('ajoute ta clé API dans « Montre et Intervals.icu »');
+  const r=await fetch('https://intervals.icu/api/v1'+path,{...opt,headers:{Authorization:'Basic '+btoa('API_KEY:'+key),...(opt.headers||{})}});
+  if(r.status===401||r.status===403)throw new Error('clé API ou identifiant refusé');if(!r.ok)throw new Error('Intervals.icu a répondu '+r.status);
+  const ct=r.headers.get('content-type')||'';return ct.includes('json')?r.json():r.text()}
+$('ivTest').onclick=async()=>{ivMsg('Connexion…');try{const a=await iv(`/athlete/${ivAth()}`);if(a.id){$('ivId').value=a.id;store.set('ivId',a.id)}ivMsg(`Connecté au compte ${a.name||a.id}.`)}catch(e){ivMsg('Connexion impossible : '+e.message+'.')}};
+$('ivImport').onclick=async()=>{ivMsg('Import des séances…');try{
+    const folders=await iv(`/athlete/${ivAth()}/folders`);const list=[];
+    (folders||[]).forEach(f=>(f.children||[]).forEach(c=>{if((c.type||'Run')==='Run'&&c.description)list.push({name:c.name,text:c.description,folder:f.name,ivId:c.id})}));
+    if(!list.length){const ws=await iv(`/athlete/${ivAth()}/workouts`);(ws||[]).forEach(c=>{if(c.description)list.push({name:c.name,text:c.description,ivId:c.id})})}
+    const usable=list.filter(w=>parseWorkout(w.text).length);
+    const mine=store.get('workouts',[]).filter(w=>!w.ivId);const names=new Set(mine.map(w=>w.name));
+    usable.forEach(w=>{let n=w.name;if(names.has(n))n=n+' ('+(w.folder||'Intervals')+')';names.add(n);mine.push({...w,name:n})});
+    store.set('workouts',mine);listWorkouts();ivMsg(`${usable.length} séances importées${list.length>usable.length?`, ${list.length-usable.length} ignorées (sans étapes lisibles)`:''}. Elles sont dans « Séances guidées ».`)}
+  catch(e){ivMsg('Import impossible : '+e.message+'.')}};
+$('wsearch').oninput=()=>listWorkouts();
+async function sendToWatch(w,row,btn){let box=row.querySelector('.sendrow');if(box){box.remove();return}
+  box=document.createElement('div');box.className='sendrow';const today=new Date().toISOString().slice(0,10);
+  box.innerHTML=`<input type="date" value="${today}"><button class="primary">Envoyer</button><span class="hint" style="margin:0">Elle arrive sur la montre à la prochaine synchro de Zepp (7 jours à l'avance au plus).</span>`;
+  row.append(box);box.querySelector('button').onclick=async()=>{const d=box.querySelector('input').value,span=box.querySelector('span');span.textContent='Envoi…';
+    try{await iv(`/athlete/${ivAth()}/events`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:'WORKOUT',type:'Run',start_date_local:d+'T00:00:00',name:w.name,description:w.text})});
+      span.textContent=`Placée le ${new Date(d).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} dans ton calendrier Intervals.icu.`}catch(e){span.textContent='Envoi impossible : '+e.message+'.'}}}
+$('ivActs').onclick=async()=>{ivMsg('Recherche de tes sorties…');const box=$('acts');box.innerHTML='';
+  try{const nw=new Date(),od=new Date(Date.now()-60*864e5),f=d=>d.toISOString().slice(0,10);
+    let acts=await iv(`/athlete/${ivAth()}/activities?oldest=${f(od)}&newest=${f(nw)}`);
+    acts=(acts||[]).filter(a=>/run/i.test(a.type||'')).slice(0,20);
+    if(!acts.length){ivMsg('Aucune course trouvée sur les 60 derniers jours.');return}ivMsg('Choisis une sortie faite dehors : elle devient un parcours, et ta course devient ton adversaire.');
+    acts.forEach(a=>{const d=document.createElement('div');d.className='item';const when=new Date(a.start_date_local).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+      d.innerHTML=`<span><b>${esc(a.name||'Course')}</b><small class="hint">${when} · ${fmt((a.distance||0)/1000,2)} km · ${clock(a.moving_time||a.elapsed_time||0)}${a.trainer?' · intérieur':''}</small></span>`;
+      if(a.trainer){d.insertAdjacentHTML('beforeend','<small class="hint">sans GPS</small>');box.append(d);return}
+      const b=document.createElement('button');b.textContent='Recourir sur le tapis';b.onclick=()=>importActivity(a,b);d.append(b);box.append(d)})}
+  catch(e){ivMsg('Lecture impossible : '+e.message+'. Les courses venues de Strava ne sont pas lisibles par une autre application.')}};
+async function importActivity(a,btn){btn.textContent='Import…';btn.disabled=true;
+  try{const st=await iv(`/activity/${a.id}/streams?types=latlng,time,distance,altitude,heartrate`);
+    const g=t=>(st||[]).find(x=>x.type===t);const ll=g('latlng'),tm=g('time'),ds=g('distance'),al=g('altitude'),hr=g('heartrate');
+    if(!ll||!ll.data?.length)throw new Error('pas de GPS sur cette sortie');
+    const lat=ll.data2?ll.data:ll.data.map(q=>q[0]),lng=ll.data2?ll.data2:ll.data.map(q=>q[1]);
+    const raw=lat.map((v,i)=>[v,lng[i],al?al.data[i]:null]).filter(q=>q[0]&&q[1]);
+    let pts=resample(raw);if(!al)pts=await addElevation(pts);
+    const name=(a.name||'Sortie')+' · '+new Date(a.start_date_local).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+    wps=[];$('rname').value=name;setRoute(pts,name);map.fitBounds(line.getBounds());
+    const rs=store.get('routes',[]).filter(x=>x.name!==name);rs.unshift({name,km:total()/1000,gain:Math.round(gain()),pts:route.pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),Math.round(p[2]*10)/10])});store.set('routes',rs);
+    if(tm&&ds){const s=[];let last=-99;tm.data.forEach((t,i)=>{if(t-last>=5){s.push([t,Math.round(ds.data[i]),hr?hr.data[i]||0:0]);last=t}});
+      const w=store.get('watchRuns',{});w[name]={date:a.start_date_local,time:s[s.length-1][0],dist:s[s.length-1][1],done:true,src:'watch',s};store.set('watchRuns',w)}
+    listRoutes();$('gsel').value='watch';updateGhostInfo();btn.textContent='Importée';ivMsg(`« ${name} » est prêt : touche « Courir ce parcours » pour te battre contre ta sortie.`)}
+  catch(e){btn.textContent='Recourir sur le tapis';btn.disabled=false;ivMsg('Import impossible : '+e.message+'.')}}
+
+/* ---------- envoi de la course du tapis ---------- */
+function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((route?.name||'Course')+' (Horizon)');
+  const pts=run.samples.map(([t,d,h])=>{const p=posAt(wrapX(d));return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`}).join('\n');
+  return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Horizon" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`}
+function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
+  const g=grantRun(done);if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
+    g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('afterGain').innerHTML=L.join('');
+    const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
+    if(spoken)setTimeout(()=>say(spoken,(g.recs.length?'New personal best. ':'')+(g.news.length?g.news.length+' new badge'+(g.news.length>1?'s':''):'')+(g.up?'. Level '+g.up:'')),2500)}
+  $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${clock(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
+$('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
+  try{const fd=new FormData();fd.append('file',new Blob([buildGPX()],{type:'application/gpx+xml'}),'horizon.gpx');
+    const nm=encodeURIComponent((route?.name||'Course')+' (Horizon)'),desc=encodeURIComponent(`Course sur tapis avec Horizon${workout?', séance '+workout.name:''}.`);
+    const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'VirtualRun',trainer:true})})}catch(e){}}
+    m.textContent='Course envoyée dans Intervals.icu.';$('ivUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
+
+/* ---------- cardio de la montre (Bluetooth) ---------- */
+$('hrconnect').onclick=async()=>{if(!navigator.bluetooth){$('hrpill').textContent='Bluetooth indisponible ici';return}
+  try{const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+    const ch=await(await(await dev.gatt.connect()).getPrimaryService('heart_rate')).getCharacteristic('heart_rate_measurement');
+    await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value,f=v.getUint8(0);run.hr=f&1?v.getUint16(1,true):v.getUint8(1);run.hrSrc='watch'});
+    dev.addEventListener('gattserverdisconnected',()=>{run.hrSrc=null;$('hrpill').textContent='Montre déconnectée';$('hrpill').className='pill'});
+    $('hrpill').textContent='Montre connectée';$('hrpill').className='pill on';log('Cardio reçu de '+(dev.name||'la montre'))}
+  catch(e){log('Montre non connectée : '+e.message+'. Sur la montre, active le partage de la fréquence cardiaque.')}};
+
+/* ---------- revoir la course en 3D ---------- */
+let replaying=false,rpX=30,rpT=0,rpRaf=0;
+document.querySelectorAll('#replaybar [data-x]').forEach(b=>b.onclick=()=>{rpX=+b.dataset.x;document.querySelectorAll('#replaybar [data-x]').forEach(o=>o.classList.toggle('on',o===b))});
+function sampleAt(s,t){if(!s.length)return 0;if(t>=s[s.length-1][0])return s[s.length-1][1];let i=0;while(s[i+1]&&s[i+1][0]<t)i++;const a=s[i],b=s[i+1]||a;return a[1]+(b[1]-a[1])*(t-a[0])/((b[0]-a[0])||1)}
+$('replay').onclick=()=>{if(!route||!run.samples.length)return;replaying=true;rpT=0;$('replaybar').hidden=false;RM.init();RM.resize();
+  const mine=run.samples.slice(),ref=run.ghost,end=mine[mine.length-1][0];let last=performance.now(),lastCam=0;
+  const step=now=>{if(!replaying)return;rpT+=Math.min(.5,(now-last)/1000)*rpX;last=now;if(rpT>end){rpT=end;replaying=false}
+    const d=sampleAt(mine,rpT),gx=ref?gDistAt(ref,rpT):null,x=wrapX(d),p=posAt(x),gp=gx!=null?posAt(wrapX(gx)):null;
+    $('replayClock').textContent=`${clock(rpT)} · ${fmt(d/1000,2)} km`;setLeader(gx==null||rpT<1?null:(d>=gx?'me':'ref'));
+    if(now-lastCam>250||!replaying){lastCam=now;RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}
+    if(replaying)rpRaf=requestAnimationFrame(step);else $('replayClock').textContent+=' · fin'};
+  rpRaf=requestAnimationFrame(step)};
+$('replayStop').onclick=()=>{replaying=false;cancelAnimationFrame(rpRaf);$('replaybar').hidden=true};
+
+/* ================= CALIBRAGE DU TAPIS ================= */
+const K=()=>bt.ok?(+store.get('calib',1)||1):1;           // vitesse réelle = vitesse affichée × K
+const realSpeed=()=>run.speed*K();
+let calTaps=0,calOn=false,calTimer=0;
+function calUI(){const k=+store.get('calib',1)||1;$('calInfo').textContent=k===1?'Aucun calibrage : Horizon fait confiance à l\'affichage du tapis.':`Calibrage enregistré : ton tapis va ${k>1?'plus':'moins'} vite qu'il ne l'affiche (${k>1?'+':''}${fmt((k-1)*100,1)} %). Distances et vitesses sont corrigées.`}
+$('calStart').onclick=async()=>{const L=+$('calLen').value/100;if(!(L>0.5)){$('calMsg').textContent='Mesure d\'abord la longueur de la bande (en cm).';return}
+  calTaps=0;calOn=true;$('calTap').disabled=false;$('calTap').textContent='Repère passé (0)';let left=60;$('calMsg').textContent='Mets le tapis à 6 km/h. Touche le gros bouton à chaque passage du repère. 60 s';
+  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
+  clearInterval(calTimer);calTimer=setInterval(()=>{left--;$('calMsg').textContent=`Touche le bouton à chaque passage du repère. ${left} s`;
+    if(left<=0){clearInterval(calTimer);calOn=false;$('calTap').disabled=true;
+      const real=calTaps*L*60/1000,k=Math.round(real/6*1000)/1000;
+      if(calTaps<5||k<0.8||k>1.2){$('calMsg').textContent=`${calTaps} passages comptés, résultat peu fiable (${fmt(real)} km/h). Recommence.`;return}
+      store.set('calib',k);calUI();$('calMsg').textContent=`${calTaps} passages en 60 s : vitesse réelle ${fmt(real,2)} km/h pour 6 affichés.`;say('Calibrage terminé','Calibration complete')}},1000)};
+$('calTap').onclick=()=>{if(!calOn)return;calTaps++;$('calTap').textContent=`Repère passé (${calTaps})`};
+$('calReset').onclick=()=>{store.set('calib',1);calUI();$('calMsg').textContent=''};
+
+/* ================= PROFIL : NIVEAUX, RECORDS, BADGES ================= */
+const BADGES=[
+ ['first','Premier pas','Termine ta première course'],['km10','10 km','10 km cumulés'],['km50','50 km','50 km cumulés'],['km100','Centurion','100 km cumulés'],['km500','Grand voyageur','500 km cumulés'],
+ ['runs10','Assidu','10 courses'],['runs50','Inarrêtable','50 courses'],['week3','Régulier','3 courses en 7 jours'],['climb100','Grimpeur','100 m de D+ en une course'],['climb300','Montagnard','300 m de D+ en une course'],
+ ['workout','Séance bouclée','Termine une séance guidée'],['test','Allures connues','Fais le test d\'allures'],['route','Parcours complet','Termine un parcours en entier'],['explorer','Explorateur','Cours sur 5 parcours différents'],
+ ['record','Chasseur de record','Bats ton record en défi'],['duel','Duel gagné','Bats le record d\'un ami'],['outdoor','Dehors comme dedans','Bats ta sortie dehors sur le tapis'],['sender','Lanceur de défis','Envoie un défi à un ami'],
+ ['english','Bilingue','Cours avec les annonces en anglais'],['zen','Esprit zen','Termine une course en mode zen'],['early','Lève-tôt','Démarre avant 7 h'],['night','Oiseau de nuit','Démarre après 21 h'],['k5','5 km','Cours 5 km d\'un coup'],['k10','10 km','Cours 10 km d\'un coup']];
+const RECS=[[1000,'1 km'],[5000,'5 km'],[10000,'10 km'],[21097,'Semi-marathon']];
+const prof=()=>store.get('profile',{xp:0,km:0,runs:0,badges:{},records:{},dates:[],routes:[]});
+const levelOf=xp=>Math.floor(Math.sqrt(xp/250))+1,xpFor=l=>250*(l-1)*(l-1);
+function bestTime(s,D){let best=null,i=0;for(let j=1;j<s.length;j++){while(i+1<j&&s[j][1]-s[i+1][1]>=D)i++;const dd=s[j][1]-s[i][1];if(dd>=D){const t=(s[j][0]-s[i][0])*D/dd;if(best==null||t<best)best=t}}return best}
+function grantRun(done){if(run.time<60)return null;const P=prof(),km=run.dist/1000,now=new Date(),news=[],recs=[];
+  P.km+=km;P.runs++;P.dates=[...(P.dates||[]),now.toISOString()].slice(-30);if(route&&!P.routes.includes(route.name))P.routes.push(route.name);
+  let xp=Math.round(km*100)+(workout&&done?50:0);
+  const g=(id,ok)=>{if(ok&&!P.badges[id]){P.badges[id]=now.toISOString();news.push(id);xp+=200}};
+  const wk=P.dates.filter(d=>now-new Date(d)<7*864e5).length,h=new Date(run.startedAt||Date.now()).getHours();
+  const gt=run.ghost?gTimeAt(run.ghost,run.dist):null,beat=gt!=null&&gt>run.time&&done,m=$('gsel').value;
+  g('first',true);g('km10',P.km>=10);g('km50',P.km>=50);g('km100',P.km>=100);g('km500',P.km>=500);g('runs10',P.runs>=10);g('runs50',P.runs>=50);g('week3',wk>=3);
+  g('climb100',run.gain>=100);g('climb300',run.gain>=300);g('workout',!!(workout&&done&&!workout.test));g('test',!!(workout&&workout.test&&testRes));g('route',!workout&&done);
+  g('explorer',P.routes.length>=5);g('record',beat&&(m==='best'||m==='last'));g('duel',beat&&m==='friend');g('outdoor',beat&&m==='watch');g('english',EN());g('zen',$('zen').checked);
+  g('early',h<7);g('night',h>=21);g('k5',run.dist>=5000);g('k10',run.dist>=10000);
+  RECS.forEach(([D,lab])=>{const t=bestTime(run.samples,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
+  const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
+  return{xp,news,recs,up:lv>lv0?lv:0}}
+function badgeSVG(on){return`<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="${on?'#f5c542':'#30353b'}" stroke="${on?'#ffffff':'#3a4047'}" stroke-width="2"/><path d="M17 9.5l2.3 4.7 5.2.8-3.8 3.6.9 5.1-4.6-2.4-4.6 2.4.9-5.1-3.8-3.6 5.2-.8z" fill="${on?'#b8860b':'#4b5259'}"/></svg>`}
+function renderProfile(){const P=prof(),lv=levelOf(P.xp),a=xpFor(lv),b=xpFor(lv+1),n=Object.keys(P.badges||{}).length;
+  $('lvlPill').textContent=`Niveau ${lv}`;$('pfLvl').textContent=`Niveau ${lv}`;$('pfXp').textContent=`${P.xp} XP · encore ${b-P.xp} XP pour le niveau ${lv+1}`;
+  $('pfBar').style.width=Math.round((P.xp-a)/(b-a)*100)+'%';
+  $('pfStats').innerHTML=`<span>${fmt(P.km,1)} km</span><span>${P.runs} course${P.runs>1?'s':''}</span><span>${n}/${BADGES.length} badges</span>`;
+  $('pfRecs').innerHTML=RECS.map(([D,lab])=>`<span>${lab}</span><span>${P.records[D]?clock(P.records[D].t)+' · '+new Date(P.records[D].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'–'}</span>`).join('');
+  $('pfBadges').innerHTML=BADGES.map(([id,name,how])=>{const on=!!P.badges[id];return`<div class="badge${on?' on':''}" title="${esc(how)}">${badgeSVG(on)}<b>${esc(name)}</b><small>${esc(how)}</small></div>`}).join('')}
+
+/* ================= MODE ZEN ET REPÈRES DU PARCOURS ================= */
+let marks=[],markSaid=-1;
+function buildMarks(){marks=[];if(!route)return;const T=total();
+  for(let k=1000;k<T-100;k+=1000)marks.push({d:k,fr:`Kilomètre ${k/1000}`,en:`Kilometre ${k/1000}`});
+  if(T>1500)marks.push({d:T/2,fr:'Mi-parcours',en:'Halfway'});marks.push({d:T-1,fr:'Arrivée du parcours',en:'End of the route'});
+  let st=null;for(let x=0;x<T;x+=20){const gr=gradeAt(x);
+    if(st==null&&gr>=3)st=x;else if(st!=null&&gr<1){const len=x-st,up=eleAt(x)-eleAt(st);
+      if(len>=150&&up>=8){marks.push({d:st,fr:`Début de la côte : ${Math.round(len)} m à ${fmt(up/len*100,0)} %`,en:`Hill ahead: ${Math.round(len)} metres at ${Math.round(up/len*100)} percent`});marks.push({d:x,fr:'Sommet de la côte',en:'Top of the hill'})}st=null}}
+  marks.sort((a,b)=>a.d-b.d)}
+function nextMark(x){if(!marks.length)return null;for(let i=0;i<marks.length;i++)if(marks[i].d>x+3)return{i,m:marks[i],gap:marks[i].d-x};return{i:0,m:marks[0],gap:total()-x+marks[0].d}}
+$('zen').checked=store.get('zen',false);$('zen').onchange=()=>{store.set('zen',$('zen').checked);render()};
+
+/* ================= ÉDITEUR DE SÉANCES ================= */
+const TY={warm:['Échauffement','warmup'],foot:['Footing','active'],work:['Effort','interval'],w10:['Allure 10k','interval'],w5:['Allure 5k','interval'],sprint:['Sprint','interval'],hill:['Côte','interval'],rec:['Récupération','recovery'],cool:['Retour au calme','cooldown']};
+let ed=[];
+function parseVal(v){v=String(v).trim().replace(',','.');let m;
+  if(m=v.match(/^(\d+(?:\.\d+)?)\s*km$/i))return{dist:Math.round(+m[1]*1000)};
+  if(m=v.match(/^(\d+)\s*m(?:tr|ètres?)?$/i))return{dist:+m[1]};
+  if(m=v.match(/^(\d+):(\d{1,2})$/))return{dur:+m[1]*60+ +m[2]};
+  if(m=v.match(/^(\d+(?:\.\d+)?)$/))return{dur:Math.round(+m[1]*60)};
+  if(m=v.match(/^(\d+)\s*s$/i))return{dur:+m[1]};return null}
+function valTxt(o){if(o.dist)return o.dist>=1000&&o.dist%100===0?(o.dist/1000+' km').replace('.',','):o.dist+' m';const m=Math.floor(o.dur/60),s=o.dur%60;return m+':'+String(s).padStart(2,'0')}
+function durTok(o){if(o.dist)return o.dist%1000===0?o.dist/1000+'km':o.dist+'mtr';const h=Math.floor(o.dur/3600),m=Math.floor(o.dur%3600/60),s=o.dur%60;return(h?h+'h':'')+(m?m+'m':'')+(s?s+'s':'')||'1m'}
+function lineOf(b){const o=parseVal(b.v);if(!o)return null;const [lab,int]=TY[b.t];return`- ${b.label&&b.lt===b.t?b.label:lab} ${durTok(o)} intensity=${int}`}
+function edText(){const out=[];ed.forEach(b=>{if(b.rep){const ls=b.items.map(lineOf).filter(Boolean);if(ls.length)out.push(`${b.rep}x\n${ls.join('\n')}`)}else{const l=lineOf(b);if(l)out.push(l)}});return out.join('\n\n')}
+function typeOf(label,int){const L=label.toLowerCase();if(/sprint/.test(L))return'sprint';if(/c[ôo]te/.test(L))return'hill';if(/5 ?k/.test(L))return'w5';if(/10 ?k/.test(L))return'w10';
+  if(/échauffement/.test(L)||int==='warmup')return'warm';if(/retour au calme/.test(L)||int==='cooldown')return'cool';if(/récup/.test(L)||int==='recovery')return'rec';if(int==='interval')return'work';return'foot'}
+function edFromText(text){const res=[];let cur=null,section=null;
+  for(const raw of text.replace(/\r/g,'').split('\n')){const l=raw.trim();
+    if(!l){cur=null;section=null;continue}if(/^warm\s*up$/i.test(l)){section='warmup';continue}if(/^cool\s*down$/i.test(l)){section='cooldown';continue}
+    const m=l.match(/^(\d+)\s*x$/i);if(m){cur={rep:+m[1],items:[]};res.push(cur);continue}if(!l.startsWith('-'))continue;
+    const st=parseWorkout(l)[0];if(!st)continue;const im=l.match(/intensity=(\w+)/i),int=section||(im?im[1].toLowerCase():'');const t=typeOf(st.label,int);
+    const b={t,v:valTxt(st),label:st.label,lt:t};(cur?cur.items:res).push(b)}
+  return res}
+function edRow(b,list,i){const d=document.createElement('div');d.className='edrow';
+  const sel=document.createElement('select');Object.entries(TY).forEach(([k,[lab]])=>{const o=document.createElement('option');o.value=k;o.textContent=lab;sel.append(o)});sel.value=b.t;
+  sel.onchange=()=>{b.t=sel.value;edDraw()};
+  const inp=document.createElement('input');inp.type='text';inp.value=b.v;inp.placeholder='5:00 ou 400 m';inp.style.width='92px';inp.onchange=()=>{b.v=inp.value;edDraw()};
+  const o=parseVal(b.v);const info=document.createElement('span');info.className='hint';info.style.margin='0';
+  info.textContent=o?fmt(speedFor({label:b.label&&b.lt===b.t?b.label:TY[b.t][0],type:{warm:'warm',cool:'cool',rec:'rec',foot:'foot'}[b.t]||'work',dur:o.dur||0,dist:o.dist||0}))+' km/h':'durée ?';
+  const btn=(t,f)=>{const x=document.createElement('button');x.textContent=t;x.className='mini';x.onclick=f;return x};
+  d.append(sel,inp,info,btn('Haut',()=>{if(i>0){[list[i-1],list[i]]=[list[i],list[i-1]];edDraw()}}),btn('Bas',()=>{if(i<list.length-1){[list[i+1],list[i]]=[list[i],list[i+1]];edDraw()}}),btn('Suppr.',()=>{list.splice(i,1);edDraw()}));return d}
+function edDraw(){const box=$('edBlocks');box.innerHTML='';
+  if(!ed.length)box.innerHTML='<p class="hint" style="margin:0">Ajoute des blocs avec les boutons ci-dessous. Durée en minutes (10 ou 1:30) ou distance (400 m, 1 km).</p>';
+  ed.forEach((b,i)=>{if(b.rep){const g=document.createElement('div');g.className='edrep';
+      const h=document.createElement('div');h.className='row';h.innerHTML='<b>Répéter</b>';const n=document.createElement('input');n.type='number';n.min=1;n.value=b.rep;n.style.width='64px';n.onchange=()=>{b.rep=Math.max(1,+n.value||1);edDraw()};
+      const x=document.createElement('button');x.className='mini';x.textContent='Suppr. la répétition';x.onclick=()=>{ed.splice(i,1);edDraw()};h.append(n,document.createTextNode('fois'),x);g.append(h);
+      b.items.forEach((it,j)=>g.append(edRow(it,b.items,j)));
+      const add=document.createElement('div');add.className='row';[['work','+ Effort'],['rec','+ Récup'],['sprint','+ Sprint'],['hill','+ Côte']].forEach(([t,l])=>{const a=document.createElement('button');a.className='mini';a.textContent=l;a.onclick=()=>{b.items.push({t,v:t==='rec'?'1:00':'1:00'});edDraw()};add.append(a)});g.append(add);box.append(g)}
+    else box.append(edRow(b,ed,i))});
+  const steps=parseWorkout(edText()).map(s=>({...s,v:speedFor(s)})),tot=steps.reduce((a,s)=>a+stepSec(s),0)||1;
+  $('edBar').innerHTML=steps.map(s=>`<i class="${s.type==='work'?'w done':'done'}" style="flex:${stepSec(s)/tot}"></i>`).join('');
+  $('edTotal').textContent=steps.length?`${steps.length} étapes · ${clock(tot)} · environ ${fmt(steps.reduce((a,s)=>a+(s.dist||s.dur*s.v/3.6),0)/1000,1)} km`:''}
+document.querySelectorAll('#edAdd [data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;
+  if(t==='rep')ed.push({rep:6,items:[{t:'work',v:'0:30'},{t:'rec',v:'0:30'}]});else ed.push({t,v:{warm:'10:00',cool:'5:00',foot:'20:00',rec:'2:00'}[t]||'5:00'});edDraw()});
+$('edClear').onclick=()=>{ed=[];$('edName').value='';$('edMsg').textContent='';edDraw()};
+$('edSave').onclick=()=>{const name=$('edName').value.trim(),text=edText();if(!name){$('edMsg').textContent='Donne un nom à ta séance.';return}
+  if(!parseWorkout(text).length){$('edMsg').textContent='Ajoute au moins un bloc avec une durée.';return}
+  const ws=store.get('workouts',[]),old=ws.find(w=>w.name===name);const nw={...(old||{}),name,text};delete nw.ivId;
+  store.set('workouts',[...ws.filter(w=>w.name!==name),nw]);listWorkouts();$('edMsg').textContent=`« ${name} » enregistrée dans Séances guidées${old?' (remplacée)':''}. Elle est prête pour la montre aussi.`};
+function editWorkout(w){ed=edFromText(w.text);$('edName').value=w.builtin?w.name+' (ma version)':w.name;$('edMsg').textContent='';edDraw();$('edPanel').scrollIntoView({behavior:'smooth'})}
+
+/* ================= MONTRE ET TAPIS D'ACCORD ================= */
+$('fixWatch').onclick=async()=>{const m=$('fixMsg');m.textContent='Recherche de la course de ta montre…';
+  try{const t0=run.startedAt||Date.now()-run.time*1000,day=d=>new Date(d).toISOString().slice(0,10);
+    const acts=await iv(`/athlete/${ivAth()}/activities?oldest=${day(t0-864e5)}&newest=${day(Date.now()+864e5)}`);
+    const cand=(acts||[]).filter(a=>/run/i.test(a.type||'')&&!/horizon/i.test(a.name||'')).map(a=>({a,gap:Math.abs(new Date(a.start_date_local).getTime()-t0)})).sort((x,y)=>x.gap-y.gap)[0];
+    if(!cand||cand.gap>45*60000){m.textContent="Je ne trouve pas encore la course de ta montre. Synchronise la montre avec Zepp, attends qu'elle arrive dans Intervals.icu, puis réessaie.";return}
+    const a=cand.a,dw=(a.distance||0)/1000,dh=run.dist/1000;
+    m.innerHTML=`Montre : <b>${fmt(dw,2)} km</b> · Horizon : <b>${fmt(dh,2)} km</b> (écart ${fmt(Math.abs(dw-dh)/Math.max(dh,.01)*100,0)} %). <button class="primary" id="fixGo">Corriger la montre</button>`;
+    $('fixGo').onclick=async()=>{try{await iv(`/activity/${a.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({distance:Math.round(run.dist)})});
+        m.textContent=`Distance corrigée dans Intervals.icu : ${fmt(dh,2)} km. Sur la montre, accepte aussi l'étalonnage proposé en fin de course sur tapis : elle se trompera de moins en moins.`}
+      catch(e){m.textContent=`Correction refusée (${e.message}). Ouvre la course dans Intervals.icu et remplace la distance par ${fmt(dh,2)} km.`}}}
+  catch(e){m.textContent='Recherche impossible : '+e.message+'.'}};
+
+/* ================= COURSE DEHORS (GPS du téléphone + cardio Bluetooth) ================= */
+const O={state:'idle',t:0,d:0,last:0,track:[],s:[[0,0,0]],sampAt:0,ref:null,lastFix:null,acc:null,kmSaid:0,split:null,splitT:0,startedAt:0,watch:null,map:null,me:null,refM:null,line:null,lead:null,goalSaid:false};
+function oRoutes(){const sel=$('oRoute'),cur=sel.value;sel.innerHTML='<option value="">Aucun (distance libre)</option>';store.get('routes',[]).forEach(r=>{const o=document.createElement('option');o.value=r.name;o.textContent=`${r.name} · ${fmt(r.km,1)} km`;sel.append(o)});sel.value=[...sel.options].some(o=>o.value===cur)?cur:''}
+function oRouteObj(){const n=$('oRoute').value;return n?store.get('routes',[]).find(r=>r.name===n):null}
+function oRefRun(){const m=$('oRef').value,rn=$('oRoute').value,runs=store.get('runs',{});
+  if(m==='dist'){const D=(+$('oDist').value||5)*1000;let best=null,bt=1e12;
+    const all=[...Object.values(runs).flat(),...Object.values(store.get('watchRuns',{}))];
+    all.forEach(r=>{if(r&&r.s&&r.dist>=D){const t=gTimeAt(r,D);if(t!=null&&t<bt){bt=t;best=r}}});return best}
+  if(!rn)return null;
+  if(m==='route'){let best=null;Object.keys(runs).filter(k=>k.startsWith(rn+'|')).forEach(k=>runs[k].filter(r=>r.done).forEach(r=>{if(!best||r.dist/r.time>best.dist/best.time)best=r}));return best}
+  if(m==='watch')return store.get('watchRuns',{})[rn]||null;
+  if(m==='friend'){const f=store.get('friend',null);return f&&f.route===rn?f.run:null}
+  return null}
+function oRefName(){const m=$('oRef').value,f=store.get('friend',null);return{dist:'Mon meilleur',route:'Mon record',watch:'Ma sortie',friend:f&&f.by?'Défi '+de(f.by):"Défi d'un ami"}[m]||'Record'}
+function oInfo(){const m=$('oRef').value,r=oRefRun(),D=(+$('oDist').value||5)*1000;$('oDistBox').hidden=m!=='dist';$('oRefBox').style.opacity=m?1:.35;$('oRefLab').textContent=oRefName();
+  let t='';if(!m)t='Course libre : un seul chrono.';
+  else if(!r)t=m==='dist'?`Aucune course de ${fmt(D/1000,1)} km ou plus pour l'instant : celle-ci deviendra ta référence.`:(!$('oRoute').value?'Choisis d\'abord un parcours.':'Aucune course de référence sur ce parcours pour l\'instant.');
+  else t=m==='dist'?`Temps à battre sur ${fmt(D/1000,1)} km : ${clock(gTimeAt(r,D))}.`:`Temps à battre : ${clock(r.time)} pour ${fmt(r.dist/1000,2)} km.`;
+  $('oInfo').textContent=t;oDrawRoute()}
+['oRoute','oRef','oDist'].forEach(id=>$(id).onchange=oInfo);
+function oInitMap(){if(O.map)return;O.map=L.map('omap',{zoomControl:false});tiles().addTo(O.map);O.map.setView([49.0486,1.6011],15);
+  const ic=h=>L.divIcon({className:'ghost-ic',iconSize:[30,40],iconAnchor:[15,20],html:h});O.ic=ic;
+  O.me=L.marker([49.0486,1.6011],{icon:ic(dotHTML(ME_C)),zIndexOffset:600,interactive:false});O.refM=L.marker([49.0486,1.6011],{icon:ic(dotHTML(REF_C)),zIndexOffset:500,interactive:false});
+  O.trail=L.polyline([],{color:'#fb923c',weight:4}).addTo(O.map)}
+function oDrawRoute(){if(!O.map)return;if(O.line){O.map.removeLayer(O.line);O.line=null}const r=oRouteObj();
+  if(r){O.line=L.polyline(r.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5,opacity:.8}).addTo(O.map);if(O.state==='idle')O.map.fitBounds(O.line.getBounds())}}
+// position le long du parcours choisi (pour placer le point du record)
+function oPosOnRoute(r,d){const pts=r.pts;let acc=0;for(let i=1;i<pts.length;i++){const sd=hav(pts[i-1],pts[i]);if(acc+sd>=d){const t=(d-acc)/(sd||1);return[pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t]}acc+=sd}return pts[pts.length-1]}
+function oFix(pos){const c=pos.coords;O.acc=c.accuracy;if(O.state!=='running')return;if(c.accuracy>35)return;
+  const p=[c.latitude,c.longitude,c.altitude??null],now=pos.timestamp||Date.now();
+  if(O.lastFix){const dd=hav(O.lastFix.p,p),dt=(now-O.lastFix.at)/1000;if(dd<3)return;if(dt>0&&dd/dt>9)return;O.d+=dd}
+  O.lastFix={p,at:now};O.track.push([Math.round(O.t),p[0],p[1],p[2],run.hr||0]);if(O.trail)O.trail.addLatLng([p[0],p[1]])}
+function oSay(fr,en){say(fr,en)}
+$('oHr').onclick=()=>$('hrconnect').onclick();
+$('oStart').onclick=async()=>{if(O.state==='running')return;if(!navigator.geolocation){$('oInfo').textContent="Ce navigateur n'a pas accès au GPS.";return}
+  oInitMap();keepAwake();
+  if(O.state==='idle'){Object.assign(O,{t:0,d:0,track:[],s:[[0,0,0]],sampAt:0,lastFix:null,kmSaid:0,split:null,splitT:0,lead:null,goalSaid:false,startedAt:Date.now()});O.ref=oRefRun();
+    $('oAfter').hidden=true;O.trail.setLatLngs([]);$('oRoute').disabled=$('oRef').disabled=$('oDist').disabled=true;
+    O.watch=navigator.geolocation.watchPosition(oFix,e=>{$('oGps').textContent='perdu';log('GPS : '+e.message)},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+    oSay(O.ref?`C'est parti. ${oRefName()} est en piste.`:'C\'est parti.',O.ref?'Go. Your record is running with you.':'Go.')}
+  O.state='running';O.last=performance.now();$('oStart').disabled=true;$('oPause').disabled=false;$('oStop').disabled=false};
+$('oPause').onclick=()=>{if(O.state!=='running')return;O.state='paused';O.lastFix=null;$('oStart').textContent='Reprendre';$('oStart').disabled=false;$('oPause').disabled=true;oSay('Pause','Paused')};
+$('oStop').onclick=()=>{if(O.state==='done'||O.state==='idle')return;O.state='done';if(O.watch!=null)navigator.geolocation.clearWatch(O.watch);wake?.release?.();
+  O.s.push([Math.round(O.t),Math.round(O.d),run.hr||0]);['oStart','oPause','oStop'].forEach(i=>$(i).disabled=true);$('oRoute').disabled=$('oRef').disabled=$('oDist').disabled=false;
+  oAfter();$('oStart').textContent='Nouvelle course';$('oStart').disabled=false;O.state='idle'};
+function oTick(){const now=performance.now(),dt=Math.min(2,(now-O.last)/1000);O.last=now;
+  if(O.state==='running'){O.t+=dt;if(O.t-O.sampAt>=2){O.sampAt=O.t;O.s.push([Math.round(O.t),Math.round(O.d),run.hr||0])}
+    const km=Math.floor(O.d/1000);if(km>O.kmSaid){O.kmSaid=km;O.split=O.t-O.splitT;O.splitT=O.t;
+      let g='',ge='';if(O.ref){const rt=gTimeAt(O.ref,km*1000);if(rt!=null){const d=Math.round(rt-O.t);g=` ${Math.abs(d)} secondes ${d>=0?"d'avance":'de retard'}.`;ge=` ${Math.abs(d)} seconds ${d>=0?'ahead':'behind'}.`}}
+      oSay(`Kilomètre ${km}, en ${durWords({dur:Math.round(O.split)})}.${g}`,`Kilometre ${km}, ${durEn({dur:Math.round(O.split)})}.${ge}`)}
+    if($('oRef').value==='dist'&&!O.goalSaid&&O.d>=(+$('oDist').value||5)*1000){O.goalSaid=true;const r=O.ref?gTimeAt(O.ref,(+$('oDist').value)*1000):null;
+      oSay(`Distance atteinte en ${durWords({dur:Math.round(O.t)})}.${r!=null?(O.t<r?' Nouveau record.':' Ton record tient encore.'):''}`,`Target distance reached.${r!=null&&O.t<r?' New record.':''}`)}}
+  oRender()}
+function oRender(){if($('view-out').hidden)return;
+  $('oMe').textContent=clock(O.t);$('oDistV').textContent=fmt(O.d/1000,2);$('oHrV').textContent=run.hr?run.hr:'–';
+  $('oHrPill').textContent=run.hrSrc==='watch'?'Montre connectée':'Montre non connectée';$('oHrPill').className='pill'+(run.hrSrc==='watch'?' on':'');
+  $('oGps').textContent=O.acc==null?'–':O.acc<=15?'bon':O.acc<=35?'moyen':'faible';
+  const back=O.s.filter(x=>x[0]>=O.t-30);const pd=back.length>1?(O.d-back[0][1])/((O.t-back[0][0])||1):0;$('oPace').textContent=pd>0.8?clock(1000/pd):'–';
+  $('oAvg').textContent=O.d>50?clock(O.t/(O.d/1000)):'–';$('oSplit').textContent=O.split?clock(O.split):'–';
+  const ref=O.ref||(O.state==='idle'?oRefRun():null);let lead=null;
+  if(ref&&$('oRef').value){const rt=gTimeAt(ref,O.d);
+    if(rt==null){$('oRec').textContent='terminé';$('oGap').textContent=O.d>0?'Plus loin que jamais':'Prêt';$('oGap').className='duo-gap ahead';lead='me'}
+    else{$('oRec').textContent=clock(rt);const d=rt-O.t;
+      if(O.t<1){$('oGap').textContent='Prêt';$('oGap').className='duo-gap'}else{const a=Math.abs(d),tx=a<60?Math.round(a)+' s':clock(a);$('oGap').textContent=d>=0?tx+" d'avance":tx+' de retard';$('oGap').className='duo-gap '+(d>=0?'ahead':'behind');lead=d>=0?'me':'ref'}}}
+  else{$('oRec').textContent='–';$('oGap').textContent=O.t>0?'Course libre':'Prêt';$('oGap').className='duo-gap'}
+  const md='<span class="mini-medal">'+medalHTML('#f5c542')+'</span>';$('oMeMedal').innerHTML=lead==='me'?md:'';$('oRefMedal').innerHTML=lead==='ref'?md:'';
+  if(O.map&&O.lastFix){const p=O.lastFix.p;O.me.setLatLng([p[0],p[1]]);if(!O.me._map)O.me.addTo(O.map);
+    const r=oRouteObj();if(ref&&r&&$('oRef').value&&$('oRef').value!=='dist'){const gp=oPosOnRoute(r,gDistAt(ref,O.t));O.refM.setLatLng(gp);if(!O.refM._map)O.refM.addTo(O.map)}else if(O.refM._map)O.refM.remove();
+    if(lead!==O.lead){O.lead=lead;O.me.setIcon(O.ic(lead==='me'?medalHTML(ME_C):dotHTML(ME_C)));O.refM.setIcon(O.ic(lead==='ref'?medalHTML(REF_C):dotHTML(REF_C)))}
+    O.map.setView([p[0],p[1]],O.map.getZoom()<14?16:O.map.getZoom(),{animate:false})}}
+setInterval(oTick,500);
+function oAfter(){if(O.t<60){return}$('oAfter').hidden=false;$('oMsg').textContent='';$('oUpload').disabled=false;
+  const rn=$('oRoute').value,key=(rn||'Dehors')+'|dehors',all=store.get('runs',{}),list=all[key]||[];
+  list.push({date:new Date().toISOString(),time:Math.round(O.t),dist:Math.round(O.d),done:true,src:'dehors',s:O.s});while(list.length>10)list.shift();all[key]=list;store.set('runs',all);
+  const P=prof(),km=O.d/1000,now=new Date(),news=[],recs=[];P.km+=km;P.runs++;P.dates=[...(P.dates||[]),now.toISOString()].slice(-30);let xp=Math.round(km*100);
+  const gb=(id,ok)=>{if(ok&&!P.badges[id]){P.badges[id]=now.toISOString();news.push(id);xp+=200}};
+  const beat=O.ref&&gTimeAt(O.ref,Math.min(O.d,O.ref.dist))!=null&&O.d>=O.ref.dist*0.99&&O.t<gTimeAt(O.ref,O.ref.dist*0.99)+1;
+  gb('first',true);gb('km10',P.km>=10);gb('km50',P.km>=50);gb('km100',P.km>=100);gb('km500',P.km>=500);gb('runs10',P.runs>=10);gb('runs50',P.runs>=50);
+  gb('week3',P.dates.filter(d=>now-new Date(d)<7*864e5).length>=3);gb('k5',O.d>=5000);gb('k10',O.d>=10000);gb('english',EN());
+  gb('record',beat&&['dist','route'].includes($('oRef').value));gb('duel',beat&&$('oRef').value==='friend');gb('outdoor',beat&&$('oRef').value==='watch');
+  const h=new Date(O.startedAt).getHours();gb('early',h<7);gb('night',h>=21);
+  RECS.forEach(([D,lab])=>{const t=bestTime(O.s,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
+  const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
+  const L=[`<span>+${xp} XP${lv>lv0?` · <b>niveau ${lv} atteint</b>`:''}</span>`];recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));
+  news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('oGain').innerHTML=L.join('');
+  $('oAfterTxt').textContent=`${fmt(km,2)} km en ${clock(O.t)}, moyenne ${O.d>50?clock(O.t/km):'–'}/km.${beat?' Défi gagné.':''} Si ta montre a aussi enregistré la course, n'envoie pas celle-ci à Intervals.icu : elle apparaîtrait deux fois.`;
+  $('oName').value=rn||('Sortie du '+now.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}));
+  if(recs.length||news.length)setTimeout(()=>say([...recs.map(r=>'Nouveau record : '+r),...news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1])].join('. '),'Well done.'),2000)}
+$('oSaveRoute').onclick=()=>{if(O.track.length<10){$('oMsg').textContent='Pas assez de points GPS pour créer un parcours.';return}
+  const name=$('oName').value.trim()||'Ma sortie';let pts=resample(O.track.map(q=>[q[1],q[2],q[3]]));
+  const fin=async()=>{if(pts.some(p=>p[2]==null)){try{pts=await addElevation(pts)}catch(e){pts=pts.map(p=>[p[0],p[1],p[2]??0])}}
+    const e=smooth(pts.map(p=>p[2]??0));let km=0,g=0;for(let i=1;i<pts.length;i++){km+=hav(pts[i-1],pts[i]);const dz=e[i]-e[i-1];if(dz>0)g+=dz}
+    const rs=store.get('routes',[]).filter(r=>r.name!==name);rs.unshift({name,km:km/1000,gain:Math.round(g),pts:pts.map((p,i)=>[+p[0].toFixed(6),+p[1].toFixed(6),Math.round(e[i]*10)/10])});store.set('routes',rs);
+    const w=store.get('watchRuns',{});w[name]={date:new Date(O.startedAt).toISOString(),time:Math.round(O.t),dist:Math.round(O.d),done:true,src:'dehors',s:O.s};store.set('watchRuns',w);
+    listRoutes();oRoutes();$('oMsg').textContent=`« ${name} » enregistré : tu peux le recourir sur le tapis contre cette course (défi « Ma sortie dehors »), ou dehors.`};fin()};
+$('oUpload').onclick=async()=>{const m=$('oMsg');m.textContent='Envoi…';
+  try{const t0=O.startedAt,nm=esc(($('oName').value||'Course dehors')+' (Horizon)');
+    const pts=O.track.map(([t,la,lo,el,h])=>`<trkpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}">${el!=null?`<ele>${(+el).toFixed(1)}</ele>`:''}<time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`).join('\n');
+    const gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Horizon" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata><trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`;
+    const fd=new FormData();fd.append('file',new Blob([gpx],{type:'application/gpx+xml'}),'horizon-dehors.gpx');
+    await iv(`/athlete/${ivAth()}/activities?name=${encodeURIComponent($('oName').value||'Course dehors')}&description=${encodeURIComponent('Course dehors avec Horizon')}`,{method:'POST',body:fd});
+    m.textContent='Course envoyée dans Intervals.icu.';$('oUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
+
+if(window.HORIZON_ANDROID){$('tab-out').hidden=true}
+listRoutes();listWorkouts();showWord();renderProfile();calUI();edDraw();
+const saved=store.get('routes',[]);
+if(saved.length){$('rname').value=saved[0].name;setRoute(saved[0].pts,saved[0].name);map.fitBounds(line.getBounds())}
+else if(!location.hash.startsWith('#defi=')){wps=[[49.0486,1.6011],[49.0552,1.5895],[49.0452,1.5778],[49.0486,1.6011]];$('rname').value='Exemple : boucle autour de Freneuse';drawPrep();rebuild().then(()=>line&&map.fitBounds(line.getBounds()))}
+resetRun();
+importChallenge();
+</script>
+</body>
+</html>
