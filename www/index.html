@@ -699,7 +699,7 @@ const LocCtl=L.Control.extend({options:{position:'topright'},onAdd(){const b=L.D
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
 function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
   if(line)map.removeLayer(line);line=null;
-  if(route&&route.decor){$('routeinfo').textContent=`Décor : ${route.name} · ${fmt(total()/1000,2)} km · D+ ${Math.round(gain())} m${total()<=400?' par tour':''}`;document.querySelectorAll('.decor').forEach(c=>c.classList.toggle('on',c.dataset.k===route.decor))}
+  if(route&&route.decor){$('routeinfo').textContent=`Décor : ${route.name}. La distance est celle de ta séance ; en course libre, tu cours autant que tu veux.`;document.querySelectorAll('.decor').forEach(c=>c.classList.toggle('on',c.dataset.k===route.decor))}
   else if(route){document.querySelectorAll('.decor').forEach(c=>c.classList.remove('on'));line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(map);
     $('routeinfo').textContent=`${route.name} · ${fmt(total()/1000,2)} km · D+ ${Math.round(gain())} m · temps à 10 km/h : ${Math.round(total()/1000/10*60)} min`}
   else $('routeinfo').textContent='Aucun parcours.'}
@@ -879,7 +879,7 @@ $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()|
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
-$('wsel').onchange=()=>{try{goalPick()}catch(e){}const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
+$('wsel').onchange=()=>{try{goalPick()}catch(e){}setTimeout(()=>{try{drawProfile($('profile'),-1)}catch(e){}},0);const aw=workouts().find(o=>o.name===$('wsel').value);if(aw&&aw.decor&&window.VR&&VR.DEFS[aw.decor]&&(!route||route.decor!==aw.decor)&&run.state==='idle'){const d=VR.DEFS[aw.decor];$('rname').value=d.name;setRoute(VR.routePts(aw.decor),d.name,aw.decor);store.set('lastRoute','d:'+aw.decor);drawPrep();if(!$('view-run').hidden)RM.init()}
   updateGhostInfo();renderSteps();renderWSpeeds();wpickLabel()};
 document.body.append($('wpickSheet'));$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
 function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
@@ -956,7 +956,7 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
   $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${clock(tot)}. Tu peux la choisir dans « Séance sur ce parcours ».`;
   $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
-  b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small><span class="km">${d.len>=1000?fmt(d.len/1000,0)+' km':d.len+' m'} · en boucle</span>`;
+  b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small>`;
   b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
@@ -1007,6 +1007,7 @@ function css(v){return getComputedStyle(document.documentElement).getPropertyVal
 function drawProfile(cv,x,gx){const dpr=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;cv.width=w*dpr;cv.height=h*dpr;
   const g=cv.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,w,h);
   if(!route){g.fillStyle=css('--muted');g.font='14px sans-serif';g.fillText('Trace un parcours pour voir le profil.',8,h/2);return}
+  if(route.decor){try{return drawProfileDecor(cv,g,w,h,x,gx)}catch(e){}}
   const es=route.pts.map(p=>p[2]),mn=Math.min(...es),mx=Math.max(...es),T=total(),pad=18;
   const X=d=>pad+(w-2*pad)*d/T,Y=e=>h-pad-(h-2*pad)*((e-mn)/((mx-mn)||1));
   g.beginPath();g.moveTo(X(0),h-pad);route.pts.forEach((p,i)=>g.lineTo(X(route.dist[i]),Y(p[2])));g.lineTo(X(T),h-pad);g.closePath();
@@ -1331,7 +1332,7 @@ function renderLeft(){const s=curStep();if(!s){$('stLeft').textContent=run.step<
   $('stLeft').textContent=s.dur?clock(s.dur-run.stepT):Math.max(0,Math.round(s.dist-run.stepD))+' m'}
 let lastBar=-2;
 let profRoute=null,profW=0;
-function render(){if(route&&!$('view-run').hidden&&(route!==profRoute||$('runprofile').clientWidth!==profW)){profRoute=route;profW=$('runprofile').clientWidth;try{drawProfile($('runprofile'),route?wrapX(run.dist):-1,null)}catch(e){}}const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
+function render(){const pk=route&&(route.name+'|'+$('wsel').value+'|'+(typeof LIVE!=='undefined'&&LIVE.room||'')+'|'+(route.decor&&!$('wsel').value?Math.ceil((run.dist+1000)/1000):''));if(route&&!$('view-run').hidden&&(pk!==profRoute||$('runprofile').clientWidth!==profW)){profRoute=pk;profW=$('runprofile').clientWidth;try{drawProfile($('runprofile'),route?wrapX(run.dist):-1,null)}catch(e){}}const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
   $('sTime').parentElement.hidden=zen;$('sPace').parentElement.hidden=zen;$('zenbox').hidden=!zen||!route;
   const x=route?wrapX(run.dist):0;
   $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+IU()+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
@@ -1348,7 +1349,7 @@ function render(){if(route&&!$('view-run').hidden&&(route!==profRoute||$('runpro
     else{const d=gt-run.time,a=Math.abs(d),txt=a<60?Math.round(a)+' s':clock(a);el.textContent=d>=0?txt+" d'avance":txt+' de retard';el.className=d>=0?'ahead':'behind'}}
   if(zen&&route){const nm=nextMark(x);$('zMark').textContent=nm?nm.m.fr:'–';$('zGap').textContent=nm?(nm.gap>=1000?fmt(nm.gap/1000,1)+' km':Math.round(nm.gap/10)*10+' m'):'–'}
   if(route){const g2=(eleAt(x+200)-eleAt(x))/2;$('sNext').textContent=(g2>=0.5?'Montée ':g2<=-0.5?'Descente ':'Plat ')+fmt(g2)+' %';
-    $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
+    $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):route.decor?(typeof LIVE!=='undefined'&&LIVE.room&&LIVE.data&&LIVE.data.dist?fmt(Math.max(0,LIVE.data.dist-run.dist)/1000,2)+' km':'libre'):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
     const p=posAt(x);$('sv').hidden=!!route.decor;$('sv').href=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p[0].toFixed(6)},${p[1].toFixed(6)}`;
     const now=performance.now();if(RM.map&&!replaying&&!$('view-run').hidden&&now-lastMap>1000){lastMap=now;
       lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
@@ -1914,6 +1915,22 @@ setInterval(()=>{try{liveTick()}catch(e){}},500);
   $('liveNew').onclick=liveCreate;$('liveJoin').onclick=liveJoin;$('liveGo').onclick=liveGo;$('liveQuit').onclick=liveLeave;
   liveUI();chalUI()})();
 
+</script>
+<script>
+/* Décors : l'environnement seulement, la distance vient de la séance */
+(()=>{const M={"Forêt, boucle de 5 km": "Forêt", "Bord de mer, 5 km": "Bord de mer", "Montagne, 6 km": "Montagne", "Ville du futur, 4 km": "Ville du futur", "Jungle préhistorique, 5 km": "Jungle préhistorique", "Tour du lac, 3 km": "Tour du lac"};try{const all=store.get('runs',{});let ch=0;for(const k of Object.keys(all)){const [n,...r]=k.split('|');if(M[n]){const nk=M[n]+'|'+r.join('|');all[nk]=[...(all[nk]||[]),...all[k]];delete all[k];ch=1}}if(ch)store.set('runs',all)}catch(e){}})();
+function planDist(){if(LIVE.room&&LIVE.data&&LIVE.data.dist)return LIVE.data.dist;
+  let st=null;if(workout&&run.state!=='idle')st=workout.steps;else{const w=$('wsel').value==='__test'?testWorkout():workouts().find(o=>o.name===$('wsel').value);if(w)st=w.steps||progSteps(w.name,parseWorkout(w.text))}
+  if(st&&st.length){const d=st.reduce((a,s)=>a+(s.dist||s.dur*(s.v||speedFor(s))/3.6),0);if(d>50)return Math.max(d,run.dist)}
+  return Math.max(5000,Math.ceil((run.dist+1000)/1000)*1000)}
+function drawProfileDecor(cv,g,w,h,x,gx){const D=planDist(),N=400,pad=18,ds=[],es=[];for(let i=0;i<=N;i++){const d=D*i/N;ds.push(d);es.push(eleAt(wrapX(d)))}
+  const mn=Math.min(...es),mx=Math.max(...es),flat=mx-mn<1,X=d=>pad+(w-2*pad)*d/D,Y=e=>flat?h-pad-(h-2*pad)*0.15:h-pad-(h-2*pad)*((e-mn)/(mx-mn));
+  g.beginPath();g.moveTo(X(0),h-pad);ds.forEach((d,i)=>g.lineTo(X(d),Y(es[i])));g.lineTo(X(D),h-pad);g.closePath();g.fillStyle=css('--accent')+'33';g.fill();
+  g.beginPath();ds.forEach((d,i)=>i?g.lineTo(X(d),Y(es[i])):g.moveTo(X(d),Y(es[i])));g.strokeStyle=css('--accent');g.lineWidth=2;g.stroke();
+  g.fillStyle=css('--muted');g.font='11px sans-serif';g.fillText(flat?'plat':Math.round(mx)+' m',pad,11);if(!flat)g.fillText(Math.round(mn)+' m',pad,h-4);
+  g.textAlign='right';const free=!(LIVE.room&&LIVE.data)&&!(workout&&run.state!=='idle')&&!$('wsel').value;g.fillText(fmt(D/1000,1)+' km'+(free?' (course libre)':''),w-pad,h-4);
+  const mark=(d,c)=>{d=Math.min(D,d);g.strokeStyle=c;g.lineWidth=2;g.beginPath();g.moveTo(X(d),pad/2);g.lineTo(X(d),h-pad);g.stroke();g.fillStyle=c;g.beginPath();g.arc(X(d),Y(eleAt(wrapX(d))),5,0,7);g.fill()};
+  if(gx!=null)mark(gx,css('--ghost'));if(x>=0)mark(typeof replaying!=='undefined'&&replaying?x:run.dist,css('--climb'))}
 </script>
 </body>
 </html>
