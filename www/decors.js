@@ -351,7 +351,7 @@
       let dx = x - o.x; if (dx < -L / 2) dx += L; if (dx > L / 2) dx -= L; const dt = (now - o.t) / 1000;
       o.v = dt > 0.2 ? o.v * 0.6 + 0.4 * Math.max(0, Math.min(12, dx / dt)) : o.v; o.x = x; o.t = now; }
     const shown = (o) => { if (o.x == null) return null; const dt = Math.min(1.4, (performance.now() - o.t) / 1000); return o.x + o.v * dt; };
-    let camPos = null;
+    let camPos = null, lookPos = null;
     function frame() {
       if (!S.alive) return; S.raf = requestAnimationFrame(frame);
       const tF = performance.now(); if (tF - (S.lastDraw || 0) < (HQ ? 15 : 31)) return; S.lastDraw = tF;   // 30 images/s en qualité normale
@@ -366,7 +366,8 @@
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
       else { const back = at(xm - 9, laneMe), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4); look = fwd.pos.clone().setY(fwd.pos.y + 1.0); }
-      camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, 1 - Math.exp(-7 * Math.max(fdt, 0.016))) : want.clone(); cam.position.copy(camPos); cam.lookAt(look);
+      const kk = 1 - Math.exp(-6 * Math.max(fdt, 0.016));
+      camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, kk) : want.clone(); lookPos = lookPos && lookPos.distanceTo(look) < 60 ? lookPos.lerp(look, kk) : look.clone(); cam.position.copy(camPos); cam.lookAt(lookPos);
       if (board) { const lap = Math.floor((S.lapDist || 0) / 400) + 1, txt = 'TOUR ' + lap + '|' + ((S.lapDist || 0) / 1000).toFixed(2).replace('.', ',') + ' km';
         if (txt !== board.last) { board.last = txt; const g = board.canvas.getContext('2d'); g.fillStyle = '#111827'; g.fillRect(0, 0, 512, 256); g.fillStyle = '#fbbf24'; g.textAlign = 'center'; g.textBaseline = 'middle';
           g.font = 'bold 70px sans-serif'; g.fillText('TOUR ' + lap, 256, 90); g.font = 'bold 48px sans-serif'; g.fillText(txt.split('|')[1], 256, 180); board.tex.needsUpdate = true; }
@@ -383,7 +384,7 @@
       dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v }; },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
-      resize() { camPos = null; },
+      resize() { camPos = null; lookPos = null; },
       remove() { S.alive = false; cancelAnimationFrame(S.raf); try { ren.dispose(); ren.forceContextLoss(); } catch (e) {} el.innerHTML = ''; },
     };
   }

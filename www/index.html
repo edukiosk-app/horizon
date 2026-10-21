@@ -1216,7 +1216,7 @@ function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);r
     let dd=realSpeed()/3.6*dt;run.spAcc=(run.spAcc||0)+dd;
     if(!bt.tdBad&&run.spAcc>80&&(run.tdAcc||0)<0.5*run.spAcc){bt.tdBad=true;log('Compteur de distance du tapis incohérent : calcul par la vitesse');dd+=Math.max(0,run.spAcc-run.dist-dd)}
     if(bt.ok&&!bt.tdBad&&bt.td!=null&&now-bt.tdAt<3000){if(run.tdPrev==null||bt.td<run.tdPrev)run.tdPrev=bt.td;const d=bt.td-run.tdPrev;
-      if(d>=0&&d<=Math.max(15,dd*4+5)){run.tdAcc=(run.tdAcc||0)+d*K();run.tdPrev=bt.td;const lag=run.tdAcc-run.tdUsed;dd=Math.max(0,Math.min(lag,dd*1.6+0.5));run.tdUsed+=dd}else run.tdPrev=bt.td}
+      if(d>=0&&d<=Math.max(15,dd*4+5)){run.tdAcc=(run.tdAcc||0)+d*K();run.tdPrev=bt.td;const lag=run.tdAcc-run.tdUsed,c=0.2*dd+0.05;dd=Math.max(0,dd+Math.max(-c,Math.min(c,lag-dd)));run.tdUsed+=dd}else run.tdPrev=bt.td}
     const x0=wrapX(run.dist);run.dist+=dd;run.time+=dt;const x1=wrapX(run.dist);
     const e0=eleAt(x0),e1=eleAt(x1);if(x1>=x0&&e1>e0&&!(workout&&workout.test))run.gain+=e1-e0;
     if(run.time-run.sampAt>=2){run.sampAt=run.time;run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0])}
@@ -1279,7 +1279,9 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
       RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
 $('incUnit').value=store.get('incUnit','pts');$('incUnit').onchange=()=>{store.set('incUnit',$('incUnit').value);if($('incUnit').value==='pts'&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange()}incUI();renderWSpeeds();render()};setTimeout(()=>{if(PTS()&&!store.get('incMax20')&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange();store.set('incMax20',1)}incUI()},0);
 // position du coureur lue en continu par les décors : mouvement fluide entre deux mesures du tapis
-window.trLive=()=>{if(replaying||!route||!route.decor)return null;let d=run.dist,v=0;if(run.state==='running'){v=realSpeed()/3.6;d+=v*Math.min(0.6,(performance.now()-run.last)/1000)}return{x:wrapX(d),v}};
+const LV={d:null,t:0};
+window.trLive=()=>{if(replaying||!route||!route.decor)return null;const now=performance.now();let truth=run.dist,v=0;if(run.state==='running'){v=realSpeed()/3.6;truth+=v*Math.min(0.6,(now-run.last)/1000)}
+  if(LV.d==null||run.state!=='running'||Math.abs(truth-LV.d)>25)LV.d=truth;else{const dt=Math.min(0.1,(now-LV.t)/1000);let nd=LV.d+v*dt;nd+=(truth-nd)*Math.min(1,dt*0.4);LV.d=Math.max(LV.d,nd)}LV.t=now;return{x:wrapX(LV.d),v}};
 try{$('vrHQ').checked=localStorage.getItem('vrHQ')==='1'}catch(e){}$('vrHQ').onchange=()=>{try{localStorage.setItem('vrHQ',$('vrHQ').checked?'1':'0')}catch(e){}if(RM.kind==='decor')RM.teardown()};
 setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
