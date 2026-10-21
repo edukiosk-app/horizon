@@ -789,7 +789,7 @@ $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()|
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
 $('wsel').onchange=()=>{updateGhostInfo();renderSteps();renderWSpeeds();wpickLabel()};
-$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
+document.body.append($('wpickSheet'));$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
 function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
 const paceTxt=v=>{const sec=3600/v;return Math.floor(sec/60)+':'+String(Math.round(sec%60)).padStart(2,'0')+' /km'};
 function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts().find(o=>o.name===name);
