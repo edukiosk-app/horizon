@@ -1,4 +1,4 @@
-name: Construire Horizon
+name: Construire Treadverse
 
 on:
   push:
@@ -42,7 +42,7 @@ jobs:
             git config user.name "horizon-bot"
             git config user.email "horizon-bot@users.noreply.github.com"
             git add resources/debug.keystore
-            git commit -m "Clé de signature d'Horizon [skip ci]"
+            git commit -m "Clé de signature de Treadverse [skip ci]"
             git push
           fi
           cp resources/debug.keystore ~/.android/debug.keystore
@@ -51,15 +51,15 @@ jobs:
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
 
       - name: Renommer
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk Horizon.apk
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk Treadverse.apk
 
       - name: Publier l'APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: Horizon 1.0.${{ github.run_number }}
-          body: Ouvre cette page sur ton téléphone Android, touche Horizon.apk puis installe-le.
-          files: Horizon.apk
+          name: Treadverse 1.0.${{ github.run_number }}
+          body: Ouvre cette page sur ton téléphone Android, touche Treadverse.apk puis installe-le.
+          files: Treadverse.apk
 
       - name: Préparer la version web
         uses: actions/upload-pages-artifact@v3
