@@ -153,7 +153,6 @@ button.mini{padding:5px 8px;font-size:12px}
 .fs-map{position:absolute;inset:0}
 .fs-map .mapwrap,.fs-map #runmap{height:100%!important;min-height:0!important;border-radius:0!important}
 #fs .mapstyles{display:none}
-#fs .vbar{bottom:calc(env(safe-area-inset-bottom,0px) + 250px)!important}
 #fs .mapbtn#btn3d{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 250px);right:12px}
 #fs .mapbtn.recenter{bottom:calc(env(safe-area-inset-bottom,0px) + 250px)}
 #fs .maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + 300px)}
@@ -205,7 +204,6 @@ button.mini{padding:6px 10px;font-size:13px}
 .pk{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin:4px 0;padding:10px 12px;background:var(--tile);border:1px solid var(--line);border-radius:10px}
 .pk .wk-meta{font-size:13px;color:var(--muted)}
 .pk.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.pk.on .wk-name{color:var(--accent)}
-.vid{display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}.vid b{font-weight:600;overflow-wrap:anywhere}.vid small{display:block;color:var(--muted)}.vid select{max-width:150px}
 .decors{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .decor{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;border-radius:12px;background:var(--tile);border:1px solid var(--line)}
 .decor b{font:700 16px var(--display);text-transform:uppercase;letter-spacing:.04em}.decor small{color:var(--muted);line-height:1.35}
@@ -258,13 +256,6 @@ button.mini{padding:6px 10px;font-size:13px}
       <h2>Décors virtuels</h2>
       <p class="hint" style="margin-top:0">Pas de carte à charger : le décor est dessiné par l'appli, même sans internet. Le tapis suit ses pentes.</p>
       <div class="decors" id="decors"></div>
-      <div id="vidBox" hidden>
-        <h3 class="ai-step">Mes vidéos</h3>
-        <p class="hint" style="margin-top:0">Télécharge sur <b>pexels.com</b> ou <b>pixabay.com</b> (gratuit) des vidéos filmées à la première personne en marchant ou en courant : forêt, plage, montagne… Ajoute-les ici : elles s'enchaînent en boucle et défilent à la vitesse du tapis. Elles restent dans ton téléphone.</p>
-        <label class="btn" style="flex-direction:row;color:var(--fg);display:inline-flex">Ajouter des vidéos<input id="vidAdd" type="file" accept="video/*" multiple hidden></label>
-        <div id="vidList" style="margin-top:8px"></div>
-        <p class="hint" id="vidMsg"></p>
-      </div>
     </div>
 
     <div class="panel" id="prepSession">
@@ -657,7 +648,6 @@ map.addControl(new LocCtl());
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
 function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
   if(line)map.removeLayer(line);line=null;
-  $('vidBox')&&($('vidBox').hidden=!(route&&route.decor==='video'));
   if(route&&route.decor){$('routeinfo').textContent=`Décor : ${route.name} · ${fmt(total()/1000,2)} km · D+ ${Math.round(gain())} m${total()<=400?' par tour':''}`;document.querySelectorAll('.decor').forEach(c=>c.classList.toggle('on',c.dataset.k===route.decor))}
   else if(route){document.querySelectorAll('.decor').forEach(c=>c.classList.remove('on'));line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(map);
     $('routeinfo').textContent=`${route.name} · ${fmt(total()/1000,2)} km · D+ ${Math.round(gain())} m · temps à 10 km/h : ${Math.round(total()/1000/10*60)} min`}
@@ -910,18 +900,7 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
   $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
   b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small><span class="km">${d.len>=1000?fmt(d.len/1000,0)+' km':d.len+' m'} · en boucle</span>`;
-  b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);drawPrep();if(k==='video'){vidList();$('vidBox').scrollIntoView({behavior:'smooth',block:'start'})}else $('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();
-async function vidList(){const box=$('vidList');if(!box||!window.VR)return;let l=[];try{l=(await VR.VDB.list()).sort((a,b)=>a.order-b.order)}catch(e){$('vidMsg').textContent='Stockage des vidéos indisponible sur cet appareil.';return}
-  box.innerHTML=l.length?'':'<p class="hint" style="margin:0">Aucune vidéo pour l\'instant.</p>';
-  l.forEach((o,i)=>{const r=document.createElement('div');r.className='vid';r.innerHTML=`<span><b>${i+1}. ${esc(o.name)}</b><small>${fmt(o.blob.size/1048576,0)} Mo${o.dur?' · '+clock(o.dur):''}</small></span>`;
-    const sel=document.createElement('select');[[4.5,'filmée en marchant'],[6.5,'en marche rapide'],[10,'filmée en courant']].forEach(([v,t])=>{const op=document.createElement('option');op.value=v;op.textContent=t;sel.append(op)});sel.value=String(o.ref||4.5);
-    sel.onchange=async()=>{o.ref=+sel.value;await VR.VDB.add(o)};
-    const x=document.createElement('button');x.className='mini danger';x.textContent='Retirer';x.onclick=async()=>{await VR.VDB.del(o.id);vidList()};r.append(sel,x);box.append(r)});
-  $('vidMsg').textContent=l.length?`${l.length} vidéo${l.length>1?'s':''} : choisis « Courir ce parcours » pour démarrer. La pente se règle dans les paramètres de la séance ou à la main.`:''}
-$('vidAdd').onchange=async ev=>{const fs=[...ev.target.files];if(!fs.length)return;$('vidMsg').textContent='Ajout en cours…';let n=0,base=Date.now();
-  for(const f of fs){const dur=await new Promise(ok=>{const v=document.createElement('video');v.preload='metadata';v.onloadedmetadata=()=>{ok(v.duration||0);URL.revokeObjectURL(v.src)};v.onerror=()=>ok(0);v.src=URL.createObjectURL(f)});
-    try{await VR.VDB.add({id:base+'-'+n,name:f.name.replace(/\.[^.]+$/,''),blob:f,ref:/run|course|jog/i.test(f.name)?10:4.5,order:base+n,dur:Math.round(dur)});n++}catch(e){$('vidMsg').textContent='Impossible de garder « '+f.name+' » : mémoire du téléphone pleine ?';}}
-  ev.target.value='';vidList();if(route&&route.decor==='video'&&RM.kind==='decor'){RM.teardown();}};$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
+  b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
 const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
@@ -978,7 +957,7 @@ const isPremium=()=>store.get('premium',true)!==false;
 const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
   teardown(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,kind:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null,line:null});$('mapstyles').hidden=false;$('btn3d').hidden=false},
   init(){const dec=!!(route&&route.decor&&window.THREE&&window.VR);if(this.map&&(dec!==(this.kind==='decor')||(dec&&this.map.route!==route)))this.teardown();if(this.map)return;
-    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=route.decor==='video';$('btn3d').textContent='Vue';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
+    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=false;$('btn3d').textContent='Vue';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
     if(window.maplibregl){try{this.initGL();return}catch(e){log('Carte 3D indisponible sur cet appareil, carte 2D à la place')}}
     this.initLeaf()},
   styleName:null,userUntil:0,
