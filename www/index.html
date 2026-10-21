@@ -60,6 +60,7 @@ canvas{width:100%;height:140px;display:block}
 .pill.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .leaflet-container{background:var(--bg)}
+.dark-tiles{filter:invert(1) hue-rotate(180deg) brightness(.95) contrast(.9) saturate(.55)}
 .ghost-ic{background:none;border:none}
 .legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;font-size:13px;color:var(--muted)}
 .legend>span{white-space:nowrap}
@@ -455,12 +456,18 @@ const eleAt=x=>posAt(x)[2];
 const gradeAt=x=>(eleAt(x+40)-eleAt(x-40))/80*100;
 function gain(){let g=0;for(let i=1;i<route.pts.length;i++){const d=route.pts[i][2]-route.pts[i-1][2];if(d>0)g+=d}return g}
 
-async function addElevation(pts){
-  const out=pts.map(p=>[p[0],p[1],null]);
-  for(let i=0;i<pts.length;i+=100){const ch=pts.slice(i,i+100);
-    const u=`https://api.open-meteo.com/v1/elevation?latitude=${ch.map(p=>p[0].toFixed(5)).join(',')}&longitude=${ch.map(p=>p[1].toFixed(5)).join(',')}`;
-    const r=await fetch(u);if(!r.ok)throw new Error('altitude indisponible');const j=await r.json();
-    j.elevation.forEach((e,k)=>out[i+k][2]=e)}
+const elevCache=(()=>{try{return JSON.parse(localStorage.getItem('elev')||'{}')}catch(e){return{}}})();
+const ek=p=>p[0].toFixed(4)+','+p[1].toFixed(4);
+async function elevFetch(list){const need=list.filter(p=>elevCache[ek(p)]==null);
+  for(let i=0;i<need.length;i+=100){const ch=need.slice(i,i+100);
+    const u=`https://api.open-meteo.com/v1/elevation?latitude=${ch.map(p=>p[0].toFixed(4)).join(',')}&longitude=${ch.map(p=>p[1].toFixed(4)).join(',')}`;
+    let r=await fetch(u);
+    if(r.status===429){if($('routeinfo'))$('routeinfo').textContent='Le service des altitudes demande une pause : nouvel essai dans une minute…';await new Promise(res=>setTimeout(res,62000));r=await fetch(u)}
+    if(!r.ok)throw new Error('altitude indisponible');const j=await r.json();j.elevation.forEach((e,k)=>elevCache[ek(ch[k])]=e)}
+  try{const keys=Object.keys(elevCache);if(keys.length>20000)keys.slice(0,keys.length-20000).forEach(k=>delete elevCache[k]);localStorage.setItem('elev',JSON.stringify(elevCache))}catch(e){}}
+async function addElevation(pts){if(!pts.length)return pts;const stepN=5,idx=[];for(let i=0;i<pts.length;i+=stepN)idx.push(i);if(idx[idx.length-1]!==pts.length-1)idx.push(pts.length-1);
+  await elevFetch(idx.map(i=>pts[i]));const out=pts.map(p=>[p[0],p[1],null]);
+  for(let k=0;k<idx.length;k++){const i=idx[k],e=elevCache[ek(pts[i])];out[i][2]=e;if(k){const i0=idx[k-1],e0=out[i0][2];for(let m=i0+1;m<i;m++)out[m][2]=e0+(e-e0)*(m-i0)/(i-i0)}}
   return out}
 async function routeThrough(wps){
   const c=wps.map(w=>w[1].toFixed(6)+','+w[0].toFixed(6)).join(';');
@@ -469,7 +476,7 @@ async function routeThrough(wps){
   catch(e){log('Itinéraire indisponible, tracé en ligne droite');return wps.map(w=>[w[0],w[1],null])}}
 
 /* ---------- carte de préparation ---------- */
-const tiles=()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'});
+const tiles=()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'dark-tiles',attribution:'© OpenStreetMap'});
 const map=L.map('map').setView([49.0486,1.6011],14);tiles().addTo(map);
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
 function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
@@ -483,7 +490,8 @@ async function rebuild(){if(wps.length<2){route=null;drawPrep();drawProfile($('p
   try{let p=await routeThrough(wps);p=resample(p);p=await addElevation(p);setRoute(p,$('rname').value||'Mon parcours')}
   catch(e){$('routeinfo').textContent='Erreur : '+e.message+'. Vérifie la connexion internet.'}
   busy=false}
-map.on('click',e=>{wps.push([e.latlng.lat,e.latlng.lng]);drawPrep();rebuild()});
+let rbT=0;const rebuildSoon=()=>{clearTimeout(rbT);$('routeinfo').textContent='Calcul du parcours…';rbT=setTimeout(rebuild,1200)};
+map.on('click',e=>{wps.push([e.latlng.lat,e.latlng.lng]);drawPrep();rebuildSoon()});
 $('undo').onclick=()=>{wps.pop();rebuild()};
 $('loop').onclick=()=>{if(wps.length>1){wps.push(wps[0]);rebuild()}};
 $('clear').onclick=()=>{wps=[];route=null;drawPrep();drawProfile($('profile'),-1)};
@@ -669,8 +677,8 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
         {id:'roads-lbl',type:'symbol',source:'ofm','source-layer':'transportation_name',minzoom:14,layout:{'symbol-placement':'line','text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':12},paint:{'text-color':'#ffffff','text-halo-color':'#000000','text-halo-width':1.5}},
         {id:'place-lbl',type:'symbol',source:'ofm','source-layer':'place',layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],'text-size':14},paint:{'text-color':'#ffffff','text-halo-color':'#000000','text-halo-width':2}}]};
     return{version:8,glyphs:OFM+'/fonts/{fontstack}/{range}.pbf',sources:{
-        base:{type:'raster',tiles:['a','b','c','d'].map(sd=>`https://${sd}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png`),tileSize:256,attribution:'© OpenStreetMap © CARTO'},ofm},
-      layers:[{id:'bg',type:'background',paint:{'background-color':'#1c1f23'}},{id:'base',type:'raster',source:'base'},
+        base:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,maxzoom:19,attribution:'© OpenStreetMap'},ofm},
+      layers:[{id:'bg',type:'background',paint:{'background-color':'#1c1f23'}},{id:'base',type:'raster',source:'base',paint:{'raster-brightness-min':0.92,'raster-brightness-max':0.08,'raster-saturation':-0.55,'raster-hue-rotate':180,'raster-contrast':0.05}},
         {id:'b3d',type:'fill-extrusion',source:'ofm','source-layer':'building',minzoom:14,paint:{'fill-extrusion-color':'#3a4047','fill-extrusion-height':['coalesce',['get','render_height'],6],'fill-extrusion-opacity':0.8}}]}},
   decorate(){const m=this.map;
     if(!m.getSource('dem'))m.addSource('dem',{type:'raster-dem',tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:14,attribution:'Relief : Mapzen / AWS'});
