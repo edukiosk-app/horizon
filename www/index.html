@@ -921,10 +921,10 @@ $('connect').onclick=async()=>{
     const srv=await(await dev.gatt.connect()).getPrimaryService(FTMS);
     try{const ir=await(await srv.getCharacteristic(IRANGE)).readValue();const lo=ir.getInt16(0,true)/10,hi=ir.getInt16(2,true)/10;log(`Pente du tapis : ${fmt(lo)} à ${fmt(hi)} %`);
       if(+$('incMax').value>hi)$('incMax').value=hi;if(+$('incMin').value<lo)$('incMin').value=lo}catch(e){}
-    try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
+    try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;bt.minSpd=sr.getUint16(0,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
     const td=await srv.getCharacteristic(TDATA);await td.startNotifications();
     td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null){run.speed=r.speed;if(Math.abs(r.speed-(bt.lastLog??-9))>=0.5||(r.speed===0)!==(bt.lastLog===0)){bt.lastLog=r.speed;log('Le tapis indique '+fmt(r.speed)+' km/h')}}if(r.inc!=null&&Math.abs(r.inc-(bt.lastInc??-99))>=0.5){bt.lastInc=r.inc;log('Le tapis indique une pente de '+fmt(r.inc)+' %')}if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
-    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
+    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(op===8&&res!==1)bt.refused8=true;if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
     await cmd([0x00],'Contrôle du tapis obtenu');bt.dev=dev;bt.ok=true;setBt();log('Connecté à '+(dev.name||'tapis'))}
   catch(e){log('Connexion impossible : '+e.message)}};
 function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connecté';$('bt').className='pill'+(bt.ok?' on':'');
@@ -953,11 +953,20 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
-  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
+  if(bt.ok){if(!first)await cmd([0x00]);bt.hardStop=false;await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
   run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
   if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
-$('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(bt.ok)await cmd([0x08,0x02],'Tapis en pause');else run.speed=0;
-  $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;say('Pause','Paused')};
+// Pause : certains tapis ignorent ou refusent la pause FTMS (0x08 0x02). On vérifie que la bande ralentit
+// vraiment, sinon on envoie l'arrêt (0x08 0x01), puis en dernier recours la vitesse minimale.
+async function pauseBelt(){if(!bt.ok)return;bt.refused8=false;const v0=run.speed;await cmd([0x08,0x02],'Tapis en pause');
+  const moving=()=>run.state==='paused'&&bt.ok&&run.speed>0.5&&run.speed>v0-1;
+  await new Promise(r=>setTimeout(r,bt.refused8?300:2500));
+  if(moving()||bt.refused8){log('Pause ignorée par le tapis : arrêt envoyé');bt.hardStop=true;await cmd([0x08,0x01],'Tapis arrêté (pause)');
+    await new Promise(r=>setTimeout(r,2500));
+    if(moving()){log('Arrêt ignoré : vitesse au minimum');await setSpeedRaw(Math.max(0.5,+(bt.minSpd||1)))}}}
+$('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(!bt.ok)run.speed=0;
+  $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;$('fsPause').textContent='Reprendre';say('Pause','Paused');
+  pauseBelt()};
 $('skip').onclick=()=>{if(workout&&run.state==='running'){if(curStep()?.test)finishTest();enterStep(run.step+1)}};
 function testWorkout(){const V=k=>+$(k).value;return{name:"Test d'allures",test:true,steps:[
   {label:'Échauffement',type:'warm',dur:600,dist:0,v:V('vWarm')},
@@ -993,7 +1002,7 @@ function fsPad(on=true){const m=RM.map;if(RM.kind!=='gl'||!m||!m.setPadding)retu
 function exitFS(){if($('fs').hidden)return;fsPad(false);const mw=document.querySelector('.mapwrap');if(fsHome&&mw)fsHome.p.insertBefore(mw,fsHome.n);$('fs').hidden=true;
   try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}setTimeout(()=>{RM.resize();RM.lastPlace=null;lastMap=0;render()},120)}
 $('fsOpen').onclick=()=>{if(!route){show('prep');return}RM.init();enterFS()};$('fsExit').onclick=exitFS;
-$('fsPause').onclick=()=>{if(run.state==='running')$('pause').onclick();else if(run.state==='paused')$('start').onclick()};
+$('fsPause').onclick=()=>{if(run.state==='running')$('pause').onclick();else if(run.state==='paused'){$('fsPause').textContent='Pause';$('start').onclick()}};
 $('fsSkip').onclick=()=>$('skip').onclick();
 $('fsStop').onclick=()=>{const b=$('fsStop');if(b.dataset.ok){delete b.dataset.ok;b.textContent='Terminer';$('stop').onclick()}else{b.dataset.ok=1;b.textContent='Confirmer ?';setTimeout(()=>{delete b.dataset.ok;b.textContent='Terminer'},4000)}};
 document.querySelectorAll('#fs [data-a]').forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(b.dataset.a==='s')bump(+v);else adjInc(v==='auto'?null:+v)});
@@ -1172,7 +1181,7 @@ let calTaps=0,calOn=false,calTimer=0;
 function calUI(){const k=+store.get('calib',1)||1;$('calInfo').textContent=k===1?'Aucun calibrage : Horizon fait confiance à l\'affichage du tapis.':`Calibrage enregistré : ton tapis va ${k>1?'plus':'moins'} vite qu'il ne l'affiche (${k>1?'+':''}${fmt((k-1)*100,1)} %). Distances et vitesses sont corrigées.`}
 $('calStart').onclick=async()=>{const L=+$('calLen').value/100;if(!(L>0.5)){$('calMsg').textContent='Mesure d\'abord la longueur de la bande (en cm).';return}
   calTaps=0;calOn=true;$('calTap').disabled=false;$('calTap').textContent='Repère passé (0)';let left=60;$('calMsg').textContent='Mets le tapis à 6 km/h. Touche le gros bouton à chaque passage du repère. 60 s';
-  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
+  if(bt.ok){if(!first)await cmd([0x00]);bt.hardStop=false;await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
   clearInterval(calTimer);calTimer=setInterval(()=>{left--;$('calMsg').textContent=`Touche le bouton à chaque passage du repère. ${left} s`;
     if(left<=0){clearInterval(calTimer);calOn=false;$('calTap').disabled=true;
       const real=calTaps*L*60/1000,k=Math.round(real/6*1000)/1000;
