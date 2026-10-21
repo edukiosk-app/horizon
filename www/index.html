@@ -694,7 +694,8 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     if(!m.getLayer('route'))m.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':this.styleName==='plan'?'#0f9d58':'#34d399','line-width':5}});
     this.ready=true;this.drawRoute()},
   setStyle(n){this.styleName=n;store.set('mapStyle',n);document.querySelectorAll('#mapstyles button').forEach(b=>b.classList.toggle('on',b.dataset.s===n));
-    if(this.kind!=='gl')return;this.ready=false;this.map.setStyle(this.styleFor(n))},
+    if(this.kind!=='gl')return;this.ready=false;try{this.map.setTerrain(null)}catch(e){}this.map.setStyle(this.styleFor(n))},
+  rebuild(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null});this.initGL();setTimeout(()=>{this.resize();this.drawRoute();lastMap=0},300)},
   initGL(){const n=store.get('mapStyle','plan');this.styleName=n;
     const m=new maplibregl.Map({container:'runmap',attributionControl:{compact:true},center:[1.6011,49.0486],zoom:15.5,pitch:62,maxPitch:75,style:this.styleFor(n)});
     this.map=m;this.kind='gl';m.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
@@ -719,7 +720,7 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
   setLeader(l){if(l===this.lead)return;this.lead=l;
     if(this.kind==='gl'){this.meEl.innerHTML=l==='me'?medalHTML(ME_C):dotHTML(ME_C);this.refEl.innerHTML=l==='ref'?medalHTML(REF_C):dotHTML(REF_C)}
     else{this.me.setIcon(this.icon(l==='me'?medalHTML(ME_C):dotHTML(ME_C)));this.ref.setIcon(this.icon(l==='ref'?medalHTML(REF_C):dotHTML(REF_C)))}},
-  place(p,gp,x){if(!this.map)return;
+  place(p,gp,x){if(!this.map)return;const sig=p[0].toFixed(6)+p[1].toFixed(6)+(gp?gp[0].toFixed(6)+gp[1].toFixed(6):'')+this.three;if(sig===this.lastPlace)return;this.lastPlace=sig;
     if(this.kind==='gl'){this.me.setLngLat([p[1],p[0]]);if(!this.me._map)this.me.addTo(this.map);
       if(gp){this.ref.setLngLat([gp[1],gp[0]]);if(!this.refOn){this.ref.addTo(this.map);this.refOn=true}}else if(this.refOn){this.ref.remove();this.refOn=false}
       const ahead=posAt(Math.min(total(),x+60)),brg=hav(p,ahead)>5?bearing(p,ahead):this.map.getBearing();
@@ -728,9 +729,11 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
       this.map.easeTo({center:c,zoom:far?Math.max(13.5,16.4-Math.log2(hav(p,gp)/120)):16.4,bearing:this.three?brg:0,pitch:this.three?62:0,duration:900})}
     else{this.me.setLatLng([p[0],p[1]]);if(gp){this.ref.setLatLng([gp[0],gp[1]]);if(!this.ref._map)this.ref.addTo(this.map)}else if(this.ref._map)this.ref.remove();
       if(gp&&hav(p,gp)>120)this.map.fitBounds(L.latLngBounds([[p[0],p[1]],[gp[0],gp[1]]]).pad(0.35),{maxZoom:16,animate:false});else this.map.setView([p[0],p[1]],16,{animate:false})}},
-  toggle3d(){if(this.kind!=='gl')return;this.three=!this.three;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
+  toggle3d(){if(this.kind!=='gl')return;this.three=!this.three;this.lastPlace=null;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
     this.map.easeTo({pitch:this.three?62:0,bearing:this.three?this.map.getBearing():0,duration:600});$('btn3d').textContent=this.three?'2D':'3D'}};
 $('btn3d').onclick=()=>RM.toggle3d();
+// garde-fou : si la carte 3D se bloque (tâche interne en erreur), on la relance
+setInterval(()=>{const m=RM.map;if(RM.kind!=='gl'||!m||$('view-run').hidden)return;const q=m._renderTaskQueue;if(q&&q._currentlyRunning){log('Carte bloquée : relance automatique');RM.rebuild()}},3000);
 function setLeader(l){RM.setLeader(l)}
 function show(v){$('view-prep').hidden=v!=='prep';$('view-run').hidden=v!=='run';$('view-out').hidden=v!=='out';$('tab-out').setAttribute('aria-selected',v==='out');
   if(v==='out'){oRoutes();setTimeout(()=>{oInitMap();O.map.invalidateSize();oInfo();oRender()},50)}
