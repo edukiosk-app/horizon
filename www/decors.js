@@ -80,7 +80,7 @@
   function create(el, route) {
     const T = THREE, k = route.decor;
     const ren = new T.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
-    ren.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); el.innerHTML = ''; el.appendChild(ren.domElement);
+    ren.setPixelRatio(Math.min(k === 'scifi' ? 1.25 : 1.5, window.devicePixelRatio || 1)); el.innerHTML = ''; el.appendChild(ren.domElement);
     ren.domElement.style.display = 'block'; ren.domElement.style.width = '100%'; ren.domElement.style.height = '100%';
     const scene = new T.Scene(), cam = new T.PerspectiveCamera(60, 1, 0.3, 1500);
     const nature = k !== 'track' && k !== 'hilly', forest = nature;
@@ -100,7 +100,7 @@
       g.setAttribute('color', new T.Float32BufferAttribute(col, 3)); const skyM = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })); skyM.renderOrder = -1; scene.add(skyM); var SKY = skyM; }
     scene.add(new T.HemisphereLight(TH.hemi[0], TH.hemi[1], TH.hemi[2]));
     const sunDir = new T.Vector3(...TH.sun).normalize();
-    const sun = new T.DirectionalLight(TH.sunC, TH.sunI); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+    const sun = new T.DirectionalLight(TH.sunC, TH.sunI); sun.castShadow = k !== 'scifi'; sun.shadow.mapSize.set(1024, 1024);
     { const c = sun.shadow.camera; c.left = -35; c.right = 35; c.top = 35; c.bottom = -35; c.near = 1; c.far = 400; } sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
     ren.shadowMap.enabled = true; ren.shadowMap.type = T.PCFSoftShadowMap; cam.far = k === 'mountain' ? 3000 : 1500; cam.updateProjectionMatrix();
 
@@ -182,31 +182,30 @@
     } else if (k === 'scifi') {
       let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const minY = Math.min(...P.map((p) => p.y));
-      const grid = new T.GridHelper(6000, 240, 0xff2fd0, 0x6a1fff); grid.position.y = minY - 28; scene.add(grid);
-      ribbon(-3, 3, 2, new T.MeshPhongMaterial({ color: 0x161a2e, shininess: 80, specular: 0x6a5cff, side: T.DoubleSide }), 0);
+      const grid = new T.GridHelper(6000, 100, 0xff2fd0, 0x6a1fff); grid.position.y = minY - 28; scene.add(grid);
+      ribbon(-3, 3, 3, new T.MeshLambertMaterial({ color: 0x1b1f36, side: T.DoubleSide }), 0);
       ribbon(-3.2, -2.9, 2, new T.MeshBasicMaterial({ color: 0x22f0ff, side: T.DoubleSide }), 0.06); ribbon(2.9, 3.2, 2, new T.MeshBasicMaterial({ color: 0x22f0ff, side: T.DoubleSide }), 0.06);
       ribbon(-0.05, 0.05, 2, new T.MeshBasicMaterial({ color: 0xff2fd0, side: T.DoubleSide }), 0.02);
-      ribbon(-3, 3, 2, new T.MeshBasicMaterial({ color: 0x0b0d1a, side: T.DoubleSide }), -0.5);
-      const m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(1, 1, 1), e = new T.Euler(), col = new T.Color();
-      const na = Math.floor(L / 30), arcs = new T.InstancedMesh(new T.TorusGeometry(4.6, 0.12, 8, 40, Math.PI), new T.MeshBasicMaterial(), na);
-      for (let i = 0; i < na; i++) { const A = at(i * 30 + 12); q.setFromEuler(e.set(0, Math.atan2(A.dir.x, A.dir.z), 0)); m4.compose(A.pos, q, sc); arcs.setMatrixAt(i, m4); arcs.setColorAt(i, col.set(i % 2 ? 0x22f0ff : 0xff2fd0)); } scene.add(arcs);
+            const m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(1, 1, 1), e = new T.Euler(), col = new T.Color();
+      const na = Math.floor(L / 45), arcs = new T.InstancedMesh(new T.TorusGeometry(4.6, 0.12, 8, 40, Math.PI), new T.MeshBasicMaterial(), na);
+      for (let i = 0; i < na; i++) { const A = at(i * 45 + 12); q.setFromEuler(e.set(0, Math.atan2(A.dir.x, A.dir.z), 0)); m4.compose(A.pos, q, sc); arcs.setMatrixAt(i, m4); arcs.setColorAt(i, col.set(i % 2 ? 0x22f0ff : 0xff2fd0)); } scene.add(arcs);
       // piliers sous la piste
       const np = Math.floor(L / 60), pil = new T.InstancedMesh(new T.CylinderGeometry(0.5, 0.8, 1, 8), new T.MeshLambertMaterial({ color: 0x23203a }), np);
       for (let i = 0; i < np; i++) { const A = at(i * 60); const h = A.pos.y - (minY - 28); m4.compose(new T.Vector3(A.pos.x, minY - 28 + h / 2, A.pos.z), new T.Quaternion(), new T.Vector3(1, h, 1)); pil.setMatrixAt(i, m4); } scene.add(pil);
       // tours avec bandes de néon
       const gridP = new Map(), key = (x, z) => Math.floor(x / 20) + ',' + Math.floor(z / 20); P.forEach((p) => { const kk = key(p.x, p.z); if (!gridP.has(kk)) gridP.set(kk, []); gridP.get(kk).push(p); });
       const near = (x, z, r) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const g = gridP.get((Math.floor(x / 20) + dx) + ',' + (Math.floor(z / 20) + dz)); if (g) for (const p of g) if ((p.x - x) ** 2 + (p.z - z) ** 2 < r * r) return true; } return false; };
-      const B = []; for (let s2 = 0; s2 < L; s2 += 14) for (const side of [-1, 1]) { if (rnd() < 0.25) continue; const off = side * (14 + rnd() ** 1.5 * 120), A = at(s2, off); if (near(A.pos.x, A.pos.z, 12)) continue; B.push([A.pos.x, A.pos.z, 30 + rnd() * 170, 8 + rnd() * 16]); }
-      const tw = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshPhongMaterial({ color: 0x14122a, emissive: 0x0a0820, shininess: 60 }), B.length), nb = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial(), B.length * 2);
+      const B = []; for (let s2 = 0; s2 < L; s2 += 26) for (const side of [-1, 1]) { if (rnd() < 0.3) continue; const off = side * (14 + rnd() ** 1.5 * 120), A = at(s2, off); if (near(A.pos.x, A.pos.z, 12)) continue; B.push([A.pos.x, A.pos.z, 30 + rnd() * 170, 8 + rnd() * 16]); }
+      const tw = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshLambertMaterial({ color: 0x14122a, emissive: 0x0a0820 }), B.length), nb = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial(), B.length);
       const NEON = [0x22f0ff, 0xff2fd0, 0xffe14d, 0x7c5cff];
       B.forEach(([x, z, h, w], i) => { const y0 = minY - 28; m4.compose(new T.Vector3(x, y0 + h / 2, z), new T.Quaternion(), new T.Vector3(w, h, w)); tw.setMatrixAt(i, m4);
-        for (let j = 0; j < 2; j++) { m4.compose(new T.Vector3(x, y0 + h * (0.35 + rnd() * 0.6), z), new T.Quaternion(), new T.Vector3(w + 0.4, 0.7, w + 0.4)); nb.setMatrixAt(i * 2 + j, m4); nb.setColorAt(i * 2 + j, col.set(NEON[Math.floor(rnd() * 4)])); } });
+        m4.compose(new T.Vector3(x, y0 + h * (0.35 + rnd() * 0.6), z), new T.Quaternion(), new T.Vector3(w + 0.4, 0.9, w + 0.4)); nb.setMatrixAt(i, m4); nb.setColorAt(i, col.set(NEON[Math.floor(rnd() * 4)])); });
       scene.add(tw, nb);
       // planète à anneaux et vaisseaux
       const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
       const planet = new T.Mesh(new T.SphereGeometry(160, 40, 30), new T.MeshBasicMaterial({ color: 0xff9a5a, fog: false })); planet.position.set(cx - 500, 360, cz - 1150); scene.add(planet);
       const ring = new T.Mesh(new T.TorusGeometry(260, 9, 8, 80), new T.MeshBasicMaterial({ color: 0xffd0a8, fog: false, transparent: true, opacity: 0.7 })); ring.position.copy(planet.position); ring.rotation.set(1.2, 0.3, 0.2); scene.add(ring);
-      const ships = []; for (let i = 0; i < 10; i++) { const sh = new T.Mesh(new T.SphereGeometry(1, 16, 10), new T.MeshPhongMaterial({ color: 0xd0d7ff, emissive: 0x3040ff, emissiveIntensity: 0.6, shininess: 100 })); sh.scale.set(1.3, 0.8, 4); scene.add(sh); ships.push({ m: sh, s: rnd() * L, off: (rnd() < 0.5 ? -1 : 1) * (25 + rnd() * 60), h: 25 + rnd() * 40, v: 15 + rnd() * 25 }); }
+      const ships = []; for (let i = 0; i < 5; i++) { const sh = new T.Mesh(new T.SphereGeometry(1, 12, 8), new T.MeshLambertMaterial({ color: 0xd0d7ff, emissive: 0x3040ff, emissiveIntensity: 0.6 })); sh.scale.set(1.3, 0.8, 4); scene.add(sh); ships.push({ m: sh, s: rnd() * L, off: (rnd() < 0.5 ? -1 : 1) * (25 + rnd() * 60), h: 25 + rnd() * 40, v: 15 + rnd() * 25 }); }
       ANIM.push((t) => ships.forEach((o) => { const A = at(o.s + t / 1000 * o.v, o.off); o.m.position.copy(A.pos).setY(A.pos.y + o.h); o.m.rotation.y = Math.atan2(A.dir.x, A.dir.z); }));
       arch(0.5, 'DÉPART');
       for (let km = 1; km * 1000 < L; km++) sign(km * 1000, 3.6, [{ t: km + ' km', size: 72 }], 1.5, 0.95, '#1a1035', '#22f0ff');

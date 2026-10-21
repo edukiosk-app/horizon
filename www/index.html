@@ -358,10 +358,12 @@ button.mini{padding:6px 10px;font-size:13px}
     <div class="panel">
       <h2>Réglages du tapis</h2>
       <div class="settings">
-        <label>Pente minimale (%)<input id="incMin" type="number" step="0.5" value="0"></label>
-        <label>Pente maximale (%)<input id="incMax" type="number" step="0.5" value="12"></label>
+        <label>Pente du tapis affichée en<select id="incUnit"><option value="pts">niveaux (0 à 20)</option><option value="pct">pourcentage (%)</option></select></label>
+        <label id="incPerPtL">1 niveau du tapis = … % de pente réelle<input id="incPerPt" type="number" step="0.1" value="1"></label>
+        <label><span class="incLbl" data-t="Pente minimale">Pente minimale</span><input id="incMin" type="number" step="0.5" value="0"></label>
+        <label><span class="incLbl" data-t="Pente maximale">Pente maximale</span><input id="incMax" type="number" step="0.5" value="20"></label>
         <label>Intensité des côtes (%)<input id="incFactor" type="number" step="10" value="100"></label>
-        <label>Pente des « côtes » (%)<input id="incHill" type="number" step="0.5" value="6"></label>
+        <label><span class="incLbl" data-t="Pente des « côtes »">Pente des « côtes »</span><input id="incHill" type="number" step="0.5" value="6"></label>
         <label>Vitesse maximale (km/h)<input id="spdMax" type="number" step="0.1" value="15.9"></label>
         <label>Ton prénom (pour les défis)<input id="me" type="text" placeholder="Prénom"></label>
       </div>
@@ -477,7 +479,7 @@ button.mini{padding:6px 10px;font-size:13px}
 
     <div class="panel stats">
       <div class="stat"><small>Vitesse km/h</small><b id="sSpeed">0,0</b></div>
-      <div class="stat climb"><small>Pente %</small><b id="sInc">0,0</b></div>
+      <div class="stat climb"><small>Pente <span class="incU">niv.</span></small><b id="sInc">0,0</b></div>
       <div class="stat"><small>Allure /km</small><b id="sPace">–</b></div>
       <div class="stat"><small>Distance km</small><b id="sDist">0,00</b></div>
       <div class="stat"><small>Temps</small><b id="sTime">0:00</b></div>
@@ -546,7 +548,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <div class="fs-step" id="fsStep" hidden><span id="fsNow"></span><b id="fsLeft"></b><small id="fsNext"></small></div>
         <div class="fs-grid">
           <div><small>Vitesse</small><b id="fsSpeed">0,0</b><i>km/h</i></div>
-          <div class="c"><small>Pente</small><b id="fsInc">0,0</b><i>%</i></div>
+          <div class="c"><small>Pente</small><b id="fsInc">0,0</b><i class="incU">niv.</i></div>
           <div><small>Distance</small><b id="fsDist">0,00</b><i>km</i></div>
           <div class="c"><small>Allure</small><b id="fsPace">–</b><i>/km</i></div>
           <div><small>Temps</small><b id="fsTime">0:00</b><i id="fsGain"></i></div>
@@ -839,10 +841,10 @@ function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts(
     const row=document.createElement('div');row.className='wsp';
     row.innerHTML=`<div class="nm"><span class="tp ${r.s.type}"></span>${esc(r.lab)}<small>${durTxt(r.s)}${r.n>1?' · × '+r.n:''}${r.s.ramp&&!vSet?' · progressive':''}</small></div>
       <div class="ctl2"><span>Vitesse</span><button data-a="v" data-d="-0.5" aria-label="moins vite">−</button><div class="val${vSet?' set':''}">${fmt(v)}<small>${paceTxt(v)}</small></div><button data-a="v" data-d="0.5" aria-label="plus vite">+</button></div>
-      <div class="ctl2"><span>Pente</span><button data-a="i" data-d="-0.5" aria-label="moins de pente">−</button><div class="val${iSet?' set':''}" data-a="iauto">${inc==null?'Parcours':fmt(inc)+' %'}<small>${inc==null?'suit le relief':iSet?'toucher : parcours':'prévue'}</small></div><button data-a="i" data-d="0.5" aria-label="plus de pente">+</button></div>`;
+      <div class="ctl2"><span>Pente</span><button data-a="i" data-d="-0.5" aria-label="moins de pente">−</button><div class="val${iSet?' set':''}" data-a="iauto">${inc==null?'Parcours':fmt(inc)+IU()}<small>${inc==null?'suit le relief':iSet?'toucher : parcours':'prévue'}</small></div><button data-a="i" data-d="0.5" aria-label="plus de pente">+</button></div>`;
     row.querySelectorAll('[data-a]').forEach(bt=>bt.onclick=()=>{const A=bt.dataset.a,d=+bt.dataset.d,k=o.mode==='block'?'b'+r.idx:gKey(r.s);
       if(A==='v')o.v[k]=Math.max(1,Math.min(S().vmax||25,Math.round((v+d)*10)/10));
-      else if(A==='i'){const base=inc==null?(d>0?0:0.5):inc;o.i[k]=Math.max(S().min,Math.min(S().max,Math.round((base+d)*2)/2))}
+      else if(A==='i'){const base=inc==null?0:inc,dd=Math.sign(d)*Math.max(Math.abs(d),ISTEP());o.i[k]=Math.max(S().min,Math.min(S().max,Math.round((base+dd)/ISTEP())*ISTEP()))}
       else if(A==='iauto'){if(!iSet)return;delete o.i[k]}
       wpPut(name,o);wspLive(name);renderWSpeeds();renderSteps()});
     L.append(row)});
@@ -862,7 +864,7 @@ SÉANCE :
 ${$('aiText').value.trim()||'(décris ici la séance)'}
 ${$('aiPrefs').value.trim()?'\nCONSIGNES EN PLUS :\n'+$('aiPrefs').value.trim()+'\n':''}
 MES ALLURES (vitesses en km/h) : échauffement ${V('vWarm')}, récupération ${V('vRec')}, retour au calme ${V('vCool')}, allure 10 km ${V('v10k')}, allure 5 km ${V('v5k')}, effort court ${V('vShort')}, sprint ${V('vSprint')}.
-MON TAPIS : vitesse maxi ${fmt(s.vmax)} km/h, pente de ${fmt(s.min)} à ${fmt(s.max)} %.
+MON TAPIS : vitesse maxi ${fmt(s.vmax)} km/h, pente de ${fmt(s.min)} à ${fmt(s.max)}${PTS()?' niveaux (incline_pct = numéro de niveau du tapis, nombre entier)':' %'}.
 
 RÈGLES :
 - Convertis chaque allure en vitesse en km/h à partir de mes allures (« allure 10k plus vingt » = allure 10 km ralentie de 20 secondes au kilomètre).
@@ -1048,11 +1050,12 @@ $('tab-prep').onclick=()=>show('prep');$('tab-run').onclick=()=>show('run');$('t
 $('go').onclick=()=>{if(route){resetRun();show('run')}};
 
 /* ================= RÉGLAGES ================= */
-const setIds=['incMin','incMax','incFactor','incHill','spdMax','vWarm','vFoot','vRec','vCool','v10k','v5k','vShort','vSprint'];
+const setIds=['incPerPt','incMin','incMax','incFactor','incHill','spdMax','vWarm','vFoot','vRec','vCool','v10k','v5k','vShort','vSprint'];
 const sv=store.get('settings',{});setIds.forEach(k=>{if(sv[k]!=null)$(k).value=sv[k];$(k).onchange=()=>{const o={};setIds.forEach(i=>o[i]=+$(i).value);store.set('settings',o);listWorkouts()}});
 if(store.get('voice',true)===false)$('voice').checked=false;$('voice').onchange=()=>store.set('voice',$('voice').checked);
 $('lang').value=store.get('lang','fr');$('lang').onchange=()=>{store.set('lang',$('lang').value);showWord()};
 $('me').value=store.get('me','');$('me').onchange=()=>store.set('me',$('me').value.trim());
+const PTS=()=>($('incUnit')?.value||'pts')==='pts',IU=()=>PTS()?' niv.':' %',IR=()=>PTS()?Math.max(0.1,+$('incPerPt').value||1):1,ISTEP=()=>PTS()?1:0.5;
 const S=()=>({min:+$('incMin').value,max:+$('incMax').value,f:+$('incFactor').value/100,hill:+$('incHill').value,vmax:+$('spdMax').value});
 
 /* ================= VOIX ================= */
@@ -1094,7 +1097,7 @@ let bt={dev:null,cp:null,ok:false},q=Promise.resolve();
 function cmd(bytes,label){if(!bt.cp)return Promise.resolve();q=q.then(()=>bt.cp.writeValueWithResponse(new Uint8Array(bytes))).then(()=>label&&log(label)).catch(e=>log('Commande refusée ('+(label||bytes[0])+') : '+e.message)).then(()=>new Promise(r=>setTimeout(r,250)));return q}
 const setSpeedRaw=v=>{const n=Math.round(v*100);return cmd([0x02,n&255,(n>>8)&255],'Vitesse tapis '+fmt(v)+' km/h')};
 const setSpeed=v=>setSpeedRaw(v/((bt.ok?(+store.get('calib',1)||1):1)));
-const setIncline=p=>{const n=Math.round(p*10)&0xffff;return cmd([0x03,n&255,(n>>8)&255],'Pente '+fmt(p)+' %')};
+const setIncline=p=>{const n=Math.round(p*10)&0xffff;return cmd([0x03,n&255,(n>>8)&255],'Pente '+fmt(p)+IU())};
 function parseTD(dv){const r={};let o=0;try{const f=dv.getUint16(o,true);o+=2;
   if(!(f&1)){r.speed=dv.getUint16(o,true)/100;o+=2}
   if(f&2)o+=2; if(f&4){r.dist=dv.getUint16(o,true)|(dv.getUint8(o+2)<<16);o+=3}
@@ -1123,8 +1126,11 @@ function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,stat
   $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
 let incAdj=0;
-function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));if(st&&st.inc!=null)return Math.max(s.min,Math.min(s.max,Math.round((st.inc+incAdj)*2)/2));let g=(route?gradeAt(x+10):0)*s.f+(st&&isHill(st)?s.hill:0)+incAdj;g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
-function adjInc(d){incAdj=d===null?0:Math.max(-15,Math.min(15,Math.round((incAdj+d)*2)/2));run.sentAt=0;run.sentInc=null;if(run.state==='running')run.inc=targetInc(wrapX(run.dist));render()}
+function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));const rd=v=>PTS()?Math.round(v):Math.round(v*2)/2;if(st&&st.inc!=null)return Math.max(s.min,Math.min(s.max,rd(st.inc+incAdj)));let g=(route?gradeAt(x+10):0)*s.f/IR()+(st&&isHill(st)?s.hill:0)+incAdj;g=rd(g);return Math.max(s.min,Math.min(s.max,g))}
+function incUI(){const p=PTS();document.querySelectorAll('.incU').forEach(e=>e.textContent=p?'niv.':'%');document.querySelectorAll('.incLbl').forEach(e=>e.textContent=e.dataset.t+(p?' (niveau)':' (%)'));
+  $('incPerPtL').hidden=!p;['im05','ip05'].forEach(i=>$(i).hidden=p);document.querySelectorAll('#fs [data-a=i][data-v="-0.5"],#fs [data-a=i][data-v="0.5"]').forEach(b=>b.hidden=p);
+  document.querySelectorAll('.fs-ctl').forEach(c=>c.style.gridTemplateColumns=c.querySelector('[data-v=auto]')&&p?'64px repeat(3,1fr)':'');['incMin','incMax','incHill'].forEach(i=>$(i).step=p?1:0.5)}
+function adjInc(d){incAdj=d===null?0:Math.max(-20,Math.min(20,Math.round((incAdj+d)/ISTEP())*ISTEP()));run.sentAt=0;run.sentInc=null;if(run.state==='running')run.inc=targetInc(wrapX(run.dist));render()}
 function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
 function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
   if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
@@ -1250,7 +1256,7 @@ let lastBar=-2;
 function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
   $('sTime').parentElement.hidden=zen;$('sPace').parentElement.hidden=zen;$('zenbox').hidden=!zen||!route;
   const x=route?wrapX(run.dist):0;
-  $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+' %'+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
+  $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+IU()+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
   $('sPace').textContent=sp>0.5?clock(3600/sp):'–';$('sDist').textContent=fmt(run.dist/1000,2);$('sTime').textContent=clock(run.time);$('sGain').textContent=Math.round(run.gain);
   $('sHr').textContent=run.hr?run.hr+' bpm':'–';
   if(workout&&run.step!==lastBar){lastBar=run.step;renderSteps()}renderLeft();
@@ -1270,6 +1276,7 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
       lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
       setLeader(gx==null||run.time<1?null:(run.dist>=gx?'me':'ref'));
       RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
+$('incUnit').value=store.get('incUnit','pts');$('incUnit').onchange=()=>{store.set('incUnit',$('incUnit').value);if($('incUnit').value==='pts'&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange()}incUI();renderWSpeeds();render()};setTimeout(()=>{if(PTS()&&!store.get('incMax20')&&+$('incMax').value<20){$('incMax').value=20;$('incMax').onchange();store.set('incMax20',1)}incUI()},0);
 setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */
@@ -1459,7 +1466,7 @@ function edRow(b,list,i){const d=document.createElement('div');d.className='edro
   const sel=document.createElement('select');Object.entries(TY).forEach(([k,[lab]])=>{const o=document.createElement('option');o.value=k;o.textContent=lab;sel.append(o)});sel.value=b.t;
   sel.onchange=()=>{b.t=sel.value;edDraw()};
   const inp=document.createElement('input');inp.type='text';inp.value=b.v;inp.placeholder='5:00 ou 400 m';inp.style.width='92px';inp.onchange=()=>{b.v=inp.value;edDraw()};
-  const pin=document.createElement('input');pin.type='text';pin.inputMode='decimal';pin.value=b.inc??'';pin.placeholder='pente %';pin.title='Pente en % (vide : suit le parcours)';pin.style.width='76px';pin.onchange=()=>{b.inc=pin.value.trim();edDraw()};
+  const pin=document.createElement('input');pin.type='text';pin.inputMode='decimal';pin.value=b.inc??'';pin.placeholder=PTS()?'pente niv.':'pente %';pin.title='Pente du tapis (vide : suit le parcours)';pin.style.width='76px';pin.onchange=()=>{b.inc=pin.value.trim();edDraw()};
   const o=parseVal(b.v);const info=document.createElement('span');info.className='hint';info.style.margin='0';
   info.textContent=o?fmt(speedFor({label:b.label&&b.lt===b.t?b.label:TY[b.t][0],type:{warm:'warm',cool:'cool',rec:'rec',foot:'foot'}[b.t]||'work',dur:o.dur||0,dist:o.dist||0}))+' km/h':'durée ?';
   const btn=(t,f)=>{const x=document.createElement('button');x.textContent=t;x.className='mini';x.onclick=f;return x};
