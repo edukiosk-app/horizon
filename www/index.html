@@ -1102,7 +1102,7 @@ $('connect').onclick=async()=>{
       if(+$('incMax').value>hi)$('incMax').value=hi;if(+$('incMin').value<lo)$('incMin').value=lo}catch(e){}
     try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;bt.minSpd=sr.getUint16(0,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
     const td=await srv.getCharacteristic(TDATA);await td.startNotifications();
-    td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null){run.speed=r.speed;if(Math.abs(r.speed-(bt.lastLog??-9))>=0.5||(r.speed===0)!==(bt.lastLog===0)){bt.lastLog=r.speed;log('Le tapis indique '+fmt(r.speed)+' km/h')}}if(r.inc!=null&&Math.abs(r.inc-(bt.lastInc??-99))>=0.5){bt.lastInc=r.inc;log('Le tapis indique une pente de '+fmt(r.inc)+' %')}if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
+    td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.dist!=null){bt.td=r.dist;bt.tdAt=performance.now()}if(r.speed!=null){run.speed=r.speed;if(Math.abs(r.speed-(bt.lastLog??-9))>=0.5||(r.speed===0)!==(bt.lastLog===0)){bt.lastLog=r.speed;log('Le tapis indique '+fmt(r.speed)+' km/h')}}if(r.inc!=null&&Math.abs(r.inc-(bt.lastInc??-99))>=0.5){bt.lastInc=r.inc;log('Le tapis indique une pente de '+fmt(r.inc)+' %')}if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
     bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(op===8&&res!==1)bt.refused8=true;if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
     await cmd([0x00],'Contrôle du tapis obtenu');bt.dev=dev;bt.ok=true;setBt();log('Connecté à '+(dev.name||'tapis'))}
   catch(e){log('Connexion impossible : '+e.message)}};
@@ -1111,7 +1111,7 @@ function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connect�
 
 /* ================= COURSE ================= */
 const run={state:'idle',dist:0,time:0,gain:0,speed:0,target:8,hr:null,inc:0,sentInc:null,sentAt:0,last:0,step:-1,stepT:0,stepD:0,samples:[],sampAt:0,ghost:null,hillSaid:0};
-function resetRun(){Object.assign(run,{state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0});
+function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0});
   $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
   $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
@@ -1198,7 +1198,12 @@ $('sm1').onclick=()=>bump(-1);$('sm05').onclick=()=>bump(-.5);$('sp05').onclick=
 
 function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);run.last=now;
   if(run.state==='running'&&route){
-    const x0=wrapX(run.dist),dd=realSpeed()/3.6*dt;run.dist+=dd;run.time+=dt;const x1=wrapX(run.dist);
+    // distance : celle du compteur du tapis quand il l'envoie (comme sur son écran), sinon vitesse × temps
+    let dd=realSpeed()/3.6*dt;run.spAcc=(run.spAcc||0)+dd;
+    if(!bt.tdBad&&run.spAcc>80&&(run.tdAcc||0)<0.5*run.spAcc){bt.tdBad=true;log('Compteur de distance du tapis incohérent : calcul par la vitesse');dd+=Math.max(0,run.spAcc-run.dist-dd)}
+    if(bt.ok&&!bt.tdBad&&bt.td!=null&&now-bt.tdAt<3000){if(run.tdPrev==null||bt.td<run.tdPrev)run.tdPrev=bt.td;const d=bt.td-run.tdPrev;
+      if(d>=0&&d<=Math.max(15,dd*4+5)){run.tdAcc=(run.tdAcc||0)+d*K();run.tdPrev=bt.td;const lag=run.tdAcc-run.tdUsed;dd=Math.max(0,Math.min(lag,dd*1.6+0.5));run.tdUsed+=dd}else run.tdPrev=bt.td}
+    const x0=wrapX(run.dist);run.dist+=dd;run.time+=dt;const x1=wrapX(run.dist);
     const e0=eleAt(x0),e1=eleAt(x1);if(x1>=x0&&e1>e0&&!(workout&&workout.test))run.gain+=e1-e0;
     if(run.time-run.sampAt>=2){run.sampAt=run.time;run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0])}
     // séance
