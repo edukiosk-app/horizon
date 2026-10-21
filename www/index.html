@@ -923,8 +923,8 @@ $('connect').onclick=async()=>{
       if(+$('incMax').value>hi)$('incMax').value=hi;if(+$('incMin').value<lo)$('incMin').value=lo}catch(e){}
     try{const sr=await(await srv.getCharacteristic(SRANGE)).readValue();const hi=sr.getUint16(2,true)/100;log(`Vitesse maxi du tapis : ${fmt(hi)} km/h`);if(+$('spdMax').value>hi)$('spdMax').value=hi}catch(e){}
     const td=await srv.getCharacteristic(TDATA);await td.startNotifications();
-    td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null)run.speed=r.speed;if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
-    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications()}catch(e){}
+    td.addEventListener('characteristicvaluechanged',e=>{const r=parseTD(e.target.value);if(r.speed!=null){run.speed=r.speed;if(Math.abs(r.speed-(bt.lastLog??-9))>=0.5||(r.speed===0)!==(bt.lastLog===0)){bt.lastLog=r.speed;log('Le tapis indique '+fmt(r.speed)+' km/h')}}if(r.inc!=null&&Math.abs(r.inc-(bt.lastInc??-99))>=0.5){bt.lastInc=r.inc;log('Le tapis indique une pente de '+fmt(r.inc)+' %')}if(r.hr&&run.hrSrc!=='watch')run.hr=r.hr});
+    bt.cp=await srv.getCharacteristic(CP);try{await bt.cp.startNotifications();bt.cp.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;if(v.byteLength>=3&&v.getUint8(0)===0x80){const op=v.getUint8(1),res=v.getUint8(2);if(res!==1){const nm={0:'prise de contrôle',2:'vitesse',3:'pente',7:'démarrage',8:'pause/arrêt'}[op]||('commande '+op);const why={2:'non prise en charge',3:'valeur hors limites',4:'refusée par le tapis',5:'contrôle non accordé'}[res]||('code '+res);log('Le tapis a refusé : '+nm+' ('+why+')')}}})}catch(e){}
     await cmd([0x00],'Contrôle du tapis obtenu');bt.dev=dev;bt.ok=true;setBt();log('Connecté à '+(dev.name||'tapis'))}
   catch(e){log('Connexion impossible : '+e.message)}};
 function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connecté';$('bt').className='pill'+(bt.ok?' on':'');
@@ -953,7 +953,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
-  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target)}else run.speed=run.target;
+  if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
   run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
   if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
 $('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(bt.ok)await cmd([0x08,0x02],'Tapis en pause');else run.speed=0;
