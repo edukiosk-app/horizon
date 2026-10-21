@@ -179,6 +179,19 @@ button.mini{padding:5px 8px;font-size:12px}
 .fs-act{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .fs-act button{font:600 14px var(--body)}
 .fs-act .danger{color:#f87171}
+#wspeeds{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--tile)}
+.wsp-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.wsp-head b{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.05em}
+button.mini{padding:6px 10px;font-size:13px}
+.wsp{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.wsp:first-child{border-top:0}
+.wsp .nm{font-weight:600;line-height:1.2}.wsp .nm small{display:block;color:var(--muted);font-weight:400}
+.wsp .tp{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#94a3b8}
+.wsp .tp.work{background:#fb923c}.wsp .tp.rec{background:#34d399}.wsp .tp.warm,.wsp .tp.cool{background:#60a5fa}
+.wsp button{width:48px;height:44px;font:700 20px var(--display);padding:0}
+.wsp .val{min-width:76px;text-align:center;font:700 22px/1 var(--display);font-variant-numeric:tabular-nums}
+.wsp .val small{display:block;font:500 12px var(--body);color:var(--muted);margin-top:3px}
+.wsp .val.set{color:var(--accent)}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -396,6 +409,7 @@ button.mini{padding:5px 8px;font-size:12px}
         <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
       </div>
       <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
+      <div id="wspeeds" hidden><div class="wsp-head"><b>Vitesses de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle chaque phase une fois : le tapis les enchaîne tout seul. Horizon s'en souvient pour cette séance.</p><div id="wspList"></div></div>
     </div>
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
@@ -640,7 +654,7 @@ async function importChallenge(){const h=location.hash;if(!h.startsWith('#defi='
   store.set('friend',{route:name,by:d.by||'',run:d.run});listRoutes();listWorkouts();$('rname').value=name;map.fitBounds(line.getBounds());
   const b=$('defibanner');b.hidden=false;
   b.innerHTML=`<b>${esc(by)} te lance un défi</b><span>Parcours « ${esc(name)} », ${fmt(total()/1000,2)} km, D+ ${Math.round(gain())} m${d.w?', séance « '+esc(d.w)+' »':''}. Temps à battre : <b style="font-size:18px">${clock(d.run.time)}</b>.</span><div class="row"><button class="primary" id="takeDefi">Relever le défi</button></div>`;
-  $('takeDefi').onclick=()=>{$('wsel').value=d.w||'';$('gsel').value='friend';b.hidden=true;resetRun();updateGhostInfo();show('run')}}
+  $('takeDefi').onclick=()=>{$('wsel').value=d.w||'';$('gsel').value='friend';b.hidden=true;resetRun();updateGhostInfo();renderWSpeeds();show('run')}}
 $('save').onclick=()=>{if(!route)return;const name=$('rname').value.trim()||route.name;route.name=name;
   const rs=store.get('routes',[]).filter(r=>r.name!==name);
   rs.unshift({name,km:total()/1000,gain:Math.round(gain()),pts:route.pts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6),Math.round(p[2]*10)/10])});
@@ -683,7 +697,10 @@ function speedFor(s){const V=k=>+$(k).value;const L=s.label.toLowerCase();let v;
   else v=V('vFoot');
   return Math.min(+$('spdMax').value,Math.round(v*10)/10)}
 const isHill=s=>/c[ôo]te/i.test(s.label);
-const stepSec=s=>s.dur||s.dist/(speedFor(s)/3.6);
+const gKey=s=>s.type+'|'+s.label.toLowerCase()+'|'+(s.dur||0)+'|'+(s.dist||0);
+const wspGet=n=>(store.get('wSpeeds',{})[n]||{});
+function progSteps(name,steps){const o=wspGet(name);return steps.map(s=>{const v=o[gKey(s)];return v!=null?{...s,v,ramp:null,prog:true}:{...s,v:speedFor(s)}})}
+const stepSec=s=>s.dur||s.dist/((s.v||speedFor(s))/3.6);
 const BUILTIN=[
  {name:"Fond et sprints",text:`Warmup\n- Échauffement 20m\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\n- Récupération entre les blocs 2m20s intensity=recovery\n\n- Allure soutenue 10m intensity=interval\n- Récupération 1m intensity=recovery\n\n4x\n- Sprint 20s intensity=interval\n- Récupération 40s intensity=recovery\n\nCooldown\n- Retour au calme 9m20s`},
  {name:"Fractionné 40-30-20",text:`Warmup\n- Échauffement 30m\n\n6x\n- Effort 40s intensity=interval\n- Récupération 20s intensity=recovery\n\n- Récupération 3m intensity=recovery\n\n6x\n- Effort 30s intensity=interval\n- Récupération 30s intensity=recovery\n\n- Récupération 3m intensity=recovery\n\n6x\n- Effort 20s intensity=interval\n- Récupération 40s intensity=recovery`},
@@ -702,7 +719,7 @@ function wItem(w,label,sel){const st=w.test?testWorkout().steps:parseWorkout(w.t
   const bar=document.createElement('div');bar.className='bar wk-bar';const tot=sec||1;bar.innerHTML=st.map(s=>`<i class="${s.type==='work'?'w done':'done'}" style="flex:${stepSec(s)/tot}"></i>`).join('');d.append(bar);
   const b=document.createElement('div');b.className='row';b.style.marginTop='8px';
   const btn=(t,f,c)=>{const x=document.createElement('button');x.textContent=t;if(c)x.className=c;x.onclick=f;b.append(x);return x};
-  btn('Choisir',()=>{sel.value=w.test?'__test':w.name;updateGhostInfo();renderSteps();show('run')},'primary');
+  btn('Choisir',()=>{sel.value=w.test?'__test':w.name;$('wsel').onchange();show('run');setTimeout(()=>($('wspeeds').hidden?$('wsel'):$('wspeeds')).scrollIntoView({block:'start',behavior:'smooth'}),150)},'primary');
   if(w.text){const mw=btn('Sur la montre',()=>sendToWatch(w,d,mw));btn('Modifier',()=>{editWorkout(w)})}
   if(!w.builtin&&w.text){const x=btn('Supprimer',()=>{if(x.dataset.ok){store.set('workouts',store.get('workouts',[]).filter(o=>o.name!==w.name));listWorkouts()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}},'danger')}
   d.append(b);return d}
@@ -737,7 +754,22 @@ $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()|
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
-$('wsel').onchange=()=>{updateGhostInfo();renderSteps()};
+$('wsel').onchange=()=>{updateGhostInfo();renderSteps();renderWSpeeds()};
+function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
+const paceTxt=v=>{const sec=3600/v;return Math.floor(sec/60)+':'+String(Math.round(sec%60)).padStart(2,'0')+' /km'};
+function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts().find(o=>o.name===name);
+  if(!w||name==='__test'){box.hidden=true;return}box.hidden=false;
+  const st=parseWorkout(w.text),o=wspGet(name),groups=new Map();
+  st.forEach(s=>{const k=gKey(s);if(!groups.has(k))groups.set(k,{s,n:0});groups.get(k).n++});
+  const L=$('wspList');L.innerHTML='';
+  groups.forEach((g,k)=>{const set=o[k]!=null,v=set?o[k]:speedFor(g.s);const row=document.createElement('div');row.className='wsp';
+    row.innerHTML=`<div class="nm"><span class="tp ${g.s.type}"></span>${esc(g.s.label)}<small>${durTxt(g.s)}${g.n>1?' · × '+g.n:''}${g.s.ramp&&!set?' · progressive':''}</small></div><button data-d="-0.5" aria-label="moins vite">−</button><div class="val${set?' set':''}">${fmt(v)}<small>${paceTxt(v)}</small></div><button data-d="0.5" aria-label="plus vite">+</button>`;
+    row.querySelectorAll('button').forEach(b=>b.onclick=()=>wspSet(name,k,Math.round((v+ +b.dataset.d)*10)/10));L.append(row)});
+  $('wspReset').onclick=()=>{const a=store.get('wSpeeds',{});delete a[name];store.set('wSpeeds',a);wspLive(name);renderWSpeeds();renderSteps()}}
+function wspSet(name,k,v){v=Math.max(1,Math.min(S().vmax||25,v));const a=store.get('wSpeeds',{});(a[name]=a[name]||{})[k]=v;store.set('wSpeeds',a);wspLive(name);renderWSpeeds();renderSteps()}
+function wspLive(name){if(!workout||workout.name!==name||run.state==='idle'||run.state==='done')return;const o=wspGet(name);
+  workout.steps.forEach((s,i)=>{const v=o[gKey(s)]??speedFor(s);if(i>run.step){s.v=v;s.ramp=o[gKey(s)]!=null?null:s.ramp}else if(i===run.step&&!s.manual&&s.v!==v){s.v=v;s.ramp=null;applySpeed(v)}})}
+setTimeout(renderWSpeeds,0);
 
 /* ================= FANTÔME ================= */
 const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
@@ -957,7 +989,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
   keepAwake();
   const first=run.state==='idle';
   if(first){run.startedAt=Date.now();$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
-    workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
+    workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:progSteps(w.name,parseWorkout(w.text))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
   if(bt.ok){if(!first)await cmd([0x00]);await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
@@ -1051,7 +1083,7 @@ function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);r
 let lastMap=0;
 function renderSteps(){const sel=$('wsel').value,box=$('steppanel');
   let steps=workout&&run.state!=='idle'?workout.steps:null;
-  if(!steps&&sel){if(sel==='__test')steps=testWorkout().steps;else{const w=workouts().find(o=>o.name===sel);if(w)steps=parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}}
+  if(!steps&&sel){if(sel==='__test')steps=testWorkout().steps;else{const w=workouts().find(o=>o.name===sel);if(w)steps=progSteps(w.name,parseWorkout(w.text))}}
   if(!steps){box.hidden=true;return}box.hidden=false;
   const totalSec=steps.reduce((a,s)=>a+stepSec(s),0)||1,i=run.step;
   $('stBar').innerHTML=steps.map((s,k)=>`<i class="${s.type==='work'?'w':''} ${k<i?'done':''} ${k===i?'cur':''}" style="flex:${stepSec(s)/totalSec}"></i>`).join('');
@@ -1115,7 +1147,7 @@ $('ivImport').onclick=async(quiet)=>{ivMsg('Import des séances…');if(quiet===
     const usable=list.filter(w=>parseWorkout(w.text).length);
     const mine=store.get('workouts',[]).filter(w=>!w.ivId);const names=new Set(mine.map(w=>w.name));
     usable.forEach(w=>{let n=w.name;if(names.has(n))n=n+' ('+fLabel(w.folder||'Intervals')+')';let k=2;while(names.has(n))n=w.name+' '+(k++);names.add(n);mine.push({...w,name:n})});
-    store.set('workouts',mine);listWorkouts();$('wsyncMsg').textContent=`${usable.length} séances d'Intervals.icu, à jour à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`;ivMsg(`${usable.length} séances importées${list.length>usable.length?`, ${list.length-usable.length} ignorées (sans étapes lisibles)`:''}. Elles sont dans « Séances guidées ».`)}
+    store.set('workouts',mine);listWorkouts();renderWSpeeds();$('wsyncMsg').textContent=`${usable.length} séances d'Intervals.icu, à jour à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}.`;ivMsg(`${usable.length} séances importées${list.length>usable.length?`, ${list.length-usable.length} ignorées (sans étapes lisibles)`:''}. Elles sont dans « Séances guidées ».`)}
   catch(e){ivMsg('Import impossible : '+e.message+'.');$('wsyncMsg').textContent='Intervals.icu : '+e.message+'.'}};
 $('wsearch').oninput=()=>listWorkouts();
 async function sendToWatch(w,row,btn){let box=row.querySelector('.sendrow');if(box){box.remove();return}
