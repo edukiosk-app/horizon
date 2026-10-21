@@ -25,6 +25,8 @@
     sea: (th) => [20 * Math.cos(th) + 0.25 * Math.sin(3 * th), Math.sin(th) + 0.15 * Math.sin(5 * th)],
     mountain: (th) => { const r = 1 + 0.22 * Math.sin(2 * th + 0.4) + 0.12 * Math.sin(7 * th) + 0.05 * Math.sin(13 * th); return [1.2 * r * Math.cos(th), r * Math.sin(th)]; },
     lake: (th) => { const r = 1 + 0.08 * Math.sin(3 * th + 0.3) + 0.05 * Math.sin(5 * th + 1); return [1.15 * r * Math.cos(th), r * Math.sin(th)]; },
+    scifi: (th) => { const r = 1 + 0.12 * Math.sin(2 * th) + 0.06 * Math.sin(5 * th + 0.7); return [2.2 * r * Math.cos(th), r * Math.sin(th)]; },
+    jungle: (th) => { const r = 1 + 0.18 * Math.sin(3 * th + 1.1) + 0.09 * Math.sin(7 * th + 0.4); return [1.3 * r * Math.cos(th), r * Math.sin(th)]; },
   };
   function loopPts(curve, L) {
     const raw = []; for (let i = 0; i <= 20000; i++) raw.push(curve(2 * Math.PI * i / 20000));
@@ -44,6 +46,8 @@
     sea: (s, L) => { const w = W(s, L); return 1.2 + 0.4 * Math.sin(4 * w); },
     mountain: (s, L) => { const w = W(s, L); return 300 + 60 * (1 - Math.cos(w)) + 7 * Math.sin(6 * w) + 3 * Math.sin(13 * w); },
     lake: (s, L) => { const w = W(s, L); return 5 + 1.5 * Math.sin(3 * w) + 0.8 * Math.sin(7 * w); },
+    scifi: (s, L) => { const w = W(s, L); return 12 + 4 * Math.sin(2 * w + 0.5) + 1.5 * Math.sin(5 * w); },
+    jungle: (s, L) => { const w = W(s, L); return 20 + 9 * Math.sin(2 * w + 0.2) + 3.5 * Math.sin(6 * w + 1) + 1 * Math.sin(13 * w); },
   };
 
   const DEFS = {
@@ -54,6 +58,8 @@
     forest: { name: 'Forêt, boucle de 5 km', desc: 'Un chemin entre les arbres, des montées et des descentes, un panneau à chaque kilomètre.', len: 5000, loop: true },
     sea: { name: 'Bord de mer, 5 km', desc: 'Une promenade en planches le long de la plage, palmiers et coucher de soleil. Tout plat.', len: 5000, loop: true },
     mountain: { name: 'Montagne, 6 km', desc: 'Des lacets qui montent vers les sommets enneigés (jusqu\'à 7 %), puis la descente.', len: 6000, loop: true },
+    scifi: { name: 'Ville du futur, 4 km', desc: 'Une piste suspendue entre les tours de néon, sous une planète à anneaux. Arches lumineuses à traverser.', len: 4000, loop: true },
+    jungle: { name: 'Jungle préhistorique, 5 km', desc: 'Un sentier entre les fougères géantes, des dinosaures au loin et un volcan qui fume.', len: 5000, loop: true },
     lake: { name: 'Tour du lac, 3 km', desc: 'Une boucle presque plate autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
   };
   function routePts(k) {
@@ -83,6 +89,8 @@
       forest: { sky: [0x5b8fbf, 0xc9dbe2, 0xdfe8e0], fog: [0xbfd3c9, 30, 230], sun: [0.35, 0.45, -0.8], sunC: 0xffe8c2, sunI: 1.05, hemi: [0xd7e8ff, 0x3a4a2a, 0.65] },
       sea: { sky: [0x40507a, 0xf0a36b, 0xffd59a], fog: [0xf4b98a, 90, 800], sun: [-0.2, 0.12, 0.95], sunC: 0xffc48a, sunI: 1.1, hemi: [0xffd2b0, 0x6b5a4a, 0.7] },
       mountain: { sky: [0x2f6fb5, 0xa9cdea, 0xe2edf5], fog: [0xcfe0ee, 220, 1450], sun: [0.4, 0.6, -0.6], sunC: 0xfff4e0, sunI: 1.05, hemi: [0xdbeaff, 0x5a5a48, 0.7] },
+      scifi: { sky: [0x0b0730, 0x3a1a6e, 0xc2367a], fog: [0x2a1250, 60, 650], sun: [0.3, 0.5, -0.8], sunC: 0xffb3f0, sunI: 0.5, hemi: [0x8a7dff, 0x200a30, 0.6] },
+      jungle: { sky: [0x7a9bb0, 0xe7c59a, 0xf3d7b0], fog: [0xd9c3a0, 40, 420], sun: [-0.3, 0.35, -0.9], sunC: 0xffd9a8, sunI: 1.05, hemi: [0xe8f0d8, 0x4a4a2a, 0.65] },
       lake: { sky: [0x4a86c5, 0xbcd6ea, 0xe6eef0], fog: [0xd3e1ea, 140, 900], sun: [-0.4, 0.5, -0.7], sunC: 0xfff1d6, sunI: 1.0, hemi: [0xd7e8ff, 0x46603a, 0.7] },
     }[k === 'hilly' ? 'track' : k] || {};
     scene.background = new T.Color(TH.fog[0]); scene.fog = new T.Fog(TH.fog[0], TH.fog[1], TH.fog[2]);
@@ -136,7 +144,7 @@
       ban.lookAt(ban.position.clone().sub(A.dir)); scene.add(ban);
     }
 
-    let board = null, S_waves = null;
+    let board = null, S_waves = null; const ANIM = [];
     if (!forest) {
       // terrain, piste, couloirs, talus pour les bosses
       const g = new T.Mesh(new T.PlaneGeometry(700, 500), lam(0x3f7d3a)); g.rotation.x = -Math.PI / 2; g.position.y = -0.05; scene.add(g);
@@ -171,12 +179,44 @@
       board = { ...c, mesh: new T.Mesh(new T.PlaneGeometry(14, 7), new T.MeshBasicMaterial({ map: c.tex, side: T.DoubleSide })), last: '' };
       board.mesh.position.set(0, 7, 0); scene.add(board.mesh);
       const leg = new T.Mesh(new T.BoxGeometry(0.4, 3.6, 0.4), lam(0x374151)); leg.position.set(0, 1.8, 0); scene.add(leg);
+    } else if (k === 'scifi') {
+      let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const minY = Math.min(...P.map((p) => p.y));
+      const grid = new T.GridHelper(6000, 240, 0xff2fd0, 0x6a1fff); grid.position.y = minY - 28; scene.add(grid);
+      ribbon(-3, 3, 2, new T.MeshPhongMaterial({ color: 0x161a2e, shininess: 80, specular: 0x6a5cff, side: T.DoubleSide }), 0);
+      ribbon(-3.2, -2.9, 2, new T.MeshBasicMaterial({ color: 0x22f0ff, side: T.DoubleSide }), 0.06); ribbon(2.9, 3.2, 2, new T.MeshBasicMaterial({ color: 0x22f0ff, side: T.DoubleSide }), 0.06);
+      ribbon(-0.05, 0.05, 2, new T.MeshBasicMaterial({ color: 0xff2fd0, side: T.DoubleSide }), 0.02);
+      ribbon(-3, 3, 2, new T.MeshBasicMaterial({ color: 0x0b0d1a, side: T.DoubleSide }), -0.5);
+      const m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(1, 1, 1), e = new T.Euler(), col = new T.Color();
+      const na = Math.floor(L / 30), arcs = new T.InstancedMesh(new T.TorusGeometry(4.6, 0.12, 8, 40, Math.PI), new T.MeshBasicMaterial(), na);
+      for (let i = 0; i < na; i++) { const A = at(i * 30 + 12); q.setFromEuler(e.set(0, Math.atan2(A.dir.x, A.dir.z), 0)); m4.compose(A.pos, q, sc); arcs.setMatrixAt(i, m4); arcs.setColorAt(i, col.set(i % 2 ? 0x22f0ff : 0xff2fd0)); } scene.add(arcs);
+      // piliers sous la piste
+      const np = Math.floor(L / 60), pil = new T.InstancedMesh(new T.CylinderGeometry(0.5, 0.8, 1, 8), new T.MeshLambertMaterial({ color: 0x23203a }), np);
+      for (let i = 0; i < np; i++) { const A = at(i * 60); const h = A.pos.y - (minY - 28); m4.compose(new T.Vector3(A.pos.x, minY - 28 + h / 2, A.pos.z), new T.Quaternion(), new T.Vector3(1, h, 1)); pil.setMatrixAt(i, m4); } scene.add(pil);
+      // tours avec bandes de néon
+      const gridP = new Map(), key = (x, z) => Math.floor(x / 20) + ',' + Math.floor(z / 20); P.forEach((p) => { const kk = key(p.x, p.z); if (!gridP.has(kk)) gridP.set(kk, []); gridP.get(kk).push(p); });
+      const near = (x, z, r) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const g = gridP.get((Math.floor(x / 20) + dx) + ',' + (Math.floor(z / 20) + dz)); if (g) for (const p of g) if ((p.x - x) ** 2 + (p.z - z) ** 2 < r * r) return true; } return false; };
+      const B = []; for (let s2 = 0; s2 < L; s2 += 14) for (const side of [-1, 1]) { if (rnd() < 0.25) continue; const off = side * (14 + rnd() ** 1.5 * 120), A = at(s2, off); if (near(A.pos.x, A.pos.z, 12)) continue; B.push([A.pos.x, A.pos.z, 30 + rnd() * 170, 8 + rnd() * 16]); }
+      const tw = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshPhongMaterial({ color: 0x14122a, emissive: 0x0a0820, shininess: 60 }), B.length), nb = new T.InstancedMesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial(), B.length * 2);
+      const NEON = [0x22f0ff, 0xff2fd0, 0xffe14d, 0x7c5cff];
+      B.forEach(([x, z, h, w], i) => { const y0 = minY - 28; m4.compose(new T.Vector3(x, y0 + h / 2, z), new T.Quaternion(), new T.Vector3(w, h, w)); tw.setMatrixAt(i, m4);
+        for (let j = 0; j < 2; j++) { m4.compose(new T.Vector3(x, y0 + h * (0.35 + rnd() * 0.6), z), new T.Quaternion(), new T.Vector3(w + 0.4, 0.7, w + 0.4)); nb.setMatrixAt(i * 2 + j, m4); nb.setColorAt(i * 2 + j, col.set(NEON[Math.floor(rnd() * 4)])); } });
+      scene.add(tw, nb);
+      // planète à anneaux et vaisseaux
+      const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
+      const planet = new T.Mesh(new T.SphereGeometry(160, 40, 30), new T.MeshBasicMaterial({ color: 0xff9a5a, fog: false })); planet.position.set(cx - 500, 360, cz - 1150); scene.add(planet);
+      const ring = new T.Mesh(new T.TorusGeometry(260, 9, 8, 80), new T.MeshBasicMaterial({ color: 0xffd0a8, fog: false, transparent: true, opacity: 0.7 })); ring.position.copy(planet.position); ring.rotation.set(1.2, 0.3, 0.2); scene.add(ring);
+      const ships = []; for (let i = 0; i < 10; i++) { const sh = new T.Mesh(new T.SphereGeometry(1, 16, 10), new T.MeshPhongMaterial({ color: 0xd0d7ff, emissive: 0x3040ff, emissiveIntensity: 0.6, shininess: 100 })); sh.scale.set(1.3, 0.8, 4); scene.add(sh); ships.push({ m: sh, s: rnd() * L, off: (rnd() < 0.5 ? -1 : 1) * (25 + rnd() * 60), h: 25 + rnd() * 40, v: 15 + rnd() * 25 }); }
+      ANIM.push((t) => ships.forEach((o) => { const A = at(o.s + t / 1000 * o.v, o.off); o.m.position.copy(A.pos).setY(A.pos.y + o.h); o.m.rotation.y = Math.atan2(A.dir.x, A.dir.z); }));
+      arch(0.5, 'DÉPART');
+      for (let km = 1; km * 1000 < L; km++) sign(km * 1000, 3.6, [{ t: km + ' km', size: 72 }], 1.5, 0.95, '#1a1035', '#22f0ff');
     } else {
       const CF = {
         forest: { ground: 0x3b5a2a, base: 0x2f5a2b, path: 0x8b6b45, pw: 1.6, trees: [['pine', 0.7], ['leaf', 0.3]], step: 2.2, far: 40, rocks: 70, ferns: 500, hills: true },
         sea: { ground: 0xe2c99a, base: 0xe2c99a, path: 0xa77d55, pw: 2.2, trees: [['palm', 1]], step: 9, far: 30, rocks: 0, ferns: 0, sea: true },
         mountain: { ground: 0x6b7a4a, base: 0x5f6d45, path: 0x9b8b74, pw: 1.8, trees: [['pine', 1]], step: 4.5, far: 45, rocks: 260, ferns: 0, hills: true, peaks: true },
         lake: { ground: 0x4f8a3a, base: 0x4a8236, path: 0x9b7b52, pw: 1.8, trees: [['leaf', 0.55], ['pine', 0.45]], step: 3, far: 38, rocks: 40, ferns: 250, lake: true },
+        jungle: { ground: 0x5d6b2e, base: 0x55632a, path: 0x8a6a46, pw: 1.8, trees: [['fern', 0.8], ['palm', 0.2]], step: 6, far: 40, rocks: 50, ferns: 400, hills: true, jungle: true },
       }[k];
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6;
@@ -203,7 +243,7 @@
       P.forEach((p) => { const kk = key(p.x, p.z); if (!grid.has(kk)) grid.set(kk, []); grid.get(kk).push(p); });
       const near = (x, z, r) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const g = grid.get((Math.floor(x / 10) + dx) + ',' + (Math.floor(z / 10) + dz)); if (g) for (const p of g) if ((p.x - x) ** 2 + (p.z - z) ** 2 < r * r) return true; } return false; };
       const pick = () => { let r = rnd(), acc = 0; for (const [t, w] of CF.trees) { acc += w; if (r <= acc) return t; } return CF.trees[0][0]; };
-      const spots = { pine: [], leaf: [], palm: [] };
+      const spots = { pine: [], leaf: [], palm: [], fern: [] };
       for (let s2 = 0; s2 < L; s2 += CF.step) for (const side of [-1, 1]) {
         if (CF.lake && side < 0 && rnd() < 0.85) continue;                  // côté lac : peu d'arbres
         if (CF.sea && side > 0 && at(s2).pos.z > 0) continue;               // pas de palmiers côté mer
@@ -229,6 +269,27 @@
         while (n < CF.ferns) { const s2 = rnd() * L, off = (rnd() < 0.5 ? -1 : 1) * (CF.pw + 0.4 + rnd() * 4), A = at(s2, off); if (CF.lake && off < 0) { n++; continue; } m4.makeTranslation(A.pos.x, A.pos.y + 0.22, A.pos.z); fe.setMatrixAt(n++, m4); } }
       if (CF.sea) { const nl = Math.floor(L / 24), po = inst(new T.CylinderGeometry(0.06, 0.08, 4, 8), new T.MeshLambertMaterial({ color: 0x334155 }), nl), bu = inst(new T.SphereGeometry(0.22, 12, 8), new T.MeshBasicMaterial({ color: 0xffe9b0 }), nl, false);
         for (let i = 0; i < nl; i++) { const A = at(i * 24 + 6, at(i * 24 + 6).pos.z > 0 ? CF.pw + 0.6 : -(CF.pw + 0.6)); m4.makeTranslation(A.pos.x, A.pos.y + 2, A.pos.z); po.setMatrixAt(i, m4); m4.makeTranslation(A.pos.x, A.pos.y + 4.1, A.pos.z); bu.setMatrixAt(i, m4); } }
+      if (spots.fern.length) { const n = spots.fern.length, tr = inst(new T.CylinderGeometry(0.25, 0.35, 5, 7), lam(0x5a4020), n), lv = inst(new T.SphereGeometry(1, 6, 3), new T.MeshLambertMaterial({ flatShading: true }), n * 7);
+        spots.fern.forEach(([x, y, z, f, r], i) => { q.setFromEuler(e.set(0, r, 0)); sc.set(f, f, f); m4.compose(new T.Vector3(x, y + 2.5 * f, z), q, sc); tr.setMatrixAt(i, m4); col.setHSL(0.24 + rnd() * 0.06, 0.5, 0.24 + rnd() * 0.1);
+          for (let j = 0; j < 7; j++) { const a = j / 7 * 6.28 + r; q.setFromEuler(e.set(0, -a, -0.45, 'YXZ')); sc.set(2.6 * f, 0.1 * f, 0.5 * f); m4.compose(new T.Vector3(x + Math.cos(a) * 2.2 * f, y + 4.4 * f, z + Math.sin(a) * 2.2 * f), q, sc); lv.setMatrixAt(i * 7 + j, m4); lv.setColorAt(i * 7 + j, col); } }); }
+      if (CF.jungle) {
+        const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
+        const vol = new T.Mesh(new T.ConeGeometry(320, 360, 24, 1, true), new T.MeshLambertMaterial({ color: 0x4a3a34, flatShading: true })); vol.position.set(cx + 150, minY + 160, cz - 1500); scene.add(vol);
+        const lava = new T.Mesh(new T.ConeGeometry(46, 34, 16), new T.MeshBasicMaterial({ color: 0xff5a1f, fog: false })); lava.position.set(vol.position.x, minY + 330, vol.position.z); scene.add(lava);
+        const smoke = []; for (let i = 0; i < 12; i++) { const sm = new T.Mesh(new T.SphereGeometry(36 + i * 7, 12, 8), new T.MeshBasicMaterial({ color: 0x8a8078, transparent: true, opacity: 0.42 - i * 0.025, fog: false })); scene.add(sm); smoke.push(sm); }
+        ANIM.push((t) => smoke.forEach((sm, i) => { const u = ((t / 9000 + i / 12) % 1); sm.position.set(vol.position.x + u * 260, minY + 350 + u * 420, vol.position.z - u * 60); sm.material.opacity = 0.42 * (1 - u); }));
+        // grands herbivores (formes simples) près du sentier
+        const dm = new T.MeshLambertMaterial({ color: 0x6b6a55, flatShading: true });
+        const herb = (A, s2, rot) => { const g = new T.Group(); const part = (geo, x, y, z, sx, sy, sz, rz) => { const m = new T.Mesh(geo, dm); m.position.set(x * s2, y * s2, z * s2); m.scale.set(sx, sy, sz); if (rz) m.rotation.z = rz; m.castShadow = true; g.add(m); };
+          part(new T.SphereGeometry(1, 12, 8), 0, 5, 0, 4.5 * s2, 2.4 * s2, 2.2 * s2); part(new T.CylinderGeometry(0.5 * s2, 1.1 * s2, 9 * s2, 8), 4.5, 9, 0, 1, 1, 1, -0.7); part(new T.SphereGeometry(0.9 * s2, 10, 8), 8, 12.6, 0, 1.4, 0.8, 0.8);
+          part(new T.ConeGeometry(1 * s2, 11 * s2, 8), -8.5, 4.2, 0, 1, 1, 1, Math.PI / 2 + 0.25); [[2.5, 1.2], [2.5, -1.2], [-2.5, 1.2], [-2.5, -1.2]].forEach(([a, b]) => part(new T.CylinderGeometry(0.6 * s2, 0.7 * s2, 4 * s2, 8), a, 2, b, 1, 1, 1));
+          g.position.copy(A.pos); g.rotation.y = rot; scene.add(g); };
+        for (let i = 0; i < 7; i++) { const s2 = 300 + i * 700, A = at(s2, (i % 2 ? 1 : -1) * (35 + rnd() * 40)); herb(A, 1.2 + rnd() * 0.6, rnd() * 6.28); }
+        // ptérosaures qui tournent dans le ciel
+        const pm = new T.MeshLambertMaterial({ color: 0x3a3028, side: T.DoubleSide }), birds = [];
+        for (let i = 0; i < 6; i++) { const gg = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(-4, 0.6, -1), new T.Vector3(-0.5, 0, 1.2), new T.Vector3(0, 0, 0), new T.Vector3(4, 0.6, -1), new T.Vector3(0.5, 0, 1.2)]); gg.computeVertexNormals(); const b = new T.Mesh(gg, pm); b.scale.setScalar(1.5 + rnd()); scene.add(b); birds.push({ m: b, s: rnd() * L, r: 30 + rnd() * 40, h: 40 + rnd() * 30, ph: rnd() * 6 }); }
+        ANIM.push((t) => birds.forEach((o) => { const c = at(o.s), a = t / 6000 + o.ph; o.m.position.set(c.pos.x + Math.cos(a) * o.r, c.pos.y + o.h + Math.sin(t / 700 + o.ph) * 2, c.pos.z + Math.sin(a) * o.r); o.m.rotation.y = -a; o.m.rotation.z = 0.25 * Math.sin(t / 250 + o.ph); }));
+      }
       if (CF.peaks) { const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
         for (let i = 0; i < 16; i++) { const a = i / 16 * 6.28 + rnd() * 0.3, d = 1300 + rnd() * 600, h = 320 + rnd() * 380, r = h * (0.9 + rnd() * 0.5);
           const rock = new T.Mesh(new T.ConeGeometry(r, h, 7), new T.MeshLambertMaterial({ color: 0x6b6f73, flatShading: true })); rock.position.set(cx + Math.cos(a) * d, 260 + h / 2, cz + Math.sin(a) * d); scene.add(rock);
@@ -309,6 +370,7 @@
           g.font = 'bold 70px sans-serif'; g.fillText('TOUR ' + lap, 256, 90); g.font = 'bold 48px sans-serif'; g.fillText(txt.split('|')[1], 256, 180); board.tex.needsUpdate = true; }
         board.mesh.lookAt(cam.position.x, board.mesh.position.y, cam.position.z); }
       sun.position.copy(me.position).addScaledVector(sunDir, 150); sun.target.position.copy(me.position); SKY.position.copy(cam.position);
+      ANIM.forEach((f) => f(nowT));
       if (S_waves) S_waves[1].material.opacity = 0.4 + 0.25 * Math.sin(nowT / 900);
       ren.render(scene, cam);
     }
