@@ -285,7 +285,7 @@ button.mini{padding:5px 8px;font-size:12px}
         <span id="oHrPill" class="pill">Montre non connectée</span>
         <button id="oHr">Connecter la montre (cardio)</button>
       </div>
-      <p class="hint">Toutes les montres et ceintures qui diffusent le cardio en Bluetooth fonctionnent : Amazfit, Garmin, Polar, Coros, Suunto, Wahoo… Le GPS est celui du téléphone. Garde l'écran allumé pendant la course : Chrome coupe le GPS quand l'écran s'éteint.</p>
+      <p class="hint">Toutes les montres et ceintures qui diffusent le cardio en Bluetooth fonctionnent : Amazfit, Garmin, Polar, Coros, Suunto, Wahoo… Le GPS est celui du téléphone. <span id="oGpsNote">Dans le navigateur, garde l'écran allumé pendant la course : Chrome coupe le GPS quand l'écran s'éteint.</span></p>
     </div>
 
     <div class="panel duo-panel">
@@ -1248,7 +1248,7 @@ $('oUpload').onclick=async()=>{const m=$('oMsg');m.textContent='Envoi…';
     await iv(`/athlete/${ivAth()}/activities?name=${encodeURIComponent($('oName').value||'Course dehors')}&description=${encodeURIComponent('Course dehors avec Horizon')}`,{method:'POST',body:fd});
     m.textContent='Course envoyée dans Intervals.icu.';$('oUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 
-if(window.HORIZON_ANDROID){$('tab-out').hidden=true}
+if(window.HORIZON_ANDROID){$('tab-out').hidden=true;$('oGpsNote').textContent=''}
 /* ---------- sauvegarde et restauration ---------- */
 const BK_KEYS=['routes','runs','watchRuns','workouts','settings','profile','friend','calib','me','lang','voice','zen','mapStyle','ivId'];
 $('bkExport').onclick=async()=>{const data={app:'Horizon',version:1,date:new Date().toISOString(),data:{}};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)data.data[k]=v}catch(e){}});
