@@ -1330,7 +1330,8 @@ function renderSteps(){const sel=$('wsel').value,box=$('steppanel');
 function renderLeft(){const s=curStep();if(!s){$('stLeft').textContent=run.step<0?'':'✓';return}
   $('stLeft').textContent=s.dur?clock(s.dur-run.stepT):Math.max(0,Math.round(s.dist-run.stepD))+' m'}
 let lastBar=-2;
-function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
+let profRoute=null,profW=0;
+function render(){if(route&&!$('view-run').hidden&&(route!==profRoute||$('runprofile').clientWidth!==profW)){profRoute=route;profW=$('runprofile').clientWidth;try{drawProfile($('runprofile'),route?wrapX(run.dist):-1,null)}catch(e){}}const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
   $('sTime').parentElement.hidden=zen;$('sPace').parentElement.hidden=zen;$('zenbox').hidden=!zen||!route;
   const x=route?wrapX(run.dist):0;
   $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+IU()+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
