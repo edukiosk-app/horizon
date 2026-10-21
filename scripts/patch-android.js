@@ -6,8 +6,9 @@ let x = fs.readFileSync(man, 'utf8');
 const perms = [
   '<uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />',
   '<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />',
-  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />',
-  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />',
+  '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:remove="android:maxSdkVersion" />',
+  '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" tools:remove="android:maxSdkVersion" />',
+  '<uses-feature android:name="android.hardware.location.gps" android:required="false" />',
   '<uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />',
   '<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />',
   '<uses-permission android:name="android.permission.WAKE_LOCK" />',
