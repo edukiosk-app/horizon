@@ -212,6 +212,10 @@ button.mini{padding:6px 10px;font-size:13px}
 .ai-step{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
 #aiPanel textarea{width:100%;margin-top:6px}
 .prem{font:700 9px var(--body);font-style:normal;letter-spacing:.06em;background:#fbbf24;color:#422006;border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:2px}
+.real-sum{cursor:pointer;list-style:none}.real-sum::-webkit-details-marker{display:none}.real-sum h2::after{content:" ›";color:var(--accent)}#realPanel[open] .real-sum h2::after{content:" ⌄"}
+#map.prepmap{height:220px;margin-top:10px;background:var(--tile)}
+.mapbtn#btnFix{top:48px}
+#fs .mapbtn#btnFix{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 296px);right:12px}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -240,17 +244,6 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="tl" id="pfRecs"></div>
       <details><summary style="cursor:pointer;margin-top:12px;font-weight:600">Badges</summary><div class="badges" id="pfBadges" style="margin-top:8px"></div></details>
     </div>
-    <div class="panel">
-      <h2>Tracer le parcours</h2>
-      <div id="map"></div>
-      <p class="hint">Touche la carte pour ajouter des points : le tracé suit les chemins piétons. Ou importe un fichier GPX.</p>
-      <div class="row" style="margin-top:8px">
-        <button id="undo">Annuler le dernier point</button>
-        <button id="loop">Revenir au départ</button>
-        <button id="clear" class="danger">Tout effacer</button>
-        <label class="btn" style="flex-direction:row;color:var(--fg)">Importer un GPX<input id="gpx" type="file" accept=".gpx,application/gpx+xml" hidden></label>
-      </div>
-    </div>
 
     <div class="panel">
       <h2>Décors virtuels</h2>
@@ -275,11 +268,16 @@ button.mini{padding:6px 10px;font-size:13px}
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Mes parcours</h2>
+    <details class="panel" id="realPanel">
+      <summary class="real-sum"><h2 style="display:inline">Parcours réel (GPX)</h2></summary>
+      <p class="hint">Refais sur le tapis le parcours d'une vraie course ou d'une sortie : importe son fichier GPX (exporté de ta montre, de Strava ou d'Intervals.icu). Le tapis suit son relief, et la carte reste fixe : seuls les points bougent.</p>
+      <div class="row"><label class="btn primary" style="flex-direction:row;display:inline-flex">Importer un GPX<input id="gpx" type="file" accept=".gpx,application/gpx+xml" hidden></label></div>
+      <div id="map" class="prepmap"></div>
+      <h3>Mes parcours</h3>
       <div id="routes" class="list"></div>
       <div id="sharebox" class="hint" hidden></div>
-    </div>
+      <div hidden><button id="undo"></button><button id="loop"></button><button id="clear"></button></div>
+    </details>
 
     <div class="panel">
       <h2>Montre et Intervals.icu</h2>
@@ -518,7 +516,7 @@ button.mini{padding:6px 10px;font-size:13px}
     </div>
 
     <div class="panel">
-      <div class="mapwrap"><div id="runmap"></div><div class="mapstyles" id="mapstyles"><button data-s="plan">Plan</button><button data-s="sat">Satellite <i class="prem">PREMIUM</i></button></div><button class="mapbtn" id="btn3d">2D</button><button class="mapbtn recenter" id="recenter" hidden>Recentrer</button></div>
+      <div class="mapwrap"><div id="runmap"></div><div class="mapstyles" id="mapstyles"><button data-s="plan">Plan</button><button data-s="sat">Satellite <i class="prem">PREMIUM</i></button></div><button class="mapbtn" id="btn3d">2D</button><button class="mapbtn" id="btnFix">Suivre</button><button class="mapbtn recenter" id="recenter" hidden>Recentrer</button></div>
       <div class="legend"><span><i style="background:var(--climb)"></i>Toi</span><span id="legGhost" hidden><i style="background:var(--ghost)"></i><span id="legRef">Ton record</span></span><span id="legMedal" hidden>La médaille montre qui est en tête</span></div>
       <canvas id="runprofile" style="margin-top:8px"></canvas>
     </div>
@@ -635,7 +633,7 @@ async function routeThrough(wps){
 
 /* ---------- carte de préparation ---------- */
 const tiles=()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'dark-tiles',attribution:'© OpenStreetMap'});
-const map=L.map('map').setView([49.0486,1.6011],14);tiles().addTo(map);
+const map=L.map('map',{zoomControl:false,attributionControl:false}).setView([49.0486,1.6011],14);
 let meDot=null;
 const LocCtl=L.Control.extend({options:{position:'topright'},onAdd(){const b=L.DomUtil.create('button','locbtn');b.type='button';b.textContent='Ma position';
   L.DomEvent.disableClickPropagation(b);b.onclick=()=>{if(!navigator.geolocation){$('routeinfo').textContent="La position n'est pas disponible sur cet appareil.";return}
@@ -644,7 +642,7 @@ const LocCtl=L.Control.extend({options:{position:'topright'},onAdd(){const b=L.D
       map.setView(ll,16);if(!wps.length)$('routeinfo').textContent='Touche la carte pour poser le départ, puis les autres points du parcours.'},
       err=>{b.textContent='Ma position';$('routeinfo').textContent=err.code===1?"Position refusée : autorise la localisation pour Treadverse dans les réglages du téléphone.":"Position introuvable pour l'instant, réessaie dehors ou près d'une fenêtre."},
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000})};return b}});
-map.addControl(new LocCtl());
+
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
 function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
   if(line)map.removeLayer(line);line=null;
@@ -659,7 +657,7 @@ async function rebuild(){if(wps.length<2){route=null;drawPrep();drawProfile($('p
   catch(e){$('routeinfo').textContent='Erreur : '+e.message+'. Vérifie la connexion internet.'}
   busy=false}
 let rbT=0;const rebuildSoon=()=>{clearTimeout(rbT);$('routeinfo').textContent='Calcul du parcours…';rbT=setTimeout(rebuild,1200)};
-map.on('click',e=>{wps.push([e.latlng.lat,e.latlng.lng]);drawPrep();rebuildSoon()});
+
 $('undo').onclick=()=>{wps.pop();rebuild()};
 $('loop').onclick=()=>{if(wps.length>1){wps.push(wps[0]);rebuild()}};
 $('clear').onclick=()=>{wps=[];route=null;drawPrep();drawProfile($('profile'),-1)};
@@ -670,7 +668,7 @@ $('gpx').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;
   const name=(xml.querySelector('trk > name, rte > name, metadata > name')?.textContent||f.name.replace(/\.gpx$/i,'')).trim();
   pts=resample(pts);
   if(pts.filter(p=>p[2]==null).length>pts.length/10){$('routeinfo').textContent='Récupération des altitudes…';try{pts=await addElevation(pts)}catch(e){pts=pts.map(p=>[p[0],p[1],p[2]??0])}}
-  wps=[];$('rname').value=name;setRoute(pts,name);map.fitBounds(line.getBounds());ev.target.value=''};
+  wps=[];$('rname').value=name;setRoute(pts,name);$('save').onclick();store.set('lastRoute','r:'+name);setTimeout(()=>{map.invalidateSize();line&&map.fitBounds(line.getBounds())},50);ev.target.value='';$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};
 
 /* ---------- parcours enregistrés ---------- */
 function listRoutes(){const rs=store.get('routes',[]),box=$('routes');box.innerHTML='';
@@ -680,7 +678,7 @@ function listRoutes(){const rs=store.get('routes',[]),box=$('routes');box.innerH
     const mine=Object.keys(runs).filter(k=>k.startsWith(r.name+'|')).reduce((n,k)=>n+runs[k].length,0);
     d.innerHTML=`<span><b>${esc(r.name)}</b><br><small class="hint">${fmt(r.km,2)} km · D+ ${r.gain} m${mine?' · '+mine+' course'+(mine>1?'s':''):''}</small></span>`;
     const b=document.createElement('div');b.className='row';
-    const o=document.createElement('button');o.textContent='Ouvrir';o.onclick=()=>{wps=[];$('rname').value=r.name;setRoute(r.pts,r.name);map.fitBounds(line.getBounds())};
+    const o=document.createElement('button');o.textContent='Ouvrir';o.onclick=()=>{wps=[];$('rname').value=r.name;setRoute(r.pts,r.name);store.set('lastRoute','r:'+r.name);setTimeout(()=>{map.invalidateSize();line&&map.fitBounds(line.getBounds())},50);$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};
     const x=document.createElement('button');x.textContent='Supprimer';x.className='danger';x.onclick=()=>{if(x.dataset.ok){rs.splice(i,1);store.set('routes',rs);listRoutes()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}};
     const c=document.createElement('button');c.textContent='Défier un ami';c.onclick=()=>shareChallenge(r);
     b.append(o,c,x);d.append(b);box.append(d)})}
@@ -900,7 +898,7 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
   $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
   b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small><span class="km">${d.len>=1000?fmt(d.len/1000,0)+' km':d.len+' m'} · en boucle</span>`;
-  b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
+  b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
 const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
@@ -954,10 +952,10 @@ function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0
 /* Carte de course : 3D avec relief (MapLibre) si possible, sinon carte 2D (Leaflet) */
 // Abonnement : pas encore de paiement, tout est ouvert pendant les essais.
 const isPremium=()=>store.get('premium',true)!==false;
-const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
-  teardown(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,kind:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null,line:null});$('mapstyles').hidden=false;$('btn3d').hidden=false},
+const RM={fixed:store.get('mapFixed',true),fitFor:null,kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
+  teardown(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,kind:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null,line:null});$('mapstyles').hidden=false;$('btn3d').hidden=false;$('btnFix').hidden=false},
   init(){const dec=!!(route&&route.decor&&window.THREE&&window.VR);if(this.map&&(dec!==(this.kind==='decor')||(dec&&this.map.route!==route)))this.teardown();if(this.map)return;
-    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=false;$('btn3d').textContent='Vue';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
+    if(dec){try{this.map=VR.create($('runmap'),route);this.kind='decor';this.ready=true;$('mapstyles').hidden=true;$('btn3d').hidden=false;$('btnFix').hidden=true;$('btn3d').textContent='Vue';$('recenter').hidden=true;return}catch(e){log('Décor 3D indisponible : '+e.message);this.map=null}}
     if(window.maplibregl){try{this.initGL();return}catch(e){log('Carte 3D indisponible sur cet appareil, carte 2D à la place')}}
     this.initLeaf()},
   styleName:null,userUntil:0,
@@ -1004,7 +1002,11 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     const ic=html=>L.divIcon({className:'ghost-ic',iconSize:[30,40],iconAnchor:[15,20],html});
     this.icon=ic;this.me=L.marker([49.0486,1.6011],{icon:ic(dotHTML(ME_C)),zIndexOffset:600,interactive:false}).addTo(m);
     this.ref=L.marker([49.0486,1.6011],{icon:ic(dotHTML(REF_C)),zIndexOffset:500,interactive:false});this.ready=true;this.drawRoute()},
-  drawRoute(){if(!route||!this.ready||this.kind==='decor')return;const ll=route.pts.map(p=>[p[1],p[0]]);
+  fitAll(){if(!route||!this.map)return;const la=route.pts.map(p=>p[0]),lo=route.pts.map(p=>p[1]);
+    if(this.kind==='gl'){this.map.fitBounds([[Math.min(...lo),Math.min(...la)],[Math.max(...lo),Math.max(...la)]],{padding:{top:50,bottom:50,left:40,right:40},pitch:this.three?45:0,bearing:0,duration:0})}
+    else if(this.kind==='leaf'){this.map.fitBounds(L.latLngBounds(route.pts.map(p=>[p[0],p[1]])).pad(0.1),{animate:false})}this.fitFor=route},
+  setFixed(f){this.fixed=f;store.set('mapFixed',f);$('btnFix').textContent=f?'Suivre':'Vue fixe';this.lastPlace=null;this.fitFor=null;$('recenter').hidden=true;lastMap=0;render()},
+  drawRoute(){if(!route||!this.ready||this.kind==='decor')return;this.fitFor=null;const ll=route.pts.map(p=>[p[1],p[0]]);
     if(this.kind==='gl'){this.map.getSource('route')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:ll}})}
     else{if(this.line)this.map.removeLayer(this.line);this.line=L.polyline(route.pts.map(p=>[p[0],p[1]]),{color:'#34d399',weight:5}).addTo(this.map)}},
   resize(){if(!this.map)return;if(this.kind==='decor')return this.map.resize();this.kind==='gl'?this.map.resize():this.map.invalidateSize()},
@@ -1014,15 +1016,17 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
   place(p,gp,x){if(!this.map)return;if(this.kind==='decor'){this.map.place(x,lastGx!=null?wrapX(lastGx):null,replaying?x:run.dist);return}const sig=p[0].toFixed(6)+p[1].toFixed(6)+(gp?gp[0].toFixed(6)+gp[1].toFixed(6):'')+this.three;if(sig===this.lastPlace)return;this.lastPlace=sig;
     if(this.kind==='gl'){this.me.setLngLat([p[1],p[0]]);if(!this.me._map)this.me.addTo(this.map);
       if(gp){this.ref.setLngLat([gp[1],gp[0]]);if(!this.refOn){this.ref.addTo(this.map);this.refOn=true}}else if(this.refOn){this.ref.remove();this.refOn=false}
+      if(this.fixed){if(this.fitFor!==route&&this.ready)this.fitAll();return}
       const ahead=posAt(Math.min(total(),x+60)),brg=hav(p,ahead)>5?bearing(p,ahead):this.map.getBearing();
       if(Date.now()<this.userUntil){this.lastPlace=null;return}$('recenter').hidden=true;
       const far=gp&&hav(p,gp)>120,c=far?[(p[1]+gp[1])/2,(p[0]+gp[0])/2]:[p[1],p[0]];
       this.map.easeTo({center:c,zoom:far?Math.max(13.5,16.4-Math.log2(hav(p,gp)/120)):16.4,bearing:this.three?brg:0,pitch:this.three?62:0,duration:900})}
     else{this.me.setLatLng([p[0],p[1]]);if(gp){this.ref.setLatLng([gp[0],gp[1]]);if(!this.ref._map)this.ref.addTo(this.map)}else if(this.ref._map)this.ref.remove();
+      if(this.fixed){if(this.fitFor!==route)this.fitAll();return}
       if(gp&&hav(p,gp)>120)this.map.fitBounds(L.latLngBounds([[p[0],p[1]],[gp[0],gp[1]]]).pad(0.35),{maxZoom:16,animate:false});else this.map.setView([p[0],p[1]],16,{animate:false})}},
-  toggle3d(){if(this.kind==='decor'){this.map.toggleView();return}if(this.kind!=='gl')return;this.three=!this.three;this.lastPlace=null;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
+  toggle3d(){if(this.kind==='decor'){this.map.toggleView();return}if(this.kind!=='gl')return;if(this.fixed){this.three=!this.three;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);$('btn3d').textContent=this.three?'2D':'3D';this.fitAll();return}this.three=!this.three;this.lastPlace=null;this.map.setTerrain(this.three?{source:'dem',exaggeration:1.6}:null);
     this.map.easeTo({pitch:this.three?62:0,bearing:this.three?this.map.getBearing():0,duration:600});$('btn3d').textContent=this.three?'2D':'3D'}};
-$('btn3d').onclick=()=>RM.toggle3d();
+$('btn3d').onclick=()=>RM.toggle3d();$('btnFix').onclick=()=>RM.setFixed(!RM.fixed);$('btnFix').textContent=RM.fixed?'Suivre':'Vue fixe';
 // garde-fou : si la carte 3D se bloque (tâche interne en erreur), on la relance
 setInterval(()=>{const m=RM.map;if(RM.kind!=='gl'||!m||$('view-run').hidden)return;const q=m._renderTaskQueue;if(q&&q._currentlyRunning){log('Carte bloquée : relance automatique');RM.rebuild()}},3000);
 function setLeader(l){RM.setLeader(l)}
@@ -1605,8 +1609,9 @@ $('bkImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{le
   catch(e){$('bkMsg').textContent='Restauration impossible : '+e.message+'.'}ev.target.value=''};
 listRoutes();listWorkouts();showWord();renderProfile();calUI();edDraw();
 const saved=store.get('routes',[]);
-if(saved.length){$('rname').value=saved[0].name;setRoute(saved[0].pts,saved[0].name);map.fitBounds(line.getBounds())}
-else if(!location.hash.startsWith('#defi=')){wps=[[49.0486,1.6011],[49.0552,1.5895],[49.0452,1.5778],[49.0486,1.6011]];$('rname').value='Exemple : boucle autour de Freneuse';drawPrep();rebuild().then(()=>line&&map.fitBounds(line.getBounds()))}
+if(!location.hash.startsWith('#defi=')){const lr=store.get('lastRoute','d:track'),sr=lr.startsWith('r:')&&saved.find(r=>r.name===lr.slice(2));
+  if(sr){$('rname').value=sr.name;setRoute(sr.pts,sr.name);setTimeout(()=>{map.invalidateSize();line&&map.fitBounds(line.getBounds())},100)}
+  else if(window.VR){const k=lr.startsWith('d:')&&VR.DEFS[lr.slice(2)]?lr.slice(2):'track';$('rname').value=VR.DEFS[k].name;setRoute(VR.routePts(k),VR.DEFS[k].name,k);drawPrep()}}
 resetRun();
 importChallenge();
 </script>
