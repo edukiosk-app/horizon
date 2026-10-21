@@ -477,7 +477,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <label id="refLvlL" hidden>Niveau visé<select id="refLvl"></select></label>
         <label>Coach cardio<select id="coach"><option value="off">Désactivé</option><option value="safe">Sécurité seulement</option><option value="auto">Zones de la séance</option><option value="z2">Endurance (zone 2)</option><option value="z3">Tempo (zone 3)</option><option value="z4">Seuil (zone 4)</option></select></label>
       </div>
-      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="vcoach" type="checkbox" checked> Coach vocal détaillé</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span><span id="coachInfo" class="hint" style="margin:0"></span></div>
+      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="vcoach" type="checkbox" checked> Coach vocal détaillé</label><label class="check"><input id="vtips" type="checkbox" checked> Conseils de course</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span><span id="coachInfo" class="hint" style="margin:0"></span></div>
       <div id="wspeeds" hidden><div class="wsp-head"><b>Paramètres de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle la vitesse et la pente une fois : le tapis enchaîne tout seul. Une pente fixée sur les efforts simule des côtes ; « Parcours » suit le relief. Treadverse s'en souvient pour cette séance.</p><div class="seg" id="wspMode"><button type="button" data-m="group">Par type de phase</button><button type="button" data-m="block">Bloc par bloc</button></div><div id="wspList"></div></div>
     </div>
 
@@ -975,7 +975,7 @@ function refUI(){const sel=$('refLvl'),cur=store.get('refLvl','forme');sel.inner
   const f=formLevel();$('pfForm').textContent=!ok?'Indique ton âge et ton sexe : Treadverse en déduit les repères de forme et le coureur de référence.':f?(f.lv?`Ton niveau d'après ${f.src} : « ${f.lv[1]} » (équivalent ${clock(f.t)} au 10 km).`:`D'après ${f.src} (équivalent ${clock(f.t)} au 10 km), le niveau « Débutant » est à ${clock(refT10('deb'))} : tu y es presque.`):`Repères pour toi : « En forme » = ${clock(refT10('forme'))} au 10 km, « Confirmé » = ${clock(refT10('conf'))}. Cours 5 ou 10 km pour connaître ton niveau.`}
 function refName(){const m=$('gsel').value,f=store.get('friend',null),by=(f&&f.by)||'';
   if(m==='goal')return{fr:'ton objectif',Fr:'Ton objectif',en:'your target',En:'Your target',lab:'Objectif'};
-  if(m==='ref'){const l=REF_LV.find(x=>x[0]===$('refLvl').value)||REF_LV[1];return{fr:'le coureur '+l[1],Fr:'Le coureur '+l[1],en:'the '+l[1]+' pacer',En:'The '+l[1]+' pacer',lab:'Référence « '+l[1]+' »'}}
+  if(m==='ref'){const l=REF_LV.find(x=>x[0]===$('refLvl').value)||REF_LV[1];return{fr:'le coureur de niveau '+l[1].toLowerCase(),Fr:'Le coureur de niveau '+l[1].toLowerCase(),en:'the '+l[1]+' pacer',En:'The '+l[1]+' pacer',lab:'Référence « '+l[1]+' »'}}
   if(m==='friend')return by?{fr:'le record '+de(by),Fr:'Le record '+de(by),en:by+"'s record",En:by+"'s record",lab:'Défi '+de(by)}:{fr:'le record de ton ami',Fr:'Le record de ton ami',en:"your friend's record",En:"Your friend's record",lab:"Défi d'un ami"};
   if(m==='watch')return{fr:'ta sortie dehors',Fr:'Ta sortie dehors',en:'your outdoor run',En:'Your outdoor run',lab:'Ta sortie dehors'};
   if(m==='last')return{fr:'ta dernière course',Fr:'Ta dernière course',en:'your last run',En:'Your last run',lab:'Ta dernière course'};
@@ -1198,7 +1198,7 @@ function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connect�
 
 /* ================= COURSE ================= */
 const run={state:'idle',dist:0,time:0,gain:0,speed:0,target:8,hr:null,inc:0,sentInc:null,sentAt:0,last:0,step:-1,stepT:0,stepD:0,samples:[],sampAt:0,ghost:null,hillSaid:0};
-function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0,hrAdj:0,coachAt:0,coachHold:0,coachSaid:-999,coachAlarm:-99,kmSaid:0,kmT:0,vert:0,nextSaid:-1,halfSaid:-1,lastMin:false,ghLead:0,ghSaid:-99});
+function resetRun(){Object.assign(run,{tdPrev:null,tdAcc:0,tdUsed:0,spAcc:0,state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0,tipAt:0,tipN:0,drinkSaid:0,hrAdj:0,coachAt:0,coachHold:0,coachSaid:-999,coachAlarm:-99,kmSaid:0,kmT:0,vert:0,nextSaid:-1,halfSaid:-1,lastMin:false,ghLead:0,ghSaid:-99});
   $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
   $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
@@ -1212,7 +1212,7 @@ function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(
 function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;run.hrAdj=0;
   if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
   const s=workout.steps[i];if(s.ramp){const V=k=>+$(k).value,r=s.ramp[0]==='%'?[V('v10k')*s.ramp[1]/100,V('v10k')*s.ramp[2]/100]:s.ramp;s.v=Math.round(r[0]*10)/10}applySpeed(s.v);run.sentAt=0;
-  say(`${s.label}, ${durWords(s)}, ${fmt(s.v)} kilomètres heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
+  say(`${s.label}, ${durWords(s)}, ${spk(s.v)} kilomètres par heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
 let wake=null;async function keepAwake(){try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
 $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='running')return;
   if(!bt.ok&&!$('simu').checked){$('bthint').textContent="Connecte d'abord le tapis : ton point n'avance qu'avec lui. Pour un simple essai, coche « Simulation sans tapis ».";$('bthint').scrollIntoView({block:'center',behavior:'smooth'});say("Connecte d'abord le tapis.",'Connect the treadmill first.');return}
@@ -1224,7 +1224,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
     $('wsel').disabled=true;$('gsel').disabled=true;wpickLabel();if(workout)run.target=workout.steps[0].v}
   if(bt.ok){if(!first)await cmd([0x00]);await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
   run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
-  if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
+  if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say(route.decor?'Bonne course !':'Bonne course sur '+route.name+'.','Have a great run.')}};
 async function pauseBelt(){if(!bt.ok)return;bt.refused8=false;const v0=run.speed;await cmd([0x08,0x02],'Tapis en pause');
   const moving=()=>run.state==='paused'&&bt.ok&&run.speed>0.5&&run.speed>v0-1;
   await new Promise(r=>setTimeout(r,bt.refused8?300:2500));
@@ -1252,13 +1252,13 @@ function finishTest(){const t=run.stepT,d=run.stepD;if(t<180||d<300){log('Test t
   $('testtxt').innerHTML=`<p class="hint" style="margin:0 0 8px">${Math.round(d)} m en ${clock(t)}, soit ${fmt(avg)} km/h de moyenne. Estimations : 5 km en ${clock(T(5000))}, 10 km en ${clock(T(10000))}.</p><div class="tl">`+
     Object.keys(L).map(k=>`<span>${L[k]}</span><span>${fmt(res[k])} km/h · ${clock(3600/res[k])}/km</span>`).join('')+'</div>';
   $('testres').hidden=false;$('testmsg').textContent='';
-  say(`Test terminé. Ta vitesse moyenne : ${fmt(avg)} kilomètres heure. Tes allures sont prêtes.`,`Test complete. Your average speed was ${fmtEn(r1(avg))} kilometres per hour.`);log('Test : '+Math.round(d)+' m en '+clock(t))}
+  say(`Test terminé. Ta vitesse moyenne : ${spk(avg)} kilomètres par heure. Tes allures sont prêtes.`,`Test complete. Your average speed was ${fmtEn(r1(avg))} kilometres per hour.`);log('Test : '+Math.round(d)+' m en '+clock(t))}
 $('testapply').onclick=()=>{if(!testRes)return;Object.keys(testRes).forEach(k=>$(k).value=testRes[k]);const o={};setIds.forEach(i=>o[i]=+$(i).value);store.set('settings',o);listWorkouts();$('testmsg').textContent='Allures enregistrées dans « Mes allures ».'};
 $('stop').onclick=async()=>{if(run.state==='done')return;const done=workout?run.step>=workout.steps.length:run.dist>=total()-5;
   if(bt.ok){await setIncline(S().min);await cmd([0x08,0x01],'Tapis arrêté')}
   run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();exitFS();
   saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${clock(run.time)}, D+ ${Math.round(run.gain)} m`);
-  const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo, tu bats ${R.fr} de ${d} secondes.`:`${R.Fr} garde ${d} secondes d'avance. La prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
+  const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo ! Victoire sur ${R.fr}, avec ${gapFr(d)} d'avance.`:`${R.Fr} garde ${gapFr(d)} d'avance. Ce sera pour la prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
   $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver;$('wsel').disabled=false;$('gsel').disabled=false;wpickLabel()};
 const startOrig=$('start').onclick;
 function startOver(){$('start').onclick=startOrig;resetRun()}
@@ -1749,7 +1749,7 @@ function coachBand(st){const m=$('coach')?.value||'off';if(m==='off')return null
 function coachSet(dv){run.hrAdj=(run.hrAdj||0)+dv;const v=Math.max(3,Math.min(S().vmax,Math.round((run.target+dv)*10)/10));run.target=v;if(bt.ok)setSpeed(v);else run.speed=v;return v}
 function coachTick(st){const b=coachBand(st);if(!b||!run.hr||run.state!=='running')return;
   const p=run.hr/hrMax()*100;
-  if(p>=97){if(run.time-(run.coachAlarm??-99)>45){run.coachAlarm=run.time;const v=coachSet(-1);say(`Cardio très haut, ${run.hr}. Je ralentis à ${fmt(v)}.`,`Heart rate very high, ${run.hr}. Slowing down to ${fmtEn(v)}.`)}return}
+  if(p>=97){if(run.time-(run.coachAlarm??-99)>45){run.coachAlarm=run.time;const v=coachSet(-1);say(`Attention, cardio à ${run.hr}. Je baisse la vitesse à ${spk(v)} kilomètres par heure.`,`Heart rate very high, ${run.hr}. Slowing down to ${fmtEn(v)}.`)}return}
   if(b.safe||(st&&st.ramp&&!st.manual))return;
   if(run.time<(run.coachHold||0))return;
   if((st?run.stepT:run.time)<90)return;
@@ -1758,8 +1758,8 @@ function coachTick(st){const b=coachBand(st);if(!b||!run.hr||run.state!=='runnin
   if(!dv||(dv>0&&(run.hrAdj||0)>=1.5)||(dv<0&&(run.hrAdj||0)<=-3))return;
   const v=coachSet(dv);
   if(run.time-(run.coachSaid??-999)>90){run.coachSaid=run.time;
-    if(dv<0)say(`Cardio ${run.hr}, au-dessus de ta zone. Je ralentis à ${fmt(v)}.`,`Heart rate ${run.hr}, above your zone. Slowing to ${fmtEn(v)}.`);
-    else say(`Cardio ${run.hr}, tu as de la marge. J'accélère à ${fmt(v)}.`,`Heart rate ${run.hr}, you have room. Speeding up to ${fmtEn(v)}.`)}}
+    if(dv<0)say(`Cardio ${run.hr}, au-dessus de ta zone. Je baisse la vitesse à ${spk(v)} kilomètres par heure.`,`Heart rate ${run.hr}, above your zone. Slowing to ${fmtEn(v)}.`);
+    else say(`Cardio ${run.hr}, tu as de la marge. J'accélère à ${spk(v)} kilomètres par heure.`,`Heart rate ${run.hr}, you have room. Speeding up to ${fmtEn(v)}.`)}}
 function coachTxt(){const b=coachBand(curStep());if(!b)return'';const M=hrMax();
   return b.safe?`Sécurité au-delà de ${Math.round(M*0.97)}`:`Zone visée ${b.lo?Math.round(M*b.lo/100)+'–':'moins de '}${Math.round(M*b.hi/100)}`}
 
@@ -1770,17 +1770,17 @@ const CHEER=[['Mi-bloc. Tu tiens le rythme.','Halfway through this block. Holdin
 function voiceTick(st){if(!$('vcoach')?.checked||run.state!=='running')return;
   // kilomètres
   const km=Math.floor(run.dist/1000);if(km>(run.kmSaid||0)){run.kmSaid=km;const t=run.time-(run.kmT||0);run.kmT=run.time;
-    if(!(workout&&workout.goal)&&!LIVE.room){let g='',ge='';const G=run.ghost;if(G){const gt=gTimeAt(G,run.dist);if(gt!=null){const d=Math.round(gt-run.time);if(Math.abs(d)>=2){g=d>0?`, ${d} secondes d'avance`:`, ${-d} secondes de retard`;ge=d>0?`, ${d} seconds ahead`:`, ${-d} seconds behind`}}}
+    if(!(workout&&workout.goal)&&!LIVE.room&&!(st&&stepSec(st)<=60)){let g='',ge='';const G=run.ghost;if(G){const gt=gTimeAt(G,run.dist);if(gt!=null){const d=Math.round(gt-run.time);if(Math.abs(d)>=2){g=d>0?`, ${gapFr(d)} d'avance`:`, ${gapFr(-d)} de retard`;ge=d>0?`, ${d} seconds ahead`:`, ${-d} seconds behind`}}}
       say(`Kilomètre ${km} en ${minWords(t)}${g}.`,`Kilometre ${km} in ${minEn(t)}${ge}.`)}}
   // le fantôme passe devant ou derrière
   const G=run.ghost;if(G&&run.time>20){const gx=gDistAt(G,run.time),lead=run.dist-gx>3?1:run.dist-gx<-3?-1:0;
-    if(lead&&lead!==run.ghLead&&run.time-(run.ghSaid??-99)>30){if(run.ghLead){const R=refName();say(lead>0?`Tu passes devant ${R.fr}.`:`${R.Fr} repasse devant.`,lead>0?`You pass ${R.en}.`:`${R.En} is back in front.`)}run.ghSaid=run.time;run.ghLead=lead}}
+    if(lead&&lead!==run.ghLead&&run.time-(run.ghSaid??-99)>30){if(run.ghLead){const R=refName();say(lead>0?`Te voilà devant ${R.fr}.`:`${R.Fr} reprend la tête.`,lead>0?`You pass ${R.en}.`:`${R.En} is back in front.`)}run.ghSaid=run.time;run.ghLead=lead}}
   if(!st||!workout)return;
   const nx=workout.steps[run.step+1];
-  const pre=nx?[`Dans 10 secondes : ${nx.label}, ${fmt(nx.v)} kilomètres heure.`,`In 10 seconds: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 10 secondes, fin de la séance.','In 10 seconds, the workout is over.'];
+  const pre=nx?[`Dans 10 secondes : ${nx.label}, ${spk(nx.v)} kilomètres par heure.`,`In 10 seconds: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 10 secondes, fin de la séance.','In 10 seconds, the workout is over.'];
   if(run.nextSaid!==run.step){
     if(st.dur>=40&&st.dur-run.stepT<=10){run.nextSaid=run.step;say(...pre)}
-    else if(!st.dur&&st.dist>=400&&st.dist-run.stepD<=40){run.nextSaid=run.step;say(...(nx?[`Dans 40 mètres : ${nx.label}, ${fmt(nx.v)} kilomètres heure.`,`In 40 metres: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 40 mètres, fin de la séance.','In 40 metres, the workout is over.']))}}
+    else if(!st.dur&&st.dist>=400&&st.dist-run.stepD<=40){run.nextSaid=run.step;say(...(nx?[`Dans 40 mètres : ${nx.label}, ${spk(nx.v)} kilomètres par heure.`,`In 40 metres: ${enLabel(nx.label)}, ${fmtEn(nx.v)} kilometres per hour.`]:['Dans 40 mètres, fin de la séance.','In 40 metres, the workout is over.']))}}
   const len=stepSec(st),f=st.dur?run.stepT/st.dur:run.stepD/(st.dist||1);
   if(st.type==='work'&&len>=240&&f>=0.5&&run.halfSaid!==run.step){run.halfSaid=run.step;const c=CHEER[Math.floor(Math.random()*CHEER.length)];say(c[0],c[1])}
   const left=workout.steps.slice(run.step).reduce((a,s)=>a+stepSec(s),0)-(st.dur?run.stepT:run.stepD/(st.v/3.6));
@@ -1892,9 +1892,9 @@ function liveTick(){if(!LIVE.room||!LIVE.data)return;const R=LIVE.data,now=srvNo
       liveSetDecor(R.decor);workout=null;$('wsel').value='';say('Partez !','Go!');$('start').onclick()}}
   if(run.state==='running'&&R.start){
     if(!LIVE.fin&&run.dist>=R.dist){LIVE.fin=Math.round(run.time);fb(`rooms/${LIVE.room}/p/${LIVE.id}`,'PATCH',{d:R.dist,t:LIVE.fin,f:LIVE.fin,at:{'.sv':'timestamp'}}).catch(()=>{});
-      setTimeout(()=>{const P=livePeople(),i=P.findIndex(p=>p.me);say(`Arrivée ! Tu termines ${i===0?'premier':(i+1)+'e'} sur ${P.length}.`,`Finish! You are number ${i+1} of ${P.length}.`);$('stop').onclick()},800);return}
+      setTimeout(()=>{const P=livePeople(),i=P.findIndex(p=>p.me);say(`Arrivée ! Tu termines ${ordFr(i+1)} sur ${P.length}.`,`Finish! You are number ${i+1} of ${P.length}.`);$('stop').onclick()},800);return}
     if(now-LIVE.lastSend>2000){LIVE.lastSend=now;fb(`rooms/${LIVE.room}/p/${LIVE.id}`,'PATCH',{n:liveName(),d:Math.round(run.dist),t:Math.round(run.time),hr:run.hr||0,at:{'.sv':'timestamp'}}).catch(()=>{})}
-    const P=livePeople(),i=P.findIndex(p=>p.me)+1;if(P.length>1&&i!==LIVE.rank){if(LIVE.rank&&run.time-LIVE.rankAt>15){say(i===1?'Tu passes en tête !':`Tu es ${i}e.`,i===1?'You take the lead!':`You are number ${i}.`)}LIVE.rank=i;LIVE.rankAt=run.time}}
+    const P=livePeople(),i=P.findIndex(p=>p.me)+1;if(P.length>1&&i!==LIVE.rank){if(LIVE.rank&&run.time-LIVE.rankAt>15){say(i===1?'Te voilà en tête !':`Tu es ${ordFr(i)}.`,i===1?'You take the lead!':`You are number ${i}.`)}LIVE.rank=i;LIVE.rankAt=run.time}}
   liveUI()}
 function liveDots(){if(!LIVE.room||!LIVE.data||!LIVE.data.start||RM.kind!=='decor'||!RM.map||!RM.map.others)return;
   RM.map.others(livePeople().filter(p=>!p.me).map((p,i)=>({id:p.id,n:p.n||'Coureur',x:wrapX(p.f?LIVE.data.dist:p.d),c:LCOL[Object.keys(LIVE.data.p).indexOf(p.id)%LCOL.length]})))}
@@ -1936,6 +1936,43 @@ function drawProfileDecor(cv,g,w,h,x,gx){const D=planDist(),N=400,pad=18,ds=[],e
 /* positions continues du point bleu et des autres coureurs, calculées à chaque image */
 window.trGhost=()=>{try{const g=run.ghost;if(!g||run.state==='idle'||(typeof replaying!=='undefined'&&replaying))return null;const t=run.time+(run.state==='running'?Math.min(1,(performance.now()-run.last)/1000):0);const d=gDistAt(g,t);return{x:wrapX(d),v:Math.max(0,gDistAt(g,t+1)-d)}}catch(e){return null}};
 window.trOthers=()=>{if(!LIVE.room||!LIVE.data||!LIVE.data.start||RM.kind!=='decor')return[];const ks=Object.keys(LIVE.data.p||{});return livePeople().filter(p=>!p.me).map(p=>({id:p.id,n:p.n||'Coureur',x:wrapX(p.f?LIVE.data.dist:p.d),c:LCOL[ks.indexOf(p.id)%LCOL.length]}))};
+</script>
+<script>
+/* conseils de course : respiration, foulée, posture */
+(()=>{const _say=say;say=function(){window.lastSayT=performance.now();return _say.apply(this,arguments)}})();
+const TIPS={souffle:[['Respire par le ventre : laisse-le se gonfler quand tu inspires.','Breathe from your belly: let it fill as you breathe in.'],
+  ['Cale ta respiration sur tes pas : inspire sur trois foulées, souffle sur deux.','Match your breathing to your steps: in for three, out for two.'],
+  ['Souffle longuement par la bouche pour vider l’air chaud.','Breathe out long through your mouth.'],
+  ['Si le souffle devient court, ralentis un peu : tu dois pouvoir dire une phrase.','If you are short of breath, ease off: you should be able to say a sentence.']],
+ recup:[['Récupère : souffle lentement, l’expiration plus longue que l’inspiration.','Recover: breathe out longer than you breathe in.'],
+  ['Profite de la récupération pour relâcher les épaules et les mains.','Use the recovery to relax your shoulders and hands.'],
+  ['Secoue doucement les bras, puis reprends une respiration calme.','Shake out your arms, then breathe calmly.']],
+ foulee:[['Pose le pied sous le bassin, pas devant : la foulée reste légère.','Land under your hips, not in front: keep it light.'],
+  ['Petits pas rapides plutôt que grandes foulées : vise environ cent soixante-quinze pas par minute.','Quick short steps rather than long strides: aim for about one hundred seventy-five steps per minute.'],
+  ['Attaque le sol avec le milieu du pied, sans taper du talon.','Land on your midfoot, not your heel.'],
+  ['Sur le tapis, garde le regard droit devant, pas sur les pieds.','On the treadmill, look ahead, not at your feet.'],
+  ['Reste au milieu du tapis, sans te rapprocher de la console.','Stay in the middle of the belt, away from the console.']],
+ posture:[['Grandis-toi : la tête dans l’axe, comme tirée vers le plafond.','Run tall: head up, as if pulled towards the ceiling.'],
+  ['Les bras pliés à angle droit, les mains relâchées, le mouvement d’avant en arrière.','Arms bent at a right angle, hands loose, swinging front to back.'],
+  ['Relâche les épaules et la mâchoire.','Relax your shoulders and your jaw.'],
+  ['Penche-toi très légèrement vers l’avant, à partir des chevilles.','Lean slightly forward from the ankles.']],
+ cote:[['En montée, raccourcis la foulée et pousse avec les bras.','Uphill: shorten your stride and drive with your arms.'],
+  ['Dans la côte, garde le buste droit et le regard loin devant.','On the climb, keep your chest up and look ahead.']]};
+function tipTick(){if(!$('vtips')?.checked||run.state!=='running'||run.time<120)return;
+  if(run.time-(run.tipAt||0)<240)return;if(performance.now()-(window.lastSayT??-1e9)<20000)return;
+  const st=curStep();if(st&&st.dur&&st.dur-run.stepT<25)return;if(st&&stepSec(st)<120)return;
+  let cat;if(route&&gradeAt(wrapX(run.dist))>=4&&!(st&&st.type==='rec'))cat='cote';else if(st&&st.type==='rec')cat='recup';else{const c=['souffle','foulee','posture'];cat=c[(run.tipN||0)%3]}
+  const L=TIPS[cat];run.tipN=(run.tipN||0)+1;run.tipAt=run.time;const t=L[Math.floor(Math.random()*L.length)];
+  if(run.time>2400&&!run.drinkSaid&&Math.random()<0.5){run.drinkSaid=1;say('Pense à boire une gorgée d’eau.','Remember to take a sip of water.');return}
+  say(t[0],t[1])}
+setInterval(()=>{try{tipTick()}catch(e){}},1000);
+(()=>{const c=$('vtips');c.checked=store.get('vtips',true);c.onchange=()=>store.set('vtips',c.checked)})();
+</script>
+<script>
+/* textes parlés : nombres et rangs en toutes lettres */
+function spk(v){v=Math.round(v*10)/10;return v%1?String(v).replace('.',','):String(v)}
+function ordFr(n){return['','premier','deuxième','troisième','quatrième','cinquième','sixième','septième','huitième','neuvième','dixième'][n]||n+'ième'}
+function gapFr(s){s=Math.round(Math.abs(s));if(s<60)return s+(s>1?' secondes':' seconde');const m=Math.floor(s/60),r=s%60;return m+(m>1?' minutes':' minute')+(r?' '+r:'')}
 </script>
 </body>
 </html>
