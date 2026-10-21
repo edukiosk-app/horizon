@@ -149,6 +149,36 @@ button.mini{padding:5px 8px;font-size:12px}
 .wk-meta{font-size:12px;color:var(--muted);white-space:nowrap}
 .wk[open]{padding-bottom:10px;outline:1px solid var(--accent)}
 .wk-bar{margin-top:2px}
+#fs{position:fixed;inset:0;z-index:3000;background:#000;color:#fff}
+.fs-map{position:absolute;inset:0}
+.fs-map .mapwrap,.fs-map #runmap{height:100%!important;min-height:0!important;border-radius:0!important}
+#fs .mapstyles{display:none}
+#fs .mapbtn#btn3d{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 250px);right:12px}
+#fs .mapbtn.recenter{bottom:calc(env(safe-area-inset-bottom,0px) + 250px)}
+#fs .maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + 300px)}
+.fs-top{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) max(10px,env(safe-area-inset-right,0px)) 10px max(10px,env(safe-area-inset-left,0px));background:linear-gradient(#000000e6,#000000b3 70%,#0000);display:grid;gap:8px;pointer-events:none}
+.fs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fs-grid>div{background:#ffffff14;border-radius:10px;padding:6px 8px;backdrop-filter:blur(3px)}
+.fs-grid small{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#cbd5e1}
+.fs-grid b{font:700 clamp(26px,8.5vw,44px)/1 var(--display);font-variant-numeric:tabular-nums}
+.fs-grid i{font-style:normal;font-size:12px;color:#cbd5e1;margin-left:4px}
+.fs-grid .c b{color:#fb923c}
+#fsGain{display:block;margin:3px 0 0}
+.fs-step{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:end;background:#ffffff14;border-radius:10px;padding:8px 10px}
+.fs-step span{font:700 20px/1.1 var(--display);text-transform:uppercase}
+.fs-step b{font:700 34px/1 var(--display);color:#34d399;font-variant-numeric:tabular-nums}
+.fs-step small{grid-column:1/-1;color:#cbd5e1}
+.fs-step.work span,.fs-step.work b{color:#fb923c}
+.fs-gap{justify-self:center;font:700 22px var(--display);background:#000000b3;border-radius:99px;padding:4px 14px}
+.fs-gap.ahead{color:#34d399}.fs-gap.behind{color:#fb923c}
+.fs-bottom{position:absolute;left:0;right:0;bottom:0;padding:24px max(10px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 10px) max(10px,env(safe-area-inset-left,0px));background:linear-gradient(#0000,#000000c7 30%,#000000eb);display:grid;gap:8px}
+.fs-ctl{display:grid;grid-template-columns:64px repeat(4,1fr);gap:6px;align-items:center}
+.fs-ctl:has([data-v=auto]){grid-template-columns:64px repeat(5,1fr)}
+.fs-ctl span{font:700 13px var(--display);text-transform:uppercase;letter-spacing:.06em;color:#cbd5e1}
+.fs-ctl button,.fs-act button{background:#ffffff1f;border:1px solid #ffffff33;color:#fff;font:700 18px var(--display);padding:10px 2px;border-radius:10px}
+.fs-act{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fs-act button{font:600 14px var(--body)}
+.fs-act .danger{color:#f87171}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -365,7 +395,7 @@ button.mini{padding:5px 8px;font-size:12px}
         <label>Séance<select id="wsel"></select></label>
         <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
       </div>
-      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
+      <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
     </div>
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
@@ -418,6 +448,7 @@ button.mini{padding:5px 8px;font-size:12px}
         <button id="skip" disabled>Étape suivante</button>
         <button id="stop" class="danger" disabled>Terminer</button>
         <a id="sv" class="btn" href="#" target="_blank" rel="noopener">Voir la rue ici</a>
+        <button id="fsOpen">Plein écran</button>
       </div>
       <p class="hint">Avant de démarrer, accroche la clé de sécurité du tapis. Tu peux toujours changer la vitesse sur le tapis lui-même : l'application suit jusqu'à l'étape suivante.</p>
     </div>
@@ -445,6 +476,27 @@ button.mini{padding:5px 8px;font-size:12px}
       <p id="upMsg" class="hint"></p>
       <div class="row"><button id="fixWatch">Accorder la montre et le tapis</button></div>
       <p id="fixMsg" class="hint">Ta montre a aussi enregistré la course ? Horizon compare sa distance à celle du tapis et corrige la montre dans Intervals.icu.</p>
+    </div>
+
+    <div id="fs" hidden>
+      <div class="fs-map" id="fsMap"></div>
+      <div class="fs-top">
+        <div class="fs-step" id="fsStep" hidden><span id="fsNow"></span><b id="fsLeft"></b><small id="fsNext"></small></div>
+        <div class="fs-grid">
+          <div><small>Vitesse</small><b id="fsSpeed">0,0</b><i>km/h</i></div>
+          <div class="c"><small>Pente</small><b id="fsInc">0,0</b><i>%</i></div>
+          <div><small>Distance</small><b id="fsDist">0,00</b><i>km</i></div>
+          <div class="c"><small>Allure</small><b id="fsPace">–</b><i>/km</i></div>
+          <div><small>Temps</small><b id="fsTime">0:00</b><i id="fsGain"></i></div>
+          <div><small>Cardio</small><b id="fsHr">–</b><i>bpm</i></div>
+        </div>
+        <div class="fs-gap" id="fsGap" hidden></div>
+      </div>
+      <div class="fs-bottom">
+        <div class="fs-ctl"><span>Vitesse</span><button data-a="s" data-v="-1">−1</button><button data-a="s" data-v="-0.5">−0,5</button><button data-a="s" data-v="0.5">+0,5</button><button data-a="s" data-v="1">+1</button></div>
+        <div class="fs-ctl"><span>Pente</span><button data-a="i" data-v="-1">−1</button><button data-a="i" data-v="-0.5">−0,5</button><button data-a="i" data-v="0.5">+0,5</button><button data-a="i" data-v="1">+1</button><button data-a="i" data-v="auto">Auto</button></div>
+        <div class="fs-act"><button id="fsPause">Pause</button><button id="fsSkip">Étape suivante</button><button id="fsStop" class="danger">Terminer</button><button id="fsExit">Réduire</button></div>
+      </div>
     </div>
 
     <div class="panel"><h2>Journal</h2><div id="log"></div></div>
@@ -893,14 +945,16 @@ function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
   const s=workout.steps[i];applySpeed(s.v);run.sentAt=0;
   say(`${s.label}, ${durWords(s)}, ${fmt(s.v)} kilomètres heure${isHill(s)?', pente en plus':''}`,`${enLabel(s.label)}, ${durEn(s)}, ${fmtEn(s.v)} kilometres per hour${isHill(s)?', extra incline':''}`);renderSteps()}
 let wake=null;async function keepAwake(){try{wake=await navigator.wakeLock?.request('screen')}catch(e){}}
-$('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='running')return;keepAwake();
+$('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='running')return;
+  if(!bt.ok&&!$('simu').checked){$('bthint').textContent="Connecte d'abord le tapis : ton point n'avance qu'avec lui. Pour un simple essai, coche « Simulation sans tapis ».";$('bthint').scrollIntoView({block:'center',behavior:'smooth'});say("Connecte d'abord le tapis.",'Connect the treadmill first.');return}
+  keepAwake();
   const first=run.state==='idle';
   if(first){run.startedAt=Date.now();$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:parseWorkout(w.text).map(s=>({...s,v:speedFor(s)}))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
   if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeed(run.target)}else run.speed=run.target;
-  run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;
+  run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
   if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
 $('pause').onclick=async()=>{if(run.state!=='running')return;run.state='paused';if(bt.ok)await cmd([0x08,0x02],'Tapis en pause');else run.speed=0;
   $('start').textContent='Reprendre';$('start').disabled=false;$('pause').disabled=true;say('Pause','Paused')};
@@ -926,12 +980,30 @@ function finishTest(){const t=run.stepT,d=run.stepD;if(t<180||d<300){log('Test t
 $('testapply').onclick=()=>{if(!testRes)return;Object.keys(testRes).forEach(k=>$(k).value=testRes[k]);const o={};setIds.forEach(i=>o[i]=+$(i).value);store.set('settings',o);listWorkouts();$('testmsg').textContent='Allures enregistrées dans « Mes allures ».'};
 $('stop').onclick=async()=>{if(run.state==='done')return;const done=workout?run.step>=workout.steps.length:run.dist>=total()-5;
   if(bt.ok){await setIncline(S().min);await cmd([0x08,0x01],'Tapis arrêté')}
-  run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();
+  run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();exitFS();
   saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${clock(run.time)}, D+ ${Math.round(run.gain)} m`);
   const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo, tu bats ${R.fr} de ${d} secondes.`:`${R.Fr} garde ${d} secondes d'avance. La prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
   $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver};
 const startOrig=$('start').onclick;
 function startOver(){$('start').onclick=startOrig;resetRun()}
+let fsHome=null;
+function enterFS(){const mw=document.querySelector('.mapwrap');if(!mw)return;if($('fs').hidden){fsHome={p:mw.parentNode,n:mw.nextSibling};$('fsMap').append(mw);$('fs').hidden=false;fsPad();
+    try{document.documentElement.requestFullscreen?.({navigationUI:'hide'}).catch(()=>{})}catch(e){}setTimeout(()=>{RM.resize();RM.lastPlace=null;lastMap=0;render()},120)}}
+function fsPad(on=true){const m=RM.map;if(RM.kind!=='gl'||!m||!m.setPadding)return;try{m.setPadding(on?{top:document.querySelector('.fs-top').offsetHeight,bottom:document.querySelector('.fs-bottom').offsetHeight,left:0,right:0}:{top:0,bottom:0,left:0,right:0})}catch(e){}}
+function exitFS(){if($('fs').hidden)return;fsPad(false);const mw=document.querySelector('.mapwrap');if(fsHome&&mw)fsHome.p.insertBefore(mw,fsHome.n);$('fs').hidden=true;
+  try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}setTimeout(()=>{RM.resize();RM.lastPlace=null;lastMap=0;render()},120)}
+$('fsOpen').onclick=()=>{if(!route){show('prep');return}RM.init();enterFS()};$('fsExit').onclick=exitFS;
+$('fsPause').onclick=()=>{if(run.state==='running')$('pause').onclick();else if(run.state==='paused')$('start').onclick()};
+$('fsSkip').onclick=()=>$('skip').onclick();
+$('fsStop').onclick=()=>{const b=$('fsStop');if(b.dataset.ok){delete b.dataset.ok;b.textContent='Terminer';$('stop').onclick()}else{b.dataset.ok=1;b.textContent='Confirmer ?';setTimeout(()=>{delete b.dataset.ok;b.textContent='Terminer'},4000)}};
+document.querySelectorAll('#fs [data-a]').forEach(b=>b.onclick=()=>{const v=b.dataset.v;if(b.dataset.a==='s')bump(+v);else adjInc(v==='auto'?null:+v)});
+function renderFS(){if($('fs').hidden)return;if(RM.map&&!RM.map._fsPad){RM.map._fsPad=1;fsPad()}
+  $('fsSpeed').textContent=$('sSpeed').textContent;$('fsInc').textContent=$('sInc').textContent;$('fsDist').textContent=$('sDist').textContent;
+  const zen=$('zen').checked;$('fsTime').textContent=zen?($('zMark').textContent.slice(0,16)||'–'):$('sTime').textContent;$('fsPace').textContent=$('sPace').textContent;
+  $('fsGain').textContent='D+ '+$('sGain').textContent+' m';$('fsHr').textContent=run.hr||'–';
+  const st=!$('steppanel').hidden&&run.state!=='idle';$('fsStep').hidden=!st;if(st){$('fsNow').textContent=$('stNow').textContent;$('fsLeft').textContent=$('stLeft').textContent;$('fsNext').textContent=$('stNext').textContent;$('fsStep').classList.toggle('work',$('steppanel').classList.contains('work'))}
+  const g=!$('ghostbox').hidden;$('fsGap').hidden=!g;if(g){$('fsGap').textContent=$('gGap').textContent;$('fsGap').className='fs-gap '+$('gGap').className}
+  $('fsPause').textContent=run.state==='paused'?'Reprendre':'Pause';$('fsSkip').disabled=!workout||run.state!=='running'}
 function bump(dv){const base=run.state==='running'?(realSpeed()||run.target):run.target;
   run.target=Math.max(1,Math.min(S().vmax,Math.round((base+dv)*10)/10));
   if(run.state==='running'){if(bt.ok)setSpeed(run.target);else run.speed=run.target}render()}
@@ -999,7 +1071,7 @@ function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'
       lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
       setLeader(gx==null||run.time<1?null:(run.dist>=gx?'me':'ref'));
       RM.place(p,gp,x);drawProfile($('runprofile'),x,gx)}}}
-setInterval(tick,500);
+setInterval(tick,500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */
 /* ================= INTERVALS.ICU ================= */
