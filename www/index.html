@@ -126,6 +126,29 @@ button.mini{padding:5px 8px;font-size:12px}
 .duo-gap{text-align:center;font:700 clamp(26px,8vw,40px) var(--display);margin-top:8px}
 .mini-medal svg{width:16px;height:21px;vertical-align:middle}
 .tabs{flex-wrap:wrap}
+.ctl-lab{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);min-width:70px}
+.ctl-val{font:700 26px var(--display);font-variant-numeric:tabular-nums}
+.ctl-val.climbv{color:var(--climb)}
+.ctl-row{display:grid!important;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.ctl-row:has(#iauto){grid-template-columns:repeat(5,1fr)}
+.ctl-btn{font:700 20px var(--display);padding:12px 4px}
+.locbtn{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 13px var(--body);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.fold{border-top:1px solid var(--line)}
+.fold>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 4px;font:700 17px var(--display);text-transform:uppercase;letter-spacing:.04em}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary>span:first-child::before{content:"";display:inline-block;width:0;height:0;border-left:7px solid var(--accent);border-top:5px solid transparent;border-bottom:5px solid transparent;margin-right:10px;transition:transform .15s;vertical-align:1px}
+.fold[open]>summary>span:first-child::before{transform:rotate(90deg)}
+.fold.sub>summary{font-size:15px;color:var(--muted);padding:8px 4px}
+.fold.date>summary{text-transform:none;letter-spacing:0;font:600 14px var(--body)}
+.fold .cnt{font:600 12px var(--body);background:var(--tile);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--muted)}
+.fold-body{padding-left:14px;border-left:2px solid var(--line);margin:0 0 8px 6px}
+.wk{background:var(--tile);border-radius:10px;margin:6px 0;padding:0 10px}
+.wk>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 0}
+.wk>summary::-webkit-details-marker{display:none}
+.wk-name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.wk-meta{font-size:12px;color:var(--muted);white-space:nowrap}
+.wk[open]{padding-bottom:10px;outline:1px solid var(--accent)}
+.wk-bar{margin-top:2px}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -374,10 +397,21 @@ button.mini{padding:5px 8px;font-size:12px}
 
     <div class="panel">
       <div class="row">
-        <button id="sm1">−1</button><button id="sm05">−0,5</button>
-        <button id="sp05">+0,5</button><button id="sp1">+1</button>
-        <span class="hint" style="margin:0">vitesse</span>
+        <span class="ctl-lab">Vitesse</span><b class="ctl-val" id="cSpeed">8,0 km/h</b>
       </div>
+      <div class="row ctl-row">
+        <button id="sm1" class="ctl-btn">−1</button><button id="sm05" class="ctl-btn">−0,5</button>
+        <button id="sp05" class="ctl-btn">+0,5</button><button id="sp1" class="ctl-btn">+1</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <span class="ctl-lab">Pente</span><b class="ctl-val climbv" id="cInc">Auto</b>
+      </div>
+      <div class="row ctl-row">
+        <button id="im1" class="ctl-btn">−1</button><button id="im05" class="ctl-btn">−0,5</button>
+        <button id="ip05" class="ctl-btn">+0,5</button><button id="ip1" class="ctl-btn">+1</button>
+        <button id="iauto" class="ctl-btn">Auto</button>
+      </div>
+      <p class="hint" style="margin-top:6px">« Auto » suit les côtes du parcours. Les boutons ajoutent ou retirent de la pente par-dessus. Le tapis reçoit les réglages dès qu'il est connecté.</p>
       <div class="row" style="margin-top:8px">
         <button id="start" class="primary">Démarrer</button>
         <button id="pause" disabled>Pause</button>
@@ -482,6 +516,15 @@ async function routeThrough(wps){
 /* ---------- carte de préparation ---------- */
 const tiles=()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,className:'dark-tiles',attribution:'© OpenStreetMap'});
 const map=L.map('map').setView([49.0486,1.6011],14);tiles().addTo(map);
+let meDot=null;
+const LocCtl=L.Control.extend({options:{position:'topright'},onAdd(){const b=L.DomUtil.create('button','locbtn');b.type='button';b.textContent='Ma position';
+  L.DomEvent.disableClickPropagation(b);b.onclick=()=>{if(!navigator.geolocation){$('routeinfo').textContent="La position n'est pas disponible sur cet appareil.";return}
+    b.textContent='Recherche…';navigator.geolocation.getCurrentPosition(pos=>{const ll=[pos.coords.latitude,pos.coords.longitude];b.textContent='Ma position';
+      if(meDot)map.removeLayer(meDot);meDot=L.circleMarker(ll,{radius:8,color:'#ffffff',weight:3,fillColor:'#60a5fa',fillOpacity:1}).addTo(map).bindTooltip('Tu es ici');
+      map.setView(ll,16);if(!wps.length)$('routeinfo').textContent='Touche la carte pour poser le départ, puis les autres points du parcours.'},
+      err=>{b.textContent='Ma position';$('routeinfo').textContent=err.code===1?"Position refusée : autorise la localisation pour Horizon dans les réglages du téléphone.":"Position introuvable pour l'instant, réessaie dehors ou près d'une fenêtre."},
+      {enableHighAccuracy:true,timeout:15000,maximumAge:60000})};return b}});
+map.addControl(new LocCtl());
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
 function drawPrep(){wpLayer.clearLayers();wps.forEach((w,i)=>L.circleMarker(w,{radius:6,color:i?'#34d399':'#fb923c',weight:3,fillOpacity:1,fillColor:'#1c1f23'}).addTo(wpLayer));
   if(line)map.removeLayer(line);line=null;
@@ -590,24 +633,45 @@ const BUILTIN=[
  {name:"10 côtes toniques",text:`Warmup\n- Échauffement 30m\n\n10x\n- Côte tonique 30s intensity=interval\n- Récupération 3m intensity=recovery`},
  {name:"Footing long avec bloc soutenu",text:`- Footing cool 40m intensity=active\n\n- Allure 10k plus une minute vingt 30m intensity=interval\n\n- Footing cool 10m intensity=active`}];
 const workouts=()=>[...BUILTIN.map(w=>({...w,builtin:true})),...store.get('workouts',[])];
-function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsearch')?.value||'').trim().toLowerCase();let shown=0,hidden=0;const sel=$('wsel'),cur=sel.value;sel.innerHTML='<option value="">Course libre (pas de séance)</option><option value="__test">Test d\'allures (25 min)</option>';
-  {const d=document.createElement('div');d.className='item';d.innerHTML=`<span><b>Test d'allures</b><br><small class="hint">10 min d'échauffement, 10 min au plus vite que tu peux tenir, 5 min de retour au calme. Calcule toutes tes allures.</small></span>`;
-   const u=document.createElement('button');u.textContent='Choisir';u.onclick=()=>{sel.value='__test';updateGhostInfo();renderSteps();show('run')};d.append(u);box.append(d)}
-  workouts().forEach((w,i)=>{
-    const st=parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0);
-    const vis=(!qy||(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))&&shown<40;if(vis)shown++;else hidden++;
-    const d=document.createElement('div');d.className='item';if(!vis)d.hidden=true;
-    d.innerHTML=`<span><b>${esc(w.name)}</b><br><small class="hint">${w.folder?esc(w.folder)+' · ':''}${st.length} étapes · ${clock(sec)}${w.builtin?' · déjà fournie':''}</small></span>`;
-    const b=document.createElement('div');b.className='row';
-    const u=document.createElement('button');u.textContent='Choisir';u.onclick=()=>{sel.value=w.name;updateGhostInfo();show('run')};b.append(u);
-    const mw=document.createElement('button');mw.textContent='Sur la montre';mw.onclick=()=>sendToWatch(w,d,mw);b.append(mw);
-    const me=document.createElement('button');me.textContent='Modifier';me.onclick=()=>{show('prep');editWorkout(w)};b.append(me);
-    if(!w.builtin){const x=document.createElement('button');x.textContent='Supprimer';x.className='danger';
-      x.onclick=()=>{if(x.dataset.ok){store.set('workouts',store.get('workouts',[]).filter(o=>o.name!==w.name));listWorkouts()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}};b.append(x)}
-    d.append(b);box.append(d);
-    const o=document.createElement('option');o.value=w.name;o.textContent=w.name;sel.append(o)});
-  if(hidden&&qy)box.insertAdjacentHTML('beforeend',`<p class="hint">${hidden} autre${hidden>1?'s':''} séance${hidden>1?'s':''} non affichée${hidden>1?'s':''}. Précise ta recherche.</p>`);
-  else if(hidden)box.insertAdjacentHTML('beforeend',`<p class="hint">${hidden} autres séances : utilise la recherche.</p>`);
+function wPath(w){if(w.builtin)return['Horizon'];if(!w.folder)return['Mes séances'];if(w.folder==='Workouts')return['Intervals.icu'];return w.folder.split(/\s*·\s*/)}
+function wDate(name){const m=name.match(/^(\d{1,2})\/(\d{1,2})\s*·\s*/);if(!m)return null;const d=+m[1],mo=+m[2];return{lab:String(d).padStart(2,'0')+'/'+String(mo).padStart(2,'0'),ord:((mo>=8?mo-8:mo+4)*40+d),rest:name.slice(m[0].length)}}
+const wOpen=new Set(store.get('wOpen',['Horizon']));
+function wItem(w,label,sel){const st=w.test?testWorkout().steps:parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0),km=st.reduce((a,s)=>a+(s.dist||s.dur*(speedFor(s)/3.6)),0);
+  const d=document.createElement('details');d.className='wk';
+  const nW=st.filter(s=>s.type==='work').length;
+  d.innerHTML=`<summary><span class="wk-name">${esc(label)}</span><span class="wk-meta">${clock(sec)} · ${fmt(km/1000,1)} km${nW?' · '+nW+' effort'+(nW>1?'s':''):''}</span></summary>`;
+  const bar=document.createElement('div');bar.className='bar wk-bar';const tot=sec||1;bar.innerHTML=st.map(s=>`<i class="${s.type==='work'?'w done':'done'}" style="flex:${stepSec(s)/tot}"></i>`).join('');d.append(bar);
+  const b=document.createElement('div');b.className='row';b.style.marginTop='8px';
+  const btn=(t,f,c)=>{const x=document.createElement('button');x.textContent=t;if(c)x.className=c;x.onclick=f;b.append(x);return x};
+  btn('Choisir',()=>{sel.value=w.test?'__test':w.name;updateGhostInfo();renderSteps();show('run')},'primary');
+  if(w.text){const mw=btn('Sur la montre',()=>sendToWatch(w,d,mw));btn('Modifier',()=>{editWorkout(w)})}
+  if(!w.builtin&&w.text){const x=btn('Supprimer',()=>{if(x.dataset.ok){store.set('workouts',store.get('workouts',[]).filter(o=>o.name!==w.name));listWorkouts()}else{x.dataset.ok=1;x.textContent='Confirmer ?'}},'danger')}
+  d.append(b);return d}
+function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsearch')?.value||'').trim().toLowerCase();const sel=$('wsel'),cur=sel.value;
+  sel.innerHTML='<option value="">Course libre (pas de séance)</option><option value="__test">Test d\'allures (25 min)</option>';
+  const root={name:'',kids:new Map(),items:[]};
+  const all=[{name:"Test d'allures",builtin:true,test:true,text:''},...workouts()];
+  all.forEach(w=>{if(qy&&!(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))return;let n=root;wPath(w).forEach(p=>{if(!n.kids.has(p))n.kids.set(p,{name:p,kids:new Map(),items:[]});n=n.kids.get(p)});n.items.push(w)});
+  const count=n=>n.items.length+[...n.kids.values()].reduce((a,k)=>a+count(k),0);
+  const order=['Horizon','Mes séances','David','Intervals.icu'];
+  const draw=(n,parent,path)=>{
+    [...n.kids.values()].sort((a,b)=>{const ia=order.indexOf(a.name),ib=order.indexOf(b.name);return(ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name,'fr')}).forEach(k=>{
+      const key=[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
+      f.innerHTML=`<summary><span>${esc(k.name)}</span><span class="cnt">${count(k)}</span></summary>`;
+      f.addEventListener('toggle',()=>{f.open?wOpen.add(key):wOpen.delete(key);store.set('wOpen',[...wOpen])});
+      const body=document.createElement('div');body.className='fold-body';f.append(body);parent.append(f);
+      draw(k,body,[...path,k.name]);
+      // séances datées (mails du coach) regroupées par date, les plus récentes d'abord
+      const dated=new Map(),plain=[];k.items.forEach(w=>{const dt=w.test?null:wDate(w.name);if(dt){if(!dated.has(dt.lab))dated.set(dt.lab,{ord:dt.ord,items:[]});dated.get(dt.lab).items.push([w,dt.rest])}else plain.push(w)});
+      plain.sort((a,b)=>a.name.localeCompare(b.name,'fr')).forEach(w=>body.append(wItem(w,w.name,sel)));
+      [...dated.entries()].sort((a,b)=>b[1].ord-a[1].ord).forEach(([lab,g])=>{const sk=key+'/'+lab,sd=document.createElement('details');sd.className='fold sub date';sd.open=!!qy||wOpen.has(sk);
+        sd.innerHTML=`<summary><span>Séances du ${lab}</span><span class="cnt">${g.items.length}</span></summary>`;
+        sd.addEventListener('toggle',()=>{sd.open?wOpen.add(sk):wOpen.delete(sk);store.set('wOpen',[...wOpen])});
+        const bd=document.createElement('div');bd.className='fold-body';g.items.forEach(([w,rest])=>bd.append(wItem(w,rest,sel)));sd.append(bd);body.append(sd)});
+      // menu Séance de l'onglet Tapis : un groupe par dossier
+      const own=k.items.filter(w=>!w.test);if(own.length){const og=document.createElement('optgroup');og.label=[...path,k.name].join(' · ');own.forEach(w=>{const o=document.createElement('option');o.value=w.name;o.textContent=w.name;og.append(o)});sel.append(og)}})};
+  draw(root,box,[]);
+  if(!box.children.length)box.innerHTML='<p class="hint">Aucune séance ne correspond à ta recherche.</p>';
   sel.value=[...sel.options].some(o=>o.value===cur)?cur:''}
 $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()||(text.match(/^[^\n:-]{1,20}:\s*(.{0,40})/)?.[1]?.trim())||'Ma séance';
   const st=parseWorkout(text);if(!st.length){$('wmsg').textContent="Je n'ai trouvé aucune étape. Vérifie que les lignes commencent par « - ».";return}
@@ -819,7 +883,9 @@ function resetRun(){Object.assign(run,{state:'idle',dist:0,time:0,gain:0,speed:0
   $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
   $('wsel').disabled=false;$('gsel').disabled=false;renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
-function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1));let g=gradeAt(x+10)*s.f+(st&&isHill(st)?s.hill:0);g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
+let incAdj=0;
+function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));let g=(route?gradeAt(x+10):0)*s.f+(st&&isHill(st)?s.hill:0)+incAdj;g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
+function adjInc(d){incAdj=d===null?0:Math.max(-15,Math.min(15,Math.round((incAdj+d)*2)/2));run.sentAt=0;run.sentInc=null;if(run.state==='running')run.inc=targetInc(wrapX(run.dist));render()}
 function applySpeed(v){run.target=v;if(run.state==='running'){if(bt.ok)setSpeed(v);else run.speed=v}}
 function enterStep(i){run.step=i;run.stepT=0;run.stepD=0;
   if(i>=workout.steps.length){run.step=workout.steps.length;say('Séance terminée. Bravo. Tu peux marcher pour récupérer.',`Workout complete. Well done. You can walk to recover. Remember today's word: ${dayWord().w}.`);log('Séance terminée');applySpeed(5);$('skip').disabled=true;renderSteps();return}
@@ -868,6 +934,7 @@ function startOver(){$('start').onclick=startOrig;resetRun()}
 function bump(dv){const base=run.state==='running'?(realSpeed()||run.target):run.target;
   run.target=Math.max(1,Math.min(S().vmax,Math.round((base+dv)*10)/10));
   if(run.state==='running'){if(bt.ok)setSpeed(run.target);else run.speed=run.target}render()}
+$('im1').onclick=()=>adjInc(-1);$('im05').onclick=()=>adjInc(-.5);$('ip05').onclick=()=>adjInc(.5);$('ip1').onclick=()=>adjInc(1);$('iauto').onclick=()=>adjInc(null);
 $('sm1').onclick=()=>bump(-1);$('sm05').onclick=()=>bump(-.5);$('sp05').onclick=()=>bump(.5);$('sp1').onclick=()=>bump(1);
 
 function tick(){const now=performance.now(),dt=Math.min(2,(now-run.last)/1000);run.last=now;
@@ -911,7 +978,7 @@ let lastBar=-2;
 function render(){const sp=run.state==='running'?realSpeed():(run.state==='idle'?(curStep()?.v??run.target):realSpeed());const zen=$('zen').checked;
   $('sTime').parentElement.hidden=zen;$('sPace').parentElement.hidden=zen;$('zenbox').hidden=!zen||!route;
   const x=route?wrapX(run.dist):0;
-  $('sSpeed').textContent=fmt(sp);$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
+  $('sSpeed').textContent=fmt(sp);$('cSpeed').textContent=fmt(run.state==='running'?run.target:sp)+' km/h';$('cInc').textContent=fmt(run.state==='idle'?targetInc(0):run.inc)+' %'+(incAdj?` (auto ${incAdj>0?'+':''}${fmt(incAdj)})`:' (auto)');$('sInc').textContent=fmt(route?(run.state==='idle'?targetInc(0):run.inc):0);
   $('sPace').textContent=sp>0.5?clock(3600/sp):'–';$('sDist').textContent=fmt(run.dist/1000,2);$('sTime').textContent=clock(run.time);$('sGain').textContent=Math.round(run.gain);
   $('sHr').textContent=run.hr?run.hr+' bpm':'–';
   if(workout&&run.step!==lastBar){lastBar=run.step;renderSteps()}renderLeft();
