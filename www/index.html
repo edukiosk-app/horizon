@@ -192,6 +192,15 @@ button.mini{padding:6px 10px;font-size:13px}
 .wsp .val{min-width:76px;text-align:center;font:700 22px/1 var(--display);font-variant-numeric:tabular-nums}
 .wsp .val small{display:block;font:500 12px var(--body);color:var(--muted);margin-top:3px}
 .wsp .val.set{color:var(--accent)}
+.wpick{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;text-align:left;font:600 16px var(--body);padding:12px 14px}
+.wpick span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wpick i{font-style:normal;font-size:22px;color:var(--accent)}
+#wpickSheet{position:fixed;inset:0;z-index:3500;background:#000a;display:flex;align-items:flex-end}
+.wps-in{background:var(--panel,#1f2329);width:100%;max-height:88vh;overflow:auto;border-radius:18px 18px 0 0;padding:14px 14px calc(env(safe-area-inset-bottom,0px) + 18px)}
+.wps-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:sticky;top:-14px;background:inherit;padding:6px 0;z-index:1}
+.wps-head b{font:700 18px var(--display);text-transform:uppercase;letter-spacing:.05em}
+.pk{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;margin:4px 0;padding:10px 12px;background:var(--tile);border:1px solid var(--line);border-radius:10px}
+.pk .wk-meta{font-size:13px;color:var(--muted)}
+.pk.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.pk.on .wk-name{color:var(--accent)}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -408,10 +417,11 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="row" style="justify-content:space-between;margin-top:8px">
         <span id="hrpill" class="pill">Montre non connectée</span>
         <button id="hrconnect">Connecter la montre (cardio)</button>
+        <p id="hrhint" class="hint">Ta montre doit diffuser son cardio. Sur l'Amazfit : ouvre la fonction de diffusion de la fréquence cardiaque (« Diffusion FC » ou « Heart Rate Push », dans les réglages d'entraînement ou la liste des applis), active-la, lance une activité « Tapis de course » sur la montre, puis appuie à nouveau sur « Connecter la montre ».</p>
       </div>
       <p class="hint" id="bthint">Sans connexion, l'application fonctionne en simulation : tu règles la vitesse ici et la pente s'affiche pour que tu la mettes à la main.</p>
       <div class="settings" style="margin-top:10px">
-        <label>Séance<select id="wsel"></select></label>
+        <label>Séance<select id="wsel" hidden></select><button type="button" id="wpick" class="wpick"><span>Course libre (pas de séance)</span><i>›</i></button></label>
         <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
       </div>
       <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
@@ -518,6 +528,8 @@ button.mini{padding:6px 10px;font-size:13px}
         <div class="fs-act"><button id="fsPause">Pause</button><button id="fsSkip">Étape suivante</button><button id="fsStop" class="danger">Terminer</button><button id="fsExit">Réduire</button></div>
       </div>
     </div>
+
+    <div id="wpickSheet" hidden><div class="wps-in"><div class="wps-head"><b>Choisir une séance</b><button type="button" id="wpickClose">Fermer</button></div><div id="wpickList"></div></div></div>
 
     <div class="panel"><h2>Journal</h2><div id="log"></div></div>
   </section>
@@ -718,6 +730,14 @@ const fLabel=f=>/david/i.test(f)?(f.replace(/david/ig,'').replace(/^[\s·\-]+|[\
 function wPath(w){if(w.builtin)return['Horizon'];if(w.ivId)return['Intervals.icu',...(w.folder&&w.folder!=='Workouts'?w.folder.split(/\s*·\s*/).map(fLabel):[])];if(!w.folder)return['Mes séances'];if(w.folder==='Workouts')return['Intervals.icu'];return w.folder.split(/\s*·\s*/).map(fLabel)}
 function wDate(name){const m=name.match(/^(\d{1,2})\/(\d{1,2})\s*·\s*/);if(!m)return null;const d=+m[1],mo=+m[2];return{lab:String(d).padStart(2,'0')+'/'+String(mo).padStart(2,'0'),ord:((mo>=8?mo-8:mo+4)*40+d),rest:name.slice(m[0].length)}}
 const wOpen=new Set(store.get('wOpen',['Horizon']));
+function wMeta(w){const st=w.test?testWorkout().steps:parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0),km=st.reduce((a,s)=>a+(s.dist||s.dur*(speedFor(s)/3.6)),0),nW=st.filter(s=>s.type==='work').length;return`${clock(sec)} · ${fmt(km/1000,1)} km${nW?' · '+nW+' effort'+(nW>1?'s':''):''}`}
+function pickItem(w,label){const b=document.createElement('button');b.type='button';b.className='pk';const v=!w?'':w.test?'__test':w.name;b.dataset.v=v;
+  b.innerHTML=`<span class="wk-name">${esc(label)}</span>${w?`<span class="wk-meta">${wMeta(w)}</span>`:''}`;
+  b.onclick=()=>{$('wsel').value=v;$('wsel').onchange();$('wpickSheet').hidden=true;document.body.style.overflow=''};return b}
+function wpickLabel(){const b=$('wpick');if(!b)return;const v=$('wsel').value;b.querySelector('span').textContent=v===''?'Course libre (pas de séance)':v==='__test'?"Test d'allures":v;b.disabled=$('wsel').disabled;
+  document.querySelectorAll('#wpickList .pk').forEach(x=>x.classList.toggle('on',x.dataset.v===v))}
+function openPick(){if($('wsel').disabled)return;$('wpickSheet').hidden=false;document.body.style.overflow='hidden';wpickLabel();
+  const on=document.querySelector('#wpickList .pk.on');if(on){let d=on.parentElement;while(d&&d.id!=='wpickList'){if(d.tagName==='DETAILS')d.open=true;d=d.parentElement}setTimeout(()=>on.scrollIntoView({block:'center'}),30)}}
 function wItem(w,label,sel){const st=w.test?testWorkout().steps:parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0),km=st.reduce((a,s)=>a+(s.dist||s.dur*(speedFor(s)/3.6)),0);
   const d=document.createElement('details');d.className='wk';
   const nW=st.filter(s=>s.type==='work').length;
@@ -736,31 +756,33 @@ function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsear
   all.forEach(w=>{if(qy&&!(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))return;let n=root;wPath(w).forEach(p=>{if(!n.kids.has(p))n.kids.set(p,{name:p,kids:new Map(),items:[]});n=n.kids.get(p)});n.items.push(w)});
   const count=n=>n.items.length+[...n.kids.values()].reduce((a,k)=>a+count(k),0);
   const order=['Horizon','Intervals.icu','Mes séances'];
-  const draw=(n,parent,path)=>{
+  const draw=(n,parent,path,mk=(w,l)=>wItem(w,l,sel),pk='')=>{
     [...n.kids.values()].sort((a,b)=>{const ia=order.indexOf(a.name),ib=order.indexOf(b.name);return(ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name,'fr')}).forEach(k=>{
-      const key=[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
+      const key=pk+[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
       f.innerHTML=`<summary><span>${esc(k.name)}</span><span class="cnt">${count(k)}</span></summary>`;
       f.addEventListener('toggle',()=>{f.open?wOpen.add(key):wOpen.delete(key);store.set('wOpen',[...wOpen])});
       const body=document.createElement('div');body.className='fold-body';f.append(body);parent.append(f);
-      draw(k,body,[...path,k.name]);
+      draw(k,body,[...path,k.name],mk,pk);
       // séances datées (mails du coach) regroupées par date, les plus récentes d'abord
       const dated=new Map(),plain=[];k.items.forEach(w=>{const dt=w.test?null:wDate(w.name);if(dt){if(!dated.has(dt.lab))dated.set(dt.lab,{ord:dt.ord,items:[]});dated.get(dt.lab).items.push([w,dt.rest])}else plain.push(w)});
-      plain.sort((a,b)=>a.name.localeCompare(b.name,'fr')).forEach(w=>body.append(wItem(w,w.name,sel)));
+      plain.sort((a,b)=>a.name.localeCompare(b.name,'fr')).forEach(w=>body.append(mk(w,w.name)));
       [...dated.entries()].sort((a,b)=>b[1].ord-a[1].ord).forEach(([lab,g])=>{const sk=key+'/'+lab,sd=document.createElement('details');sd.className='fold sub date';sd.open=!!qy||wOpen.has(sk);
         sd.innerHTML=`<summary><span>Séances du ${lab}</span><span class="cnt">${g.items.length}</span></summary>`;
         sd.addEventListener('toggle',()=>{sd.open?wOpen.add(sk):wOpen.delete(sk);store.set('wOpen',[...wOpen])});
-        const bd=document.createElement('div');bd.className='fold-body';g.items.forEach(([w,rest])=>bd.append(wItem(w,rest,sel)));sd.append(bd);body.append(sd)});
+        const bd=document.createElement('div');bd.className='fold-body';g.items.forEach(([w,rest])=>bd.append(mk(w,rest)));sd.append(bd);body.append(sd)});
       // menu Séance de l'onglet Tapis : un groupe par dossier
-      const own=k.items.filter(w=>!w.test);if(own.length){const og=document.createElement('optgroup');og.label=[...path,k.name].join(' · ');own.forEach(w=>{const o=document.createElement('option');o.value=w.name;o.textContent=w.name;og.append(o)});sel.append(og)}})};
+      const own=pk?[]:k.items.filter(w=>!w.test);if(own.length){const og=document.createElement('optgroup');og.label=[...path,k.name].join(' · ');own.forEach(w=>{const o=document.createElement('option');o.value=w.name;o.textContent=w.name;og.append(o)});sel.append(og)}})};
   draw(root,box,[]);
+  const pl=$('wpickList');if(pl){pl.innerHTML='';const free=document.createElement('div');free.append(pickItem(null,'Course libre (pas de séance)'));pl.append(free);draw(root,pl,[],pickItem,'P:')}
   if(!box.children.length)box.innerHTML='<p class="hint">Aucune séance ne correspond à ta recherche.</p>';
-  sel.value=[...sel.options].some(o=>o.value===cur)?cur:''}
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:'';wpickLabel()}
 $('wadd').onclick=()=>{const text=$('wtext').value,name=$('wname').value.trim()||(text.match(/^[^\n:-]{1,20}:\s*(.{0,40})/)?.[1]?.trim())||'Ma séance';
   const st=parseWorkout(text);if(!st.length){$('wmsg').textContent="Je n'ai trouvé aucune étape. Vérifie que les lignes commencent par « - ».";return}
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text});store.set('workouts',ws);
   $('wmsg').textContent=`Ajoutée : ${st.length} étapes.`;$('wtext').value='';$('wname').value='';listWorkouts()};
 let workout=null;
-$('wsel').onchange=()=>{updateGhostInfo();renderSteps();renderWSpeeds()};
+$('wsel').onchange=()=>{updateGhostInfo();renderSteps();renderWSpeeds();wpickLabel()};
+$('wpick').onclick=e=>{e.preventDefault();openPick()};$('wpickClose').onclick=()=>{$('wpickSheet').hidden=true;document.body.style.overflow=''};$('wpickSheet').onclick=e=>{if(e.target.id==='wpickSheet')$('wpickClose').onclick()};
 function durTxt(s){if(s.dist)return s.dist>=1000?fmt(s.dist/1000,s.dist%1000?1:0)+' km':s.dist+' m';const d=s.dur;return d>=60?(Math.floor(d/60)+(d%60?' min '+String(d%60).padStart(2,'0'):' min')):d+' s'}
 const paceTxt=v=>{const sec=3600/v;return Math.floor(sec/60)+':'+String(Math.round(sec%60)).padStart(2,'0')+' /km'};
 function renderWSpeeds(){const box=$('wspeeds'),name=$('wsel').value,w=workouts().find(o=>o.name===name);
@@ -984,7 +1006,7 @@ function setBt(){$('bt').textContent=bt.ok?'Tapis connecté':'Tapis non connect�
 const run={state:'idle',dist:0,time:0,gain:0,speed:0,target:8,hr:null,inc:0,sentInc:null,sentAt:0,last:0,step:-1,stepT:0,stepD:0,samples:[],sampAt:0,ghost:null,hillSaid:0};
 function resetRun(){Object.assign(run,{state:'idle',dist:0,time:0,gain:0,speed:0,inc:0,sentInc:null,sentAt:0,step:-1,stepT:0,stepD:0,samples:[[0,0]],sampAt:0,ghost:null,hillSaid:0});
   $('start').textContent='Démarrer';$('start').disabled=false;['pause','stop','skip'].forEach(i=>$(i).disabled=true);
-  $('wsel').disabled=false;$('gsel').disabled=false;renderSteps();render()}
+  $('wsel').disabled=false;$('gsel').disabled=false;wpickLabel();renderSteps();render()}
 function curStep(){return workout&&run.step>=0?workout.steps[run.step]:null}
 let incAdj=0;
 function targetInc(x){const s=S(),st=curStep();if(workout&&workout.test)return Math.max(s.min,Math.min(s.max,1+incAdj));let g=(route?gradeAt(x+10):0)*s.f+(st&&isHill(st)?s.hill:0)+incAdj;g=Math.round(g*2)/2;return Math.max(s.min,Math.min(s.max,g))}
@@ -1002,7 +1024,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
   if(first){run.startedAt=Date.now();$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:progSteps(w.name,parseWorkout(w.text))}:null;
     run.ghost=ghostRun();
-    $('wsel').disabled=true;$('gsel').disabled=true;if(workout)run.target=workout.steps[0].v}
+    $('wsel').disabled=true;$('gsel').disabled=true;wpickLabel();if(workout)run.target=workout.steps[0].v}
   if(bt.ok){if(!first)await cmd([0x00]);await cmd([0x07],'Tapis démarré');await setSpeed(run.target);const want=run.target;[4000,8000].forEach(t=>setTimeout(()=>{if(bt.ok&&run.state==='running'&&run.target===want&&Math.abs(run.speed-want/K())>0.4)setSpeed(want)},t))}else run.speed=run.target;
   run.state='running';run.last=performance.now();$('start').disabled=true;$('pause').disabled=false;$('stop').disabled=false;$('skip').disabled=!workout;enterFS();
   if(first){log('Course démarrée');if(EN()){const w=dayWord();say('',`Word of the run: ${w.w}. ${w.ex}`)}if(workout)enterStep(0);else say('Bonne course. '+route.name,'Have a great run.')}};
@@ -1216,7 +1238,7 @@ $('hrconnect').onclick=async()=>{if(!navigator.bluetooth){$('hrpill').textConten
     await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value,f=v.getUint8(0);run.hr=f&1?v.getUint16(1,true):v.getUint8(1);run.hrSrc='watch'});
     dev.addEventListener('gattserverdisconnected',()=>{run.hrSrc=null;$('hrpill').textContent='Montre déconnectée';$('hrpill').className='pill'});
     $('hrpill').textContent='Montre connectée';$('hrpill').className='pill on';log('Cardio reçu de '+(dev.name||'la montre'))}
-  catch(e){log('Montre non connectée : '+e.message+'. Sur la montre, active le partage de la fréquence cardiaque.')}};
+  catch(e){log('Montre non connectée : '+e.message);$('hrhint').hidden=false}};
 
 /* ---------- revoir la course en 3D ---------- */
 let replaying=false,rpX=30,rpT=0,rpRaf=0;
