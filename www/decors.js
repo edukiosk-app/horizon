@@ -1,4 +1,4 @@
-/* Horizon : décors virtuels (piste de 400 m, piste vallonnée, forêt).
+/* Treadverse : décors virtuels (piste de 400 m, piste vallonnée, forêt).
    Aucun fond de carte à télécharger : tout est dessiné sur place avec three.js.
    Les décors fournissent un parcours ordinaire (points lat/lon/altitude) : distance,
    pente du tapis, séances et défis fonctionnent comme sur un vrai parcours. */
@@ -130,7 +130,7 @@
       }
       // ligne d'arrivée, arche, tribune, projecteurs
       ribbon(-0.3, 9.46, 0.5, new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide }), 0.02).geometry.setDrawRange(0, 6);
-      arch(0.5, 'HORIZON');
+      arch(0.5, 'TREADVERSE');
       for (let r = 0; r < 7; r++) {
         const st = new T.Mesh(new T.BoxGeometry(80, 0.8, 1.6), lam(r % 2 ? 0x9ca3af : 0x6b7280));
         const A = at(LS / 2, 13 + r * 1.6); st.position.set(A.pos.x, 0.4 + r * 0.8, A.pos.z); scene.add(st);

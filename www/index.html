@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Horizon</title>
+<title>Treadverse</title>
 <link rel="stylesheet" href="lib/leaflet.css">
 <link rel="stylesheet" href="lib/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -218,7 +218,7 @@ button.mini{padding:6px 10px;font-size:13px}
 <body>
 <div class="wrap">
   <header>
-    <h1>Hori<span>zon</span> <span id="lvlPill" class="pill" style="font:600 12px var(--body);vertical-align:middle">Niveau 1</span></h1>
+    <h1>Tread<span>verse</span> <span id="lvlPill" class="pill" style="font:600 12px var(--body);vertical-align:middle">Niveau 1</span></h1>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" id="tab-prep" aria-selected="true">Préparer</button>
       <button class="tab" role="tab" id="tab-run" aria-selected="false">Tapis</button>
@@ -282,7 +282,7 @@ button.mini{padding:6px 10px;font-size:13px}
 
     <div class="panel">
       <h2>Montre et Intervals.icu</h2>
-      <p class="hint" style="margin-top:0">Ta montre envoie tes courses à Intervals.icu, et Intervals.icu envoie tes séances à ta montre. En reliant Horizon à ton compte, tout circule dans les deux sens.</p>
+      <p class="hint" style="margin-top:0">Ta montre envoie tes courses à Intervals.icu, et Intervals.icu envoie tes séances à ta montre. En reliant Treadverse à ton compte, tout circule dans les deux sens.</p>
       <div class="settings">
         <label>Identifiant athlète<input id="ivId" type="text" placeholder="i597195"></label>
         <label>Clé API<input id="ivKey" type="password" placeholder="Clé API personnelle" autocomplete="off"></label>
@@ -458,7 +458,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <label>Défi<select id="gsel"><option value="">Aucun</option><option value="best">Mon record</option><option value="last">Ma dernière course</option><option value="friend">Défi reçu d'un ami</option><option value="watch">Ma sortie dehors (montre)</option></select></label>
       </div>
       <div class="row" style="margin-top:8px"><label class="check"><input id="voice" type="checkbox" checked> Annonces vocales</label><label class="check"><input id="zen" type="checkbox"> Mode zen</label><label class="check"><input id="simu" type="checkbox"> Simulation sans tapis</label><label class="check">en <select id="lang"><option value="fr">français</option><option value="en">anglais</option></select></label><span id="ginfo" class="hint" style="margin:0"></span></div>
-      <div id="wspeeds" hidden><div class="wsp-head"><b>Paramètres de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle la vitesse et la pente une fois : le tapis enchaîne tout seul. Une pente fixée sur les efforts simule des côtes ; « Parcours » suit le relief. Horizon s'en souvient pour cette séance.</p><div class="seg" id="wspMode"><button type="button" data-m="group">Par type de phase</button><button type="button" data-m="block">Bloc par bloc</button></div><div id="wspList"></div></div>
+      <div id="wspeeds" hidden><div class="wsp-head"><b>Paramètres de la séance</b><button id="wspReset" class="mini">Valeurs conseillées</button></div><p class="hint" style="margin:2px 0 8px">Règle la vitesse et la pente une fois : le tapis enchaîne tout seul. Une pente fixée sur les efforts simule des côtes ; « Parcours » suit le relief. Treadverse s'en souvient pour cette séance.</p><div class="seg" id="wspMode"><button type="button" data-m="group">Par type de phase</button><button type="button" data-m="block">Bloc par bloc</button></div><div id="wspList"></div></div>
     </div>
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
@@ -538,7 +538,7 @@ button.mini{padding:6px 10px;font-size:13px}
       </div>
       <p id="upMsg" class="hint"></p>
       <div class="row"><button id="fixWatch">Accorder la montre et le tapis</button></div>
-      <p id="fixMsg" class="hint">Ta montre a aussi enregistré la course ? Horizon compare sa distance à celle du tapis et corrige la montre dans Intervals.icu.</p>
+      <p id="fixMsg" class="hint">Ta montre a aussi enregistré la course ? Treadverse compare sa distance à celle du tapis et corrige la montre dans Intervals.icu.</p>
     </div>
 
     <div id="fs" hidden>
@@ -641,7 +641,7 @@ const LocCtl=L.Control.extend({options:{position:'topright'},onAdd(){const b=L.D
     b.textContent='Recherche…';navigator.geolocation.getCurrentPosition(pos=>{const ll=[pos.coords.latitude,pos.coords.longitude];b.textContent='Ma position';
       if(meDot)map.removeLayer(meDot);meDot=L.circleMarker(ll,{radius:8,color:'#ffffff',weight:3,fillColor:'#60a5fa',fillOpacity:1}).addTo(map).bindTooltip('Tu es ici');
       map.setView(ll,16);if(!wps.length)$('routeinfo').textContent='Touche la carte pour poser le départ, puis les autres points du parcours.'},
-      err=>{b.textContent='Ma position';$('routeinfo').textContent=err.code===1?"Position refusée : autorise la localisation pour Horizon dans les réglages du téléphone.":"Position introuvable pour l'instant, réessaie dehors ou près d'une fenêtre."},
+      err=>{b.textContent='Ma position';$('routeinfo').textContent=err.code===1?"Position refusée : autorise la localisation pour Treadverse dans les réglages du téléphone.":"Position introuvable pour l'instant, réessaie dehors ou près d'une fenêtre."},
       {enableHighAccuracy:true,timeout:15000,maximumAge:60000})};return b}});
 map.addControl(new LocCtl());
 let wps=[],wpLayer=L.layerGroup().addTo(map),line=null;
@@ -692,12 +692,12 @@ async function shareChallenge(r){const box=$('sharebox');box.hidden=false;const 
   const payload={v:1,n:r.name,by:store.get('me','')||'',p:r.pts.map(q=>[+q[0].toFixed(5),+q[1].toFixed(5),Math.round(q[2])]),w:w?w.name:'',wt:w?w.text:'',
     run:{date:best.date,time:best.time,dist:best.dist,done:true,s:best.s.filter((_,i)=>i%5===0||i===best.s.length-1)}};
   const base=window.SHARE_BASE||(window.HORIZON_ANDROID?'':location.href.split('#')[0]);const url=base+'#defi='+await pack(payload);
-  const by=payload.by||'Je';const text=`${by} te lance un défi sur Horizon : « ${r.name} », ${fmt(r.km,2)} km${w?', séance '+w.name:''}. Temps à battre : ${clock(best.time)}.`;
-  box.innerHTML=`<b>Défi prêt</b> (${clock(best.time)} à battre). Envoie ce lien à ton ami :<input type="text" readonly id="shareurl">`+(location.protocol==='file:'||!base?'<br>Le lien ne fonctionnera qu\'une fois Horizon mis en ligne.':'');
+  const by=payload.by||'Je';const text=`${by} te lance un défi sur Treadverse : « ${r.name} », ${fmt(r.km,2)} km${w?', séance '+w.name:''}. Temps à battre : ${clock(best.time)}.`;
+  box.innerHTML=`<b>Défi prêt</b> (${clock(best.time)} à battre). Envoie ce lien à ton ami :<input type="text" readonly id="shareurl">`+(location.protocol==='file:'||!base?'<br>Le lien ne fonctionnera qu\'une fois Treadverse mis en ligne.':'');
   $('shareurl').value=url;$('shareurl').onclick=e=>e.target.select();
   if(!payload.by)box.insertAdjacentHTML('beforeend','<br>Astuce : indique ton prénom dans les réglages pour qu\'il apparaisse dans le défi.');
   {const P=prof();if(!P.badges.sender){P.badges.sender=new Date().toISOString();P.xp+=200;store.set('profile',P);renderProfile()}}
-  try{if(navigator.share){await navigator.share({title:'Défi Horizon',text,url});return}}catch(e){}
+  try{if(navigator.share){await navigator.share({title:'Défi Treadverse',text,url});return}}catch(e){}
   try{await navigator.clipboard.writeText(text+' '+url);box.insertAdjacentHTML('beforeend','<br>Lien copié : colle-le dans WhatsApp ou un SMS.')}catch(e){}}
 async function importChallenge(){const h=location.hash;if(!h.startsWith('#defi='))return;let d;try{d=await unpack(h.slice(6))}catch(e){log('Lien de défi illisible');return}
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
@@ -768,9 +768,9 @@ const BUILTIN=[
  {name:"Footing long avec bloc soutenu",text:`- Footing cool 40m intensity=active\n\n- Allure 10k plus une minute vingt 30m intensity=interval\n\n- Footing cool 10m intensity=active`}];
 const workouts=()=>[...BUILTIN.map(w=>({...w,builtin:true})),...store.get('workouts',[])];
 const fLabel=f=>/david/i.test(f)?(f.replace(/david/ig,'').replace(/^[\s·\-]+|[\s·\-]+$/g,'')||'Séances du coach'):f;
-function wPath(w){if(w.builtin)return['Horizon'];if(w.ivId)return['Intervals.icu',...(w.folder&&w.folder!=='Workouts'?w.folder.split(/\s*·\s*/).map(fLabel):[])];if(!w.folder)return['Mes séances'];if(w.folder==='Workouts')return['Intervals.icu'];return w.folder.split(/\s*·\s*/).map(fLabel)}
+function wPath(w){if(w.builtin)return['Treadverse'];if(w.ivId)return['Intervals.icu',...(w.folder&&w.folder!=='Workouts'?w.folder.split(/\s*·\s*/).map(fLabel):[])];if(!w.folder)return['Mes séances'];if(w.folder==='Workouts')return['Intervals.icu'];return w.folder.split(/\s*·\s*/).map(fLabel)}
 function wDate(name){const m=name.match(/^(\d{1,2})\/(\d{1,2})\s*·\s*/);if(!m)return null;const d=+m[1],mo=+m[2];return{lab:String(d).padStart(2,'0')+'/'+String(mo).padStart(2,'0'),ord:((mo>=8?mo-8:mo+4)*40+d),rest:name.slice(m[0].length)}}
-const wOpen=new Set(store.get('wOpen',['Horizon']));
+const wOpen=new Set(store.get('wOpen',['Treadverse']));
 function wMeta(w){const st=w.test?testWorkout().steps:parseWorkout(w.text),sec=st.reduce((a,s)=>a+stepSec(s),0),km=st.reduce((a,s)=>a+(s.dist||s.dur*(speedFor(s)/3.6)),0),nW=st.filter(s=>s.type==='work').length;return`${clock(sec)} · ${fmt(km/1000,1)} km${nW?' · '+nW+' effort'+(nW>1?'s':''):''}`}
 function pickItem(w,label){const b=document.createElement('button');b.type='button';b.className='pk';const v=!w?'':w.test?'__test':w.name;b.dataset.v=v;
   b.innerHTML=`<span class="wk-name">${esc(label)}</span>${w?`<span class="wk-meta">${wMeta(w)}</span>`:''}`;
@@ -796,7 +796,7 @@ function listWorkouts(){const box=$('wlist');box.innerHTML='';const qy=($('wsear
   const all=[{name:"Test d'allures",builtin:true,test:true,text:''},...workouts()];
   all.forEach(w=>{if(qy&&!(w.name+' '+(w.folder||'')).toLowerCase().includes(qy))return;let n=root;wPath(w).forEach(p=>{if(!n.kids.has(p))n.kids.set(p,{name:p,kids:new Map(),items:[]});n=n.kids.get(p)});n.items.push(w)});
   const count=n=>n.items.length+[...n.kids.values()].reduce((a,k)=>a+count(k),0);
-  const order=['Horizon','Assistant IA','Intervals.icu','Mes séances'];
+  const order=['Treadverse','Assistant IA','Intervals.icu','Mes séances'];
   const draw=(n,parent,path,mk=(w,l)=>wItem(w,l,sel),pk='')=>{
     [...n.kids.values()].sort((a,b)=>{const ia=order.indexOf(a.name),ib=order.indexOf(b.name);return(ia<0?99:ia)-(ib<0?99:ib)||a.name.localeCompare(b.name,'fr')}).forEach(k=>{
       const key=pk+[...path,k.name].join('/'),f=document.createElement('details');f.className='fold'+(path.length?' sub':'');f.open=!!qy||wOpen.has(key);
@@ -880,7 +880,7 @@ RÉPONDS UNIQUEMENT avec le JSON, sans texte autour, sous cette forme :
 async function aiCopy(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.append(ta);ta.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}ta.remove();return ok}}
 $('aiCopy').onclick=async()=>{if(!$('aiText').value.trim()){$('aiMsg').textContent="Colle d'abord la séance à l'étape 1.";return}$('aiMsg').textContent=await aiCopy(aiPrompt())?'Copié : colle-le dans ton appli d\'IA, puis reviens coller la réponse à l\'étape 3.':'Copie impossible ici, utilise « Envoyer à l\'IA ».'};
 $('aiShare').onclick=async()=>{if(!$('aiText').value.trim()){$('aiMsg').textContent="Colle d'abord la séance à l'étape 1.";return}const t=aiPrompt();await aiCopy(t);
-  if(navigator.share){try{await navigator.share({title:'Séance pour Horizon',text:t});$('aiMsg').textContent='Envoyé. Quand l\'IA a répondu, copie son bloc { … } et colle-le à l\'étape 3.';return}catch(e){}}
+  if(navigator.share){try{await navigator.share({title:'Séance pour Treadverse',text:t});$('aiMsg').textContent='Envoyé. Quand l\'IA a répondu, copie son bloc { … } et colle-le à l\'étape 3.';return}catch(e){}}
   $('aiMsg').textContent='Texte copié : ouvre ton appli d\'IA, colle-le et envoie. Ensuite, colle sa réponse à l\'étape 3.'};
 function aiToText(j){const out=[];const dur=b=>{if(b.distance_m)return b.distance_m%1000===0?(b.distance_m/1000)+'km':Math.round(b.distance_m)+'mtr';const t=Math.round(+b.duration_s||0);if(!t)return'';const m=Math.floor(t/60),x=t%60;return(m?m+'m':'')+(x?x+'s':'')};
   const INT={warmup:'warmup',work:'interval',recovery:'recovery',cooldown:'cooldown',steady:'active',rest:'recovery'};
@@ -1319,9 +1319,9 @@ async function importActivity(a,btn){btn.textContent='Import…';btn.disabled=tr
   catch(e){btn.textContent='Recourir sur le tapis';btn.disabled=false;ivMsg('Import impossible : '+e.message+'.')}}
 
 /* ---------- envoi de la course du tapis ---------- */
-function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((route?.name||'Course')+' (Horizon)');
+function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((route?.name||'Course')+' (Treadverse)');
   const pts=run.samples.map(([t,d,h])=>{const p=posAt(wrapX(d));return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`}).join('\n');
-  return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Horizon" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`}
+  return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Treadverse" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`}
 function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
   const g=grantRun(done);if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
     g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('afterGain').innerHTML=L.join('');
@@ -1330,7 +1330,7 @@ function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg'
   $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${clock(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
 $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
   try{const fd=new FormData();fd.append('file',new Blob([buildGPX()],{type:'application/gpx+xml'}),'horizon.gpx');
-    const nm=encodeURIComponent((route?.name||'Course')+' (Horizon)'),desc=encodeURIComponent(`Course sur tapis avec Horizon${workout?', séance '+workout.name:''}.`);
+    const nm=encodeURIComponent((route?.name||'Course')+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${workout?', séance '+workout.name:''}.`);
     const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
     const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'VirtualRun',trainer:true})})}catch(e){}}
     m.textContent='Course envoyée dans Intervals.icu.';$('ivUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
@@ -1362,7 +1362,7 @@ $('replayStop').onclick=()=>{replaying=false;cancelAnimationFrame(rpRaf);$('repl
 const K=()=>bt.ok?(+store.get('calib',1)||1):1;           // vitesse réelle = vitesse affichée × K
 const realSpeed=()=>run.speed*K();
 let calTaps=0,calOn=false,calTimer=0;
-function calUI(){const k=+store.get('calib',1)||1;$('calInfo').textContent=k===1?'Aucun calibrage : Horizon fait confiance à l\'affichage du tapis.':`Calibrage enregistré : ton tapis va ${k>1?'plus':'moins'} vite qu'il ne l'affiche (${k>1?'+':''}${fmt((k-1)*100,1)} %). Distances et vitesses sont corrigées.`}
+function calUI(){const k=+store.get('calib',1)||1;$('calInfo').textContent=k===1?'Aucun calibrage : Treadverse fait confiance à l\'affichage du tapis.':`Calibrage enregistré : ton tapis va ${k>1?'plus':'moins'} vite qu'il ne l'affiche (${k>1?'+':''}${fmt((k-1)*100,1)} %). Distances et vitesses sont corrigées.`}
 $('calStart').onclick=async()=>{const L=+$('calLen').value/100;if(!(L>0.5)){$('calMsg').textContent='Mesure d\'abord la longueur de la bande (en cm).';return}
   calTaps=0;calOn=true;$('calTap').disabled=false;$('calTap').textContent='Repère passé (0)';let left=60;$('calMsg').textContent='Mets le tapis à 6 km/h. Touche le gros bouton à chaque passage du repère. 60 s';
   if(bt.ok){await cmd([0x07],'Tapis démarré');await setSpeedRaw(6)}
@@ -1476,7 +1476,7 @@ $('fixWatch').onclick=async()=>{const m=$('fixMsg');m.textContent='Recherche de 
     const cand=(acts||[]).filter(a=>/run/i.test(a.type||'')&&!/horizon/i.test(a.name||'')).map(a=>({a,gap:Math.abs(new Date(a.start_date_local).getTime()-t0)})).sort((x,y)=>x.gap-y.gap)[0];
     if(!cand||cand.gap>45*60000){m.textContent="Je ne trouve pas encore la course de ta montre. Synchronise la montre avec Zepp, attends qu'elle arrive dans Intervals.icu, puis réessaie.";return}
     const a=cand.a,dw=(a.distance||0)/1000,dh=run.dist/1000;
-    m.innerHTML=`Montre : <b>${fmt(dw,2)} km</b> · Horizon : <b>${fmt(dh,2)} km</b> (écart ${fmt(Math.abs(dw-dh)/Math.max(dh,.01)*100,0)} %). <button class="primary" id="fixGo">Corriger la montre</button>`;
+    m.innerHTML=`Montre : <b>${fmt(dw,2)} km</b> · Treadverse : <b>${fmt(dh,2)} km</b> (écart ${fmt(Math.abs(dw-dh)/Math.max(dh,.01)*100,0)} %). <button class="primary" id="fixGo">Corriger la montre</button>`;
     $('fixGo').onclick=async()=>{try{await iv(`/activity/${a.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({distance:Math.round(run.dist)})});
         m.textContent=`Distance corrigée dans Intervals.icu : ${fmt(dh,2)} km. Sur la montre, accepte aussi l'étalonnage proposé en fin de course sur tapis : elle se trompera de moins en moins.`}
       catch(e){m.textContent=`Correction refusée (${e.message}). Ouvre la course dans Intervals.icu et remplace la distance par ${fmt(dh,2)} km.`}}}
@@ -1578,21 +1578,21 @@ $('oSaveRoute').onclick=()=>{if(O.track.length<10){$('oMsg').textContent='Pas as
     const w=store.get('watchRuns',{});w[name]={date:new Date(O.startedAt).toISOString(),time:Math.round(O.t),dist:Math.round(O.d),done:true,src:'dehors',s:O.s};store.set('watchRuns',w);
     listRoutes();oRoutes();$('oMsg').textContent=`« ${name} » enregistré : tu peux le recourir sur le tapis contre cette course (défi « Ma sortie dehors »), ou dehors.`};fin()};
 $('oUpload').onclick=async()=>{const m=$('oMsg');m.textContent='Envoi…';
-  try{const t0=O.startedAt,nm=esc(($('oName').value||'Course dehors')+' (Horizon)');
+  try{const t0=O.startedAt,nm=esc(($('oName').value||'Course dehors')+' (Treadverse)');
     const pts=O.track.map(([t,la,lo,el,h])=>`<trkpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}">${el!=null?`<ele>${(+el).toFixed(1)}</ele>`:''}<time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`).join('\n');
-    const gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Horizon" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata><trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`;
+    const gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Treadverse" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"><metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata><trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`;
     const fd=new FormData();fd.append('file',new Blob([gpx],{type:'application/gpx+xml'}),'horizon-dehors.gpx');
-    await iv(`/athlete/${ivAth()}/activities?name=${encodeURIComponent($('oName').value||'Course dehors')}&description=${encodeURIComponent('Course dehors avec Horizon')}`,{method:'POST',body:fd});
+    await iv(`/athlete/${ivAth()}/activities?name=${encodeURIComponent($('oName').value||'Course dehors')}&description=${encodeURIComponent('Course dehors avec Treadverse')}`,{method:'POST',body:fd});
     m.textContent='Course envoyée dans Intervals.icu.';$('oUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 
 if(window.HORIZON_ANDROID){$('tab-out').hidden=true;$('oGpsNote').textContent=''}
 /* ---------- sauvegarde et restauration ---------- */
 const BK_KEYS=['routes','runs','watchRuns','workouts','settings','profile','friend','calib','me','lang','voice','zen','mapStyle','ivId'];
-$('bkExport').onclick=async()=>{const data={app:'Horizon',version:1,date:new Date().toISOString(),data:{}};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)data.data[k]=v}catch(e){}});
+$('bkExport').onclick=async()=>{const data={app:'Treadverse',version:1,date:new Date().toISOString(),data:{}};BK_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v!=null)data.data[k]=v}catch(e){}});
   const txt=JSON.stringify(data),name=`horizon-sauvegarde-${new Date().toISOString().slice(0,10)}.json`;
-  try{if(window.HORIZON_ANDROID&&navigator.share){await navigator.share({title:'Sauvegarde Horizon',text:txt});$('bkMsg').textContent='Sauvegarde envoyée. Garde-la dans Drive ou dans tes mails.';return}}catch(e){}
+  try{if(window.HORIZON_ANDROID&&navigator.share){await navigator.share({title:'Sauvegarde Treadverse',text:txt});$('bkMsg').textContent='Sauvegarde envoyée. Garde-la dans Drive ou dans tes mails.';return}}catch(e){}
   try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));a.download=name;document.body.append(a);a.click();a.remove();$('bkMsg').textContent='Fichier '+name+' téléchargé.'}catch(e){$('bkMsg').textContent='Sauvegarde impossible : '+e.message}};
-$('bkImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{let t=await f.text();const i=t.indexOf('{');if(i>0)t=t.slice(i);const d=JSON.parse(t);if(d.app!=='Horizon'||!d.data)throw new Error('ce fichier n\'est pas une sauvegarde Horizon');
+$('bkImport').onchange=async ev=>{const f=ev.target.files[0];if(!f)return;try{let t=await f.text();const i=t.indexOf('{');if(i>0)t=t.slice(i);const d=JSON.parse(t);if(d.app!=='Treadverse'||!d.data)throw new Error('ce fichier n\'est pas une sauvegarde Treadverse');
     Object.entries(d.data).forEach(([k,v])=>{if(BK_KEYS.includes(k))try{localStorage.setItem(k,v)}catch(e){}});$('bkMsg').textContent=`Sauvegarde du ${new Date(d.date).toLocaleDateString('fr-FR')} restaurée. L'application redémarre…`;setTimeout(()=>location.reload(),1500)}
   catch(e){$('bkMsg').textContent='Restauration impossible : '+e.message+'.'}ev.target.value=''};
 listRoutes();listWorkouts();showWord();renderProfile();calUI();edDraw();
