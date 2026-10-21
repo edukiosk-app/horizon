@@ -761,7 +761,7 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     if(this.kind!=='gl')return;this.ready=false;try{this.map.setTerrain(null)}catch(e){}this.map.setStyle(this.styleFor(n))},
   rebuild(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null});this.initGL();setTimeout(()=>{this.resize();this.drawRoute();lastMap=0},300)},
   initGL(){const n=store.get('mapStyle','plan');this.styleName=n;
-    const m=new maplibregl.Map({container:'runmap',attributionControl:{compact:true},center:[1.6011,49.0486],zoom:15.5,pitch:62,maxPitch:75,style:this.styleFor(n)});
+    const c0=route?posAt(wrapX(run.dist)):[49.0486,1.6011];const m=new maplibregl.Map({container:'runmap',attributionControl:{compact:true},center:[c0[1],c0[0]],zoom:16,pitch:this.three?62:0,maxPitch:75,style:this.styleFor(n)});
     this.map=m;this.kind='gl';m.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
     const mk=html=>{const el=document.createElement('div');el.innerHTML=html;el.style.lineHeight='0';return el};
     this.meEl=mk(dotHTML(ME_C));this.refEl=mk(dotHTML(REF_C));
@@ -772,7 +772,8 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     ['dragstart','rotatestart','pitchstart','zoomstart'].forEach(ev=>m.on(ev,hold));
     m.on('error',e=>{const msg=String(e?.error?.message||'');if(!this.warned&&/terrarium|elevation|openfreemap|arcgis/i.test(msg+(e?.sourceId||''))){this.warned=true;log('Une partie de la carte (relief, bâtiments ou satellite) ne répond pas')}});
     document.querySelectorAll('#mapstyles button').forEach(b=>{b.classList.toggle('on',b.dataset.s===n);b.onclick=()=>this.setStyle(b.dataset.s)});
-    $('recenter').onclick=()=>{this.userUntil=0;$('recenter').hidden=true;lastMap=0}},
+    $('recenter').onclick=()=>{this.userUntil=0;this.lastPlace=null;$('recenter').hidden=true;lastMap=0;render()};
+    $('btn3d').textContent=this.three?'2D':'3D'},
   initLeaf(){const m=L.map('runmap',{zoomControl:false});tiles().addTo(m);this.map=m;this.kind='leaf';this.three=false;$('btn3d').hidden=true;$('mapstyles').hidden=true;
     const ic=html=>L.divIcon({className:'ghost-ic',iconSize:[30,40],iconAnchor:[15,20],html});
     this.icon=ic;this.me=L.marker([49.0486,1.6011],{icon:ic(dotHTML(ME_C)),zIndexOffset:600,interactive:false}).addTo(m);
@@ -788,7 +789,7 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     if(this.kind==='gl'){this.me.setLngLat([p[1],p[0]]);if(!this.me._map)this.me.addTo(this.map);
       if(gp){this.ref.setLngLat([gp[1],gp[0]]);if(!this.refOn){this.ref.addTo(this.map);this.refOn=true}}else if(this.refOn){this.ref.remove();this.refOn=false}
       const ahead=posAt(Math.min(total(),x+60)),brg=hav(p,ahead)>5?bearing(p,ahead):this.map.getBearing();
-      if(Date.now()<this.userUntil)return;$('recenter').hidden=true;
+      if(Date.now()<this.userUntil){this.lastPlace=null;return}$('recenter').hidden=true;
       const far=gp&&hav(p,gp)>120,c=far?[(p[1]+gp[1])/2,(p[0]+gp[0])/2]:[p[1],p[0]];
       this.map.easeTo({center:c,zoom:far?Math.max(13.5,16.4-Math.log2(hav(p,gp)/120)):16.4,bearing:this.three?brg:0,pitch:this.three?62:0,duration:900})}
     else{this.me.setLatLng([p[0],p[1]]);if(gp){this.ref.setLatLng([gp[0],gp[1]]);if(!this.ref._map)this.ref.addTo(this.map)}else if(this.ref._map)this.ref.remove();
