@@ -47,6 +47,8 @@
     hilly: { name: 'Piste vallonnée', desc: 'La même piste… avec une bosse sur la ligne opposée et une petite sur la ligne droite.', len: 400,
       xy: (s) => trackXY(s), ele: hillyEle },
     forest: { name: 'Forêt, boucle de 5 km', desc: 'Un chemin entre les arbres, des montées et des descentes, un panneau à chaque kilomètre.', len: 5000 },
+    video: { name: 'Parcours vidéo', desc: 'Tes vidéos libres de droits (Pexels, Pixabay…) défilent à la vitesse du tapis.', len: 5000,
+      xy: (s) => [s, 0], ele: () => 0 },
   };
   function routePts(k) {
     const d = DEFS[k];
@@ -63,7 +65,44 @@
     const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return { tex: t, canvas: c };
   }
 
+  /* ---------- vidéos de l'utilisateur, gardées dans le téléphone (IndexedDB) ---------- */
+  const VDB = {
+    open() { return this.p || (this.p = new Promise((ok, ko) => { const r = indexedDB.open('treadverse-videos', 1); r.onupgradeneeded = () => r.result.createObjectStore('v', { keyPath: 'id' }); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); })); },
+    async tx(mode, f) { const db = await this.open(); return new Promise((ok, ko) => { const t = db.transaction('v', mode), st = t.objectStore('v'); const r = f(st); t.oncomplete = () => ok(r && r.result); t.onerror = () => ko(t.error); }); },
+    list() { return this.tx('readonly', (st) => st.getAll()); },
+    add(o) { return this.tx('readwrite', (st) => st.put(o)); },
+    del(id) { return this.tx('readwrite', (st) => st.delete(id)); },
+  };
+  function createVideo(el, route) {
+    el.innerHTML = '';
+    const box = document.createElement('div'); box.style.cssText = 'position:relative;width:100%;height:100%;background:#000;overflow:hidden';
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+    const msg = document.createElement('div'); msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:#cbd5e1;font:15px sans-serif';
+    const bar = document.createElement('div'); bar.className = 'vbar'; bar.style.cssText = 'position:absolute;left:12px;right:12px;bottom:12px;height:10px;border-radius:6px;background:#0008;outline:1px solid #fff4';
+    const dot = (c) => { const d = document.createElement('div'); d.style.cssText = `position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:${c};border:2px solid #fff;transition:left .5s linear`; bar.appendChild(d); return d; };
+    const dr = dot('#3b82f6'), dm = dot('#fb923c'); dr.style.display = 'none';
+    const med = document.createElement('div'); med.style.cssText = 'position:absolute;top:-22px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fbbf24;border:2px solid #7c4a00;display:none'; bar.appendChild(med);
+    box.append(v, msg, bar); el.appendChild(box);
+    let list = [], i = 0, urls = [], S = { me: { x: 0, v: 0, t: 0 }, lead: null, alive: true };
+    VDB.list().then((l) => { list = (l || []).sort((a, b) => a.order - b.order); if (!list.length) { msg.textContent = 'Ajoute d\'abord tes vidéos dans Préparer › Décors virtuels › Parcours vidéo.'; return; } msg.textContent = ''; load(0); }).catch(() => { msg.textContent = 'Vidéos indisponibles sur cet appareil.'; });
+    function load(k) { i = ((k % list.length) + list.length) % list.length; const o = list[i]; if (!urls[i]) urls[i] = URL.createObjectURL(o.blob); v.src = urls[i]; v.load(); v.playbackRate = 1; }
+    v.addEventListener('ended', () => { if (list.length) { load(i + 1); if (S.me.v > 0.3) v.play().catch(() => {}); } });
+    function speedTick() { if (!S.alive) return; requestAnimationFrame(speedTick); if (!list.length) return;
+      const kmh = S.me.v * 3.6, ref = list[i].ref || 5, rate = kmh / ref;
+      if (kmh < 0.8) { if (!v.paused) v.pause(); return; }
+      const r = Math.max(0.25, Math.min(4, rate)); if (Math.abs(v.playbackRate - r) > 0.03) v.playbackRate = r; if (v.paused) v.play().catch(() => {}); }
+    speedTick();
+    const L = route.dist[route.dist.length - 1];
+    return { route, decor: 'video',
+      place(x, gx, total) { const now = performance.now(); const o = S.me; if (o.t) { let dx = x - o.x; if (dx < -L / 2) dx += L; const dt = (now - o.t) / 1000; if (dt > 0.2) o.v = Math.max(0, Math.min(12, dx / dt)); } o.x = x; o.t = now;
+        const f = (q) => Math.max(0, Math.min(100, (q % L) / L * 100)) + '%'; dm.style.left = f(x); if (gx != null) { dr.style.display = ''; dr.style.left = f(gx); } else dr.style.display = 'none';
+        const leadEl = S.lead === 'me' ? dm : S.lead === 'ref' && gx != null ? dr : null; med.style.display = leadEl ? '' : 'none'; if (leadEl) med.style.left = leadEl.style.left; },
+      setLeader(l) { S.lead = l; }, toggleView() {}, resize() {},
+      remove() { S.alive = false; try { v.pause(); } catch (e) {} urls.forEach((u) => u && URL.revokeObjectURL(u)); el.innerHTML = ''; } };
+  }
+
   function create(el, route) {
+    if (route.decor === 'video') return createVideo(el, route);
     const T = THREE, k = route.decor;
     const ren = new T.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
     ren.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); el.innerHTML = ''; el.appendChild(ren.domElement);
@@ -257,5 +296,5 @@
     };
   }
 
-  window.VR = { DEFS, routePts, create };
+  window.VR = { DEFS, routePts, create, VDB };
 })();
