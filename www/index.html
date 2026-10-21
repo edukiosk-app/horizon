@@ -211,6 +211,7 @@ button.mini{padding:6px 10px;font-size:13px}
 .decor.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .ai-step{font:700 15px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--line)}
 #aiPanel textarea{width:100%;margin-top:6px}
+.prem{font:700 9px var(--body);font-style:normal;letter-spacing:.06em;background:#fbbf24;color:#422006;border-radius:6px;padding:1px 5px;margin-left:4px;vertical-align:2px}
 .ahead{color:var(--accent)}.behind{color:var(--climb)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -517,7 +518,7 @@ button.mini{padding:6px 10px;font-size:13px}
     </div>
 
     <div class="panel">
-      <div class="mapwrap"><div id="runmap"></div><div class="mapstyles" id="mapstyles"><button data-s="plan">Plan</button><button data-s="sat">Satellite</button><button data-s="dark">Sombre</button></div><button class="mapbtn" id="btn3d">2D</button><button class="mapbtn recenter" id="recenter" hidden>Recentrer</button></div>
+      <div class="mapwrap"><div id="runmap"></div><div class="mapstyles" id="mapstyles"><button data-s="plan">Plan</button><button data-s="sat">Satellite <i class="prem">PREMIUM</i></button></div><button class="mapbtn" id="btn3d">2D</button><button class="mapbtn recenter" id="recenter" hidden>Recentrer</button></div>
       <div class="legend"><span><i style="background:var(--climb)"></i>Toi</span><span id="legGhost" hidden><i style="background:var(--ghost)"></i><span id="legRef">Ton record</span></span><span id="legMedal" hidden>La médaille montre qui est en tête</span></div>
       <canvas id="runprofile" style="margin-top:8px"></canvas>
     </div>
@@ -951,6 +952,8 @@ const medalHTML=c=>`<svg width="30" height="40" viewBox="0 0 30 40" aria-label="
 const ME_C='#fb923c',REF_C='#60a5fa';
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[1]-a[1])*r)*Math.cos(b[0]*r),x=Math.cos(a[0]*r)*Math.sin(b[0]*r)-Math.sin(a[0]*r)*Math.cos(b[0]*r)*Math.cos((b[1]-a[1])*r);return(Math.atan2(y,x)/r+360)%360}
 /* Carte de course : 3D avec relief (MapLibre) si possible, sinon carte 2D (Leaflet) */
+// Abonnement : pas encore de paiement, tout est ouvert pendant les essais.
+const isPremium=()=>store.get('premium',true)!==false;
 const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,ready:false,lead:null,refOn:false,
   teardown(){try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,kind:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null,line:null});$('mapstyles').hidden=false;$('btn3d').hidden=false},
   init(){const dec=!!(route&&route.decor&&window.THREE&&window.VR);if(this.map&&(dec!==(this.kind==='decor')||(dec&&this.map.route!==route)))this.teardown();if(this.map)return;
@@ -980,10 +983,10 @@ const RM={kind:null,map:null,me:null,ref:null,meEl:null,refEl:null,three:true,re
     if(!m.getLayer('route-glow'))m.addLayer({id:'route-glow',type:'line',source:'route',paint:{'line-color':'#34d399','line-width':12,'line-opacity':0.25,'line-blur':4}});
     if(!m.getLayer('route'))m.addLayer({id:'route',type:'line',source:'route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':this.styleName==='plan'?'#0f9d58':'#34d399','line-width':5}});
     this.ready=true;this.drawRoute()},
-  setStyle(n){this.styleName=n;store.set('mapStyle',n);document.querySelectorAll('#mapstyles button').forEach(b=>b.classList.toggle('on',b.dataset.s===n));
+  setStyle(n){if(n==='dark')n='plan';if(n==='sat'&&!isPremium()){log('La vue satellite fait partie de l\'abonnement Treadverse Premium.');n='plan'}this.styleName=n;store.set('mapStyle',n);document.querySelectorAll('#mapstyles button').forEach(b=>b.classList.toggle('on',b.dataset.s===n));
     if(this.kind!=='gl')return;this.ready=false;try{this.map.setTerrain(null)}catch(e){}this.map.setStyle(this.styleFor(n))},
   rebuild(){if(this.kind==='decor')return;try{this.map&&this.map.remove()}catch(e){}$('runmap').innerHTML='';Object.assign(this,{map:null,me:null,ref:null,meEl:null,refEl:null,ready:false,lead:null,refOn:false,lastPlace:null});this.initGL();setTimeout(()=>{this.resize();this.drawRoute();lastMap=0},300)},
-  initGL(){const n=store.get('mapStyle','plan');this.styleName=n;
+  initGL(){let n=store.get('mapStyle','plan');if(n==='dark'||(n==='sat'&&!isPremium()))n='plan';this.styleName=n;
     const c0=route?posAt(wrapX(run.dist)):[49.0486,1.6011];const m=new maplibregl.Map({container:'runmap',attributionControl:{compact:true},center:[c0[1],c0[0]],zoom:16,pitch:this.three?62:0,maxPitch:75,style:this.styleFor(n)});
     this.map=m;this.kind='gl';m.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
     const mk=html=>{const el=document.createElement('div');el.innerHTML=html;el.style.lineHeight='0';return el};
