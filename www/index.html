@@ -242,6 +242,7 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="pfstats" id="pfStats"></div>
       <h3>Records</h3>
       <div class="tl" id="pfRecs"></div>
+      <div class="row" style="margin-top:10px"><button id="pfReset" class="mini danger">Remettre mon profil à zéro</button><span id="pfResetMsg" class="hint" style="margin:0"></span></div>
       <details><summary style="cursor:pointer;margin-top:12px;font-weight:600">Badges</summary><div class="badges" id="pfBadges" style="margin-top:8px"></div></details>
     </div>
 
@@ -914,22 +915,23 @@ function refName(){const m=$('gsel').value,f=store.get('friend',null),by=(f&&f.b
   if(m==='watch')return{fr:'ta sortie dehors',Fr:'Ta sortie dehors',en:'your outdoor run',En:'Your outdoor run',lab:'Ta sortie dehors'};
   if(m==='last')return{fr:'ta dernière course',Fr:'Ta dernière course',en:'your last run',En:'Your last run',lab:'Ta dernière course'};
   return{fr:'ton record',Fr:'Ton record',en:'your record',En:'Your record',lab:'Ton record'}}
+const isSim=()=>run.state==='idle'||run.state==='done'?(!bt.ok&&$('simu').checked):!!run.sim;
 function ghostRun(){const mode=$('gsel').value;if(!mode||!route)return null;
   if(mode==='friend'){const f=store.get('friend',null);return f&&f.route===route.name?f.run:null}
-  if(mode==='watch'){const w=store.get('watchRuns',{})[route.name];return w||null}const list=store.get('runs',{})[runKey()]||[];if(!list.length)return null;
+  if(mode==='watch'){const w=store.get('watchRuns',{})[route.name];return w||null}const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());if(!list.length)return null;
   if(mode==='last')return list[list.length-1];
   const done=list.filter(r=>r.done);if(done.length)return done.reduce((a,b)=>a.time<=b.time?a:b);
   return list.reduce((a,b)=>a.dist/a.time>=b.dist/b.time?a:b)}
 function gDistAt(g,t){const s=g.s;if(t<=0)return 0;if(t>=s[s.length-1][0])return s[s.length-1][1];let i=0;while(s[i+1][0]<t)i++;const a=s[i],b=s[i+1];return a[1]+(b[1]-a[1])*(t-a[0])/((b[0]-a[0])||1)}
 function gTimeAt(g,d){const s=g.s;if(d>s[s.length-1][1])return null;let i=0;while(s[i+1]&&s[i+1][1]<d)i++;const a=s[i],b=s[i+1]||a;return a[0]+(b[0]-a[0])*(d-a[1])/((b[1]-a[1])||1)}
-function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]);
+function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());
   if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${clock(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
   if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${clock(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
   $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
 $('gsel').onchange=updateGhostInfo;
 function saveRun(done){if(run.time<60||!route)return;const all=store.get('runs',{}),k=runKey(),list=all[k]||[];
   run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0]);
-  list.push({date:new Date().toISOString(),time:Math.round(run.time),dist:Math.round(run.dist),done,s:run.samples});
+  list.push({date:new Date().toISOString(),time:Math.round(run.time),dist:Math.round(run.dist),done,s:run.samples,...(run.sim?{sim:true}:{})});
   while(list.length>10)list.shift();all[k]=list;store.set('runs',all);updateGhostInfo();listRoutes();log('Course enregistrée pour tes prochains défis')}
 
 /* ================= PROFIL ================= */
@@ -1142,7 +1144,7 @@ $('start').onclick=async()=>{if(!route){show('prep');return}if(run.state==='runn
   if(!bt.ok&&!$('simu').checked){$('bthint').textContent="Connecte d'abord le tapis : ton point n'avance qu'avec lui. Pour un simple essai, coche « Simulation sans tapis ».";$('bthint').scrollIntoView({block:'center',behavior:'smooth'});say("Connecte d'abord le tapis.",'Connect the treadmill first.');return}
   keepAwake();
   const first=run.state==='idle';
-  if(first){run.startedAt=Date.now();$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
+  if(first){run.startedAt=Date.now();run.sim=!bt.ok;$('after').hidden=true;const w=workouts().find(o=>o.name===$('wsel').value);
     workout=$('wsel').value==='__test'?testWorkout():w?{name:w.name,steps:progSteps(w.name,parseWorkout(w.text))}:null;
     run.ghost=ghostRun();
     $('wsel').disabled=true;$('gsel').disabled=true;wpickLabel();if(workout)run.target=workout.steps[0].v}
@@ -1283,6 +1285,8 @@ const LV={d:null,t:0};
 window.trLive=()=>{if(replaying||!route||!route.decor)return null;const now=performance.now();let truth=run.dist,v=0;if(run.state==='running'){v=realSpeed()/3.6;truth+=v*Math.min(0.6,(now-run.last)/1000)}
   if(LV.d==null||run.state!=='running'||Math.abs(truth-LV.d)>25)LV.d=truth;else{const dt=Math.min(0.1,(now-LV.t)/1000);let nd=LV.d+v*dt;nd+=(truth-nd)*Math.min(1,dt*0.4);LV.d=Math.max(LV.d,nd)}LV.t=now;return{x:wrapX(LV.d),v}};
 try{$('vrHQ').checked=localStorage.getItem('vrHQ')==='1'}catch(e){}$('vrHQ').onchange=()=>{try{localStorage.setItem('vrHQ',$('vrHQ').checked?'1':'0')}catch(e){}if(RM.kind==='decor')RM.teardown()};
+$('pfReset').onclick=()=>{const b=$('pfReset');if(!b.dataset.ok){b.dataset.ok=1;b.textContent='Confirmer : tout effacer ?';$('pfResetMsg').textContent='Niveau, kilomètres, badges et records repartent de zéro. Tes parcours, séances et courses de défi sont gardés.';setTimeout(()=>{delete b.dataset.ok;b.textContent='Remettre mon profil à zéro';$('pfResetMsg').textContent=''},6000);return}
+  delete b.dataset.ok;store.set('profile',{xp:0,km:0,runs:0,badges:{},records:{},dates:[],routes:[]});renderProfile();b.textContent='Remettre mon profil à zéro';$('pfResetMsg').textContent='Profil remis à zéro.'};
 setInterval(tick,500);$('wsync').onclick=()=>{if(!store.get('ivKey','')){$('wsyncMsg').textContent='Ajoute ta clé API dans « Montre et Intervals.icu » pour récupérer tes séances.';return}ivSync(true)};setTimeout(()=>ivSync(true),1500);setInterval(()=>{try{renderFS()}catch(e){}},500);
 
 /* ================= DÉMARRAGE ================= */
@@ -1351,6 +1355,7 @@ function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((rou
   const pts=run.samples.map(([t,d,h])=>{const p=posAt(wrapX(d));return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`}).join('\n');
   return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Treadverse" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`}
 function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
+  if(run.sim)$('afterGain').innerHTML='<span>Course simulée : elle ne compte ni dans tes kilomètres, ni dans ton niveau, tes badges ou tes records. Elle reste utilisable comme défi en simulation.</span>';
   const g=grantRun(done);if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
     g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('afterGain').innerHTML=L.join('');
     const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
@@ -1408,21 +1413,27 @@ const BADGES=[
  ['runs10','Assidu','10 courses'],['runs50','Inarrêtable','50 courses'],['week3','Régulier','3 courses en 7 jours'],['climb100','Grimpeur','100 m de D+ en une course'],['climb300','Montagnard','300 m de D+ en une course'],
  ['workout','Séance bouclée','Termine une séance guidée'],['test','Allures connues','Fais le test d\'allures'],['route','Parcours complet','Termine un parcours en entier'],['explorer','Explorateur','Cours sur 5 parcours différents'],
  ['record','Chasseur de record','Bats ton record en défi'],['duel','Duel gagné','Bats le record d\'un ami'],['outdoor','Dehors comme dedans','Bats ta sortie dehors sur le tapis'],['sender','Lanceur de défis','Envoie un défi à un ami'],
- ['english','Bilingue','Cours avec les annonces en anglais'],['zen','Esprit zen','Termine une course en mode zen'],['early','Lève-tôt','Démarre avant 7 h'],['night','Oiseau de nuit','Démarre après 21 h'],['k5','5 km','Cours 5 km d\'un coup'],['k10','10 km','Cours 10 km d\'un coup']];
+ ['english','Bilingue','Cours avec les annonces en anglais'],['zen','Esprit zen','Termine une course en mode zen'],['early','Lève-tôt','Démarre avant 7 h'],['night','Oiseau de nuit','Démarre après 21 h'],['k5','5 km','Cours 5 km d\'un coup'],['k10','10 km','Cours 10 km d\'un coup'],
+ ['f5_30','5 km express','5 km en moins de 30 min'],['f5_25','Fusée du 5 km','5 km en moins de 25 min'],['f5_20','Éclair du 5 km','5 km en moins de 20 min'],
+ ['f10_60','10 km dans l\'heure','10 km en moins d\'1 h'],['f10_50','Rapide sur 10 km','10 km en moins de 50 min'],['f10_45','Fusée du 10 km','10 km en moins de 45 min'],['f10_40','Éclair du 10 km','10 km en moins de 40 min'],
+ ['pb5','Record 5 km battu','Améliore ton record personnel sur 5 km'],['pb10','Record 10 km battu','Améliore ton record personnel sur 10 km']];
 const RECS=[[1000,'1 km'],[5000,'5 km'],[10000,'10 km'],[21097,'Semi-marathon']];
 const prof=()=>store.get('profile',{xp:0,km:0,runs:0,badges:{},records:{},dates:[],routes:[]});
 const levelOf=xp=>Math.floor(Math.sqrt(xp/250))+1,xpFor=l=>250*(l-1)*(l-1);
 function bestTime(s,D){let best=null,i=0;for(let j=1;j<s.length;j++){while(i+1<j&&s[j][1]-s[i+1][1]>=D)i++;const dd=s[j][1]-s[i][1];if(dd>=D){const t=(s[j][0]-s[i][0])*D/dd;if(best==null||t<best)best=t}}return best}
-function grantRun(done){if(run.time<60)return null;const P=prof(),km=run.dist/1000,now=new Date(),news=[],recs=[];
+function grantRun(done){if(run.time<60||run.sim)return null;const P=prof(),km=run.dist/1000,now=new Date(),news=[],recs=[];
   P.km+=km;P.runs++;P.dates=[...(P.dates||[]),now.toISOString()].slice(-30);if(route&&!P.routes.includes(route.name))P.routes.push(route.name);
   let xp=Math.round(km*100)+(workout&&done?50:0);
   const g=(id,ok)=>{if(ok&&!P.badges[id]){P.badges[id]=now.toISOString();news.push(id);xp+=200}};
   const wk=P.dates.filter(d=>now-new Date(d)<7*864e5).length,h=new Date(run.startedAt||Date.now()).getHours();
   const gt=run.ghost?gTimeAt(run.ghost,run.dist):null,beat=gt!=null&&gt>run.time&&done,m=$('gsel').value;
   g('first',true);g('km10',P.km>=10);g('km50',P.km>=50);g('km100',P.km>=100);g('km500',P.km>=500);g('runs10',P.runs>=10);g('runs50',P.runs>=50);g('week3',wk>=3);
-  g('climb100',run.gain>=100);g('climb300',run.gain>=300);g('workout',!!(workout&&done&&!workout.test));g('test',!!(workout&&workout.test&&testRes));g('route',!workout&&done);
+  g('climb100',run.gain>=100);g('climb300',run.gain>=300);g('workout',!!(workout&&done&&!workout.test));g('test',!!(workout&&workout.test&&testRes));g('route',!workout&&done&&!(route&&route.decor));
   g('explorer',P.routes.length>=5);g('record',beat&&(m==='best'||m==='last'));g('duel',beat&&m==='friend');g('outdoor',beat&&m==='watch');g('english',EN());g('zen',$('zen').checked);
   g('early',h<7);g('night',h>=21);g('k5',run.dist>=5000);g('k10',run.dist>=10000);
+  const t5=bestTime(run.samples,5000),t10=bestTime(run.samples,10000);
+  if(t5){g('f5_30',t5<1800);g('f5_25',t5<1500);g('f5_20',t5<1200);g('pb5',!!(P.records[5000]&&t5<P.records[5000].t))}
+  if(t10){g('f10_60',t10<3600);g('f10_50',t10<3000);g('f10_45',t10<2700);g('f10_40',t10<2400);g('pb10',!!(P.records[10000]&&t10<P.records[10000].t))}
   RECS.forEach(([D,lab])=>{const t=bestTime(run.samples,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
   const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
   return{xp,news,recs,up:lv>lv0?lv:0}}
