@@ -1,4 +1,4 @@
-// Ajoute les permissions Bluetooth, l'icône et la couleur d'Horizon au projet Android généré par Capacitor.
+// Ajoute les permissions Bluetooth, l'icône et la couleur de Treadverse au projet Android généré par Capacitor.
 const fs = require('fs'), path = require('path');
 const root = path.join(__dirname, '..');
 const man = path.join(root, 'android/app/src/main/AndroidManifest.xml');
@@ -29,4 +29,4 @@ const res = path.join(root, 'android/app/src/main/res');
 });
 const bg = path.join(res, 'values/ic_launcher_background.xml');
 if (fs.existsSync(bg)) fs.writeFileSync(bg, '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#1C1F23</color>\n</resources>\n');
-console.log('Projet Android préparé pour Horizon.');
+console.log('Projet Android préparé pour Treadverse.');
