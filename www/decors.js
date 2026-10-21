@@ -131,6 +131,8 @@
       // ligne d'arrivée, arche, tribune, projecteurs
       ribbon(-0.3, 9.46, 0.5, new T.MeshBasicMaterial({ color: 0xffffff, side: T.DoubleSide }), 0.02).geometry.setDrawRange(0, 6);
       arch(0.5, 'TREADVERSE');
+      [100, 200, 300].forEach((m) => { sign(m, -1.6, [{ t: m + ' m', size: 70 }], 1.2, 0.75, '#111827', '#fbbf24');
+        const A = at(m, -0.3), B = at(m, 9.46); const g = new T.BufferGeometry().setFromPoints([A.pos.clone().setY(A.pos.y + 0.02), B.pos.clone().setY(B.pos.y + 0.02)]); scene.add(new T.Line(g, new T.LineBasicMaterial({ color: 0xfbbf24 }))); });
       for (let r = 0; r < 7; r++) {
         const st = new T.Mesh(new T.BoxGeometry(80, 0.8, 1.6), lam(r % 2 ? 0x9ca3af : 0x6b7280));
         const A = at(LS / 2, 13 + r * 1.6); st.position.set(A.pos.x, 0.4 + r * 0.8, A.pos.z); scene.add(st);
@@ -203,7 +205,18 @@
       u.parts.l.arm.rotation.x = -0.7 * a * sw; u.parts.r.arm.rotation.x = 0.7 * a * sw; u.parts.l.fore.rotation.x = u.parts.r.fore.rotation.x = -1.2 * Math.max(0.2, a);
       u.body.position.y = v > 0.3 ? 0.05 * Math.abs(Math.cos(ph)) : 0; u.body.rotation.x = 0.12 * a;
     }
-    const me = runner(0xfb923c), ref = runner(0x3b82f6); ref.visible = false;
+    // point lumineux (par défaut) : boule, anneau blanc, halo au sol qui pulse
+    function dot(c) {
+      const g = new T.Group();
+      const ball = new T.Mesh(new T.SphereGeometry(0.42, 24, 16), new T.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.55 })); ball.position.y = 0.75;
+      const ring = new T.Mesh(new T.TorusGeometry(0.47, 0.06, 10, 32), new T.MeshBasicMaterial({ color: 0xffffff })); ring.position.y = 0.75; ring.rotation.x = Math.PI / 2;
+      const halo = new T.Mesh(new T.CircleGeometry(0.9, 32), new T.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.35, depthWrite: false })); halo.rotation.x = -Math.PI / 2; halo.position.y = 0.03;
+      const stem = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 0.33, 6), new T.MeshBasicMaterial({ color: c })); stem.position.y = 0.2;
+      g.add(ball, ring, halo, stem); g.userData = { dot: true, halo, ball }; scene.add(g); return g;
+    }
+    const FIG = (() => { try { return localStorage.getItem('vrFigures') === '1'; } catch (e) { return false; } })();
+    const me = FIG ? runner(0xfb923c) : dot(0xfb923c), ref = FIG ? runner(0x3b82f6) : dot(0x3b82f6); ref.visible = false;
+    const pulse = (o, t) => { if (!o.userData.dot) return; const k = 1 + 0.18 * Math.sin(t / 260); o.userData.halo.scale.set(k, k, k); };
     const medal = new T.Group(); { const d = new T.Mesh(new T.CylinderGeometry(0.42, 0.42, 0.09, 24), new T.MeshLambertMaterial({ color: 0xfbbf24, emissive: 0x8a5a00, emissiveIntensity: 0.5 })); d.rotation.x = Math.PI / 2; medal.add(d); } medal.visible = false; scene.add(medal);
     const laneMe = forest ? -0.6 : 0, laneRef = forest ? 0.6 : 1.22;
 
@@ -219,10 +232,10 @@
       const w = el.clientWidth, h = el.clientHeight; if (!w || !h || el.offsetParent === null) return;
       if (ren.domElement.width !== Math.round(w * ren.getPixelRatio())) { ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
       const nowT = performance.now(), fdt = Math.min(0.1, (nowT - (S.lastF || nowT)) / 1000); S.lastF = nowT;
-      const xm = shown(S.me) ?? 0, A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); animate(me, S.me.v, fdt);
-      const xr = shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); animate(ref, S.ref.v, fdt); ref.visible = true; } else ref.visible = false;
+      const xm = shown(S.me) ?? 0, A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
+      const xr = shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); if (FIG) animate(ref, S.ref.v, fdt); else pulse(ref, nowT); ref.visible = true; } else ref.visible = false;
       const lead = S.lead === 'me' ? me : S.lead === 'ref' && ref.visible ? ref : null; medal.visible = !!lead;
-      if (lead) { medal.position.copy(lead.position).setY(lead.position.y + 2.15 + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
+      if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
       else { const back = at(xm - 9, laneMe), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4); look = fwd.pos.clone().setY(fwd.pos.y + 1.0); }
