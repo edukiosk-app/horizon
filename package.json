@@ -1,0 +1,22 @@
+{
+  "name": "horizon-tapis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Horizon, l'application de tapis de course",
+  "scripts": {
+    "build:native": "esbuild src/native.js --bundle --format=iife --outfile=www/native.js --minify",
+    "android": "npm run build:native && npx cap add android && node scripts/patch-android.js && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/share": "8.0.2",
+    "@capacitor-community/bluetooth-le": "8.3.0",
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor-community/text-to-speech": "8.0.2",
+    "esbuild": "0.25.10",
+    "leaflet": "1.9.4",
+    "maplibre-gl": "4.7.1"
+  }
+}

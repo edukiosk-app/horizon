@@ -1,0 +1,10 @@
+{
+  "appId": "fr.horizon.tapis",
+  "appName": "Horizon",
+  "webDir": "www",
+  "android": { "backgroundColor": "#1c1f23" },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true },
+    "BluetoothLe": { "displayStrings": { "scanning": "Recherche…", "cancel": "Annuler", "availableDevices": "Appareils trouvés", "noDeviceFound": "Aucun appareil trouvé" } }
+  }
+}
