@@ -34,10 +34,18 @@ jobs:
       - name: Préparer le projet Android
         run: npm run android
 
-      - name: Clé de signature (toujours la même, pour les mises à jour)
+      - name: Clé de signature (créée une seule fois, puis toujours la même)
         run: |
           mkdir -p ~/.android
-          if [ -f resources/debug.keystore ]; then cp resources/debug.keystore ~/.android/debug.keystore; else echo "Pas de clé fournie : clé temporaire"; fi
+          if [ ! -f resources/debug.keystore ]; then
+            keytool -genkeypair -keystore resources/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+            git config user.name "horizon-bot"
+            git config user.email "horizon-bot@users.noreply.github.com"
+            git add resources/debug.keystore
+            git commit -m "Clé de signature d'Horizon [skip ci]"
+            git push
+          fi
+          cp resources/debug.keystore ~/.android/debug.keystore
 
       - name: Construire l'APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug --no-daemon
