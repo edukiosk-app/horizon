@@ -259,9 +259,9 @@ button.mini{padding:6px 10px;font-size:13px}
     </div>
 
     <div class="panel" id="prepSession">
-      <h2>Séance sur ce parcours</h2>
+      <h2 id="prepSesTitle">Séance</h2>
       <div id="wspSlotPrep"></div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="goRun">Courir ce parcours</button></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="goRun">Courir</button></div>
     </div>
 
     <div class="panel" id="goalPanel">
@@ -980,14 +980,14 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
   const name=($('aiName').value.trim()||j?.name||'Séance IA').slice(0,60);
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text,folder:'Assistant IA'});store.set('workouts',ws);listWorkouts();
   const tot=st.reduce((x,s)=>x+stepSec({...s,v:speedFor(s)}),0);
-  $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${hdur(tot)}. Tu peux la choisir dans « Séance sur ce parcours ».`;
+  $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${hdur(tot)}. Tu peux la choisir dans « Séance ».`;
   $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
   b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small>`;
   b.onclick=()=>{wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();$('prepSession').scrollIntoView({behavior:'smooth',block:'start'})};box.append(b)})})();$('goRun').onclick=()=>show('run');setTimeout(()=>{if(!$('view-prep').hidden)wspMove('prep')},0);
 
 /* ================= FANTÔME ================= */
-const runKey=()=>(route?route.name:'?')+'|'+($('wsel').value||'libre');
+const runKey=()=>(route?(route.decor?'Décor':route.name):'?')+'|'+($('wsel').value||'libre');
 const de=n=>/^[aeiouyhàâéèêëîïôûù]/i.test(n)?"d'"+n:'de '+n;
 /* ---------- coureur de référence : niveaux de forme au 10 km (repères indicatifs, corrigés selon l'âge et le sexe) ---------- */
 const REF_LV=[['deb','Débutant',62],['forme','En forme',52],['conf','Confirmé',45],['tb','Très bon',40],['elite','Élite',35]]; // minutes au 10 km, homme de 20 à 34 ans
@@ -1022,7 +1022,7 @@ function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filte
   if($('gsel').value==='goal'){let g=null;try{g=goalGhost()}catch(e){}$('ginfo').textContent=g?`Le point bleu court ton objectif : ${hdur(g.time)} pour ${fmt(g.dist/1000,2)} km, en suivant les allures prévues kilomètre par kilomètre.`:'Choisis une séance « Course objectif » (Préparer › Objectif course).';return}
   if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${hdur(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
   if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${hdur(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
-  $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
+  $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} ${route&&route.decor?'avec cette séance':'sur ce parcours avec cette séance'}.`:(route&&route.decor?'Aucune course encore avec cette séance : ce sera ta référence.':'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.')}
 $('gsel').onchange=()=>{if(run.state==='done')startOver();updateGhostInfo()};
 function saveRun(done){if(run.time<60||!route)return;const all=store.get('runs',{}),k=runKey(),list=all[k]||[];
   run.samples.push([Math.round(run.time),Math.round(run.dist),run.hr||0]);
@@ -1882,7 +1882,7 @@ function liveListen(){if(LIVE.es)LIVE.es.close();const es=new EventSource(`${LIV
   const on=patch=>e=>{try{const m=JSON.parse(e.data);if(patch)Object.entries(m.data||{}).forEach(([c,v])=>liveApply(m.path.replace(/\/$/,'')+'/'+c,v));else liveApply(m.path,m.data);liveUI()}catch(err){}};
   es.addEventListener('put',on(false));es.addEventListener('patch',on(true));es.onerror=()=>{$('liveMsg').textContent='Connexion au serveur interrompue, nouvelle tentative…'}}
 function liveCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s}
-function liveSetDecor(k){if(!k||!window.VR||!VR.DEFS[k])return;if(route&&route.decor===k)return;const d=VR.DEFS[k];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();if(!$('view-run').hidden)RM.init()}
+function liveSetDecor(k){if(!k||!window.VR||!VR.DEFS[k])return;if(route&&route.decor)return;const d=VR.DEFS[k];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();if(!$('view-run').hidden)RM.init()}
 async function liveCreate(){const msg=$('liveMsg');if(!LIVE.url()){msg.textContent='Active d’abord le serveur (étape ci-dessus).';return}
   if(!route||!route.decor){msg.textContent='Choisis d’abord un décor virtuel dans Préparer : tout le monde court dans le même.';return}
   if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return}
@@ -1906,7 +1906,7 @@ function livePeople(){const P=(LIVE.data&&LIVE.data.p)||{},now=srvNow();return O
 function liveUI(){const on=!!LIVE.room,R=LIVE.data||{};$('liveOff').hidden=on;$('liveOn').hidden=!on;$('liveSetup').hidden=!!LIVE.url();$('liveJoinBox').hidden=!LIVE.url();
   if(!on){$('livebox').hidden=true;return}
   const P=livePeople(),host=R.host===LIVE.id,now=srvNow();
-  $('liveTitle').textContent=`Course ${LIVE.room} · ${R.dname||''} · ${fmt((R.dist||0)/1000,R.dist%1000?1:0)} km`;
+  $('liveTitle').textContent=`Course ${LIVE.room} · ${fmt((R.dist||0)/1000,R.dist%1000?1:0)} km`;
   $('liveGo').hidden=!host||!!R.start;
   $('liveState').textContent=!R.start?(host?`${P.length} coureur${P.length>1?'s':''} inscrit${P.length>1?'s':''}. Lance le départ quand tout le monde est prêt (tapis connecté) : un compte à rebours de 15 secondes démarre chez tous.`:'En attente du départ donné par le créateur.'):now<R.start?`Départ dans ${Math.ceil((R.start-now)/1000)} s`:'Course en cours';
   $('livePeople').innerHTML=P.map((p,i)=>`<div class="lrow${p.me?' me':''}"><span>${R.start?i+1+'. ':''}${esc(p.n||'Coureur')}${p.me?' (toi)':''}</span><span>${p.f?hdur(p.f):R.start?fmt(p.d/1000,2)+' km':'prêt'}</span></div>`).join('');
@@ -2117,7 +2117,7 @@ const okStart=(gpx)=>{const msg=$('liveMsg');if(!route||(!route.decor&&!gpx)){ms
 async function liveRandom(){const msg=$('liveMsg');if(!LIVE.url()||!okStart())return;LIVE.randD=+$('randDist').value||5000;msg.textContent='Recherche d’un adversaire…';
   try{await liveClock();const D=getD(),now=srvNow(),open=await fb('rooms/_open/'+D)||{};
     const c=Object.entries(open).filter(([k,v])=>v&&v.at>now-45000&&v.host!==LIVE.id).sort((a,b)=>a[1].at-b[1].at);
-    for(const [code] of c){const r=await fb('rooms/'+code);if(r&&r.decor&&!r.start&&Object.keys(r.p||{}).length<6){$('liveCodeIn').value=code;await liveJoin();if(LIVE.room){LIVE.pub=D;msg.textContent=`Adversaire trouvé : ${Object.values(r.p||{}).map(x=>x.n).join(', ')}. Décor « ${r.dname} ». Le départ part tout seul dans quelques secondes.`}return}}
+    for(const [code] of c){const r=await fb('rooms/'+code);if(r&&r.decor&&!r.start&&Object.keys(r.p||{}).length<6){$('liveCodeIn').value=code;await liveJoin();if(LIVE.room){LIVE.pub=D;msg.textContent=`Adversaire trouvé : ${Object.values(r.p||{}).map(x=>x.n).join(', ')}. Le départ part tout seul dans quelques secondes.`}return}}
     await liveCreate();if(!LIVE.room)return;LIVE.pub=D;LIVE.pubSince=Date.now();await fb(`rooms/${LIVE.room}`,'PATCH',{pub:D});await fb(`rooms/_open/${D}/${LIVE.room}`,'PUT',{at:{'.sv':'timestamp'},host:LIVE.id});
     msg.textContent='En attente d’un adversaire… Le départ part tout seul dès qu’un coureur te rejoint. Sans personne en ligne d’ici 25 secondes, tu cours contre de vrais coureurs en différé.'}catch(e){msg.textContent='Recherche impossible : '+e.message}}
 function liveBotsStart(){if(!okStart(true))return;LIVE.randD=0;if(LIVE.room)liveLeave();const D=getD(),lv=$('botLvl').value,k={facile:0.92,egal:1,dur:1.06}[lv]||1;
@@ -2139,7 +2139,7 @@ setInterval(()=>{try{botTick()}catch(e){}
 async function liveGoX(){if(LIVE.local&&LIVE.data){LIVE.data.start=Date.now()+10000;LIVE.said={};liveUI();return}return liveGo()}
 async function liveLeaveX(){LIVE.randD=0;const pub=LIVE.pub,r=LIVE.room,local=LIVE.local;LIVE.pub=0;LIVE.autoAt=0;LIVE.lonely=0;if(pub&&r&&!local)fb(`rooms/_open/${pub}/${r}`,'DELETE').catch(()=>{});LIVE.local=false;if(local){LIVE.room=null;LIVE.data=null;liveUI();return}return liveLeave()}
 $('liveRandom').onclick=liveRandom;$('liveBots').onclick=liveBotsStart;$('liveGo').onclick=liveGoX;$('liveQuit').onclick=liveLeaveX;
-(()=>{const ui=liveUI;liveUI=function(){ui.apply(this,arguments);try{if(LIVE.local&&LIVE.room){$('liveTitle').textContent=LIVE.data.wk?`Contre l’ordinateur · ${LIVE.data.dname} · même séance, le plus de distance gagne`:`Contre l’ordinateur · ${LIVE.data.dname} · ${fmt(LIVE.data.dist/1000,LIVE.data.dist%1000?1:0)} km`;if(!LIVE.data.start)$('liveState').textContent='Tes adversaires sont prêts. Le départ part 10 secondes après avoir touché « Lancer le départ ».'}
+(()=>{const ui=liveUI;liveUI=function(){ui.apply(this,arguments);try{if(LIVE.local&&LIVE.room){$('liveTitle').textContent=LIVE.data.wk?`Contre l’ordinateur · même séance, le plus de distance gagne`:`Contre l’ordinateur · ${route&&!route.decor?LIVE.data.dname+' · ':''}${fmt(LIVE.data.dist/1000,LIVE.data.dist%1000?1:0)} km`;if(!LIVE.data.start)$('liveState').textContent='Tes adversaires sont prêts. Le départ part 10 secondes après avoir touché « Lancer le départ ».'}
   else if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.data.start){$('liveGo').hidden=true;$('liveState').textContent=`Course au hasard · ${Object.keys(LIVE.data.p||{}).length} coureur(s) inscrit(s).`}
   $('liveRandom').disabled=!LIVE.url()}catch(e){}}})();
 liveUI();
@@ -2354,6 +2354,14 @@ try{liveDistUI(true)}catch(e){}
 (()=>{const u1=liveDistUI;liveDistUI=function(){u1.apply(this,arguments);const d=seanceDist(),sel=$('liveDist');if(d){sel.value='0';sel.disabled=true;sel.title='La séance choisie fixe la course';}else sel.disabled=false}})();
 (()=>{const lb=liveBotsStart;liveBotsStart=function(){lb.apply(this,arguments);const R=LIVE.data;if(R&&LIVE.local&&!R.wk){const n=Object.values(R.p).filter(x=>x.bot).length,lv=$('botLvl').value;$('liveMsg').textContent=`${n} coureur${n>1?'s':''} ordinateur (${lv==='facile'?'un peu plus lents que toi':lv==='dur'?'un peu plus rapides que toi':'à ton niveau'}) sur ${fmt(R.dist/1000,R.dist%1000?1:0)} km. Touche « Lancer le départ ».`}};$('liveBots').onclick=liveBotsStart})();
 (()=>{let lw=null;setInterval(()=>{try{const w=$('wsel').value;if(w!==lw){lw=w;liveDistUI(true);if(LIVE.local&&LIVE.data&&!LIVE.data.start){liveBotsStart()}}}catch(e){}},700)})();
+</script>
+<script>
+/* les décors ne sont qu'un environnement : records et défis par séance, quel que soit le décor */
+(()=>{try{if(store.get('decorMerged',0))return;const names=new Set(Object.values(VR.DEFS).map(d=>d.name));['Forêt, boucle de 5 km','Bord de mer, 5 km','Montagne, 6 km','Ville du futur, 4 km','Jungle préhistorique, 5 km','Tour du lac, 3 km'].forEach(n=>names.add(n));
+  const all=store.get('runs',{});let ch=0;for(const k of Object.keys(all)){const i=k.indexOf('|'),n=k.slice(0,i);if(names.has(n)){const nk='Décor'+k.slice(i);all[nk]=[...(all[nk]||[]),...all[k]].sort((a,b)=>a.date<b.date?-1:1).slice(-10);delete all[k];ch=1}}
+  if(ch)store.set('runs',all);store.set('decorMerged',1)}catch(e){}})();
+(()=>{const dp=drawPrep;drawPrep=function(){dp.apply(this,arguments);try{$('prepSesTitle').textContent=route&&!route.decor?'Séance sur ce parcours':'Séance';$('go').textContent=route&&route.decor?'Courir':'Courir ce parcours'}catch(e){}}})();
+try{drawPrep()}catch(e){}
 </script>
 </body>
 </html>
