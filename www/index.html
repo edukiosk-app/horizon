@@ -1946,7 +1946,7 @@ setInterval(()=>{try{liveTick()}catch(e){}},500);
 <script>
 /* Décors : l'environnement seulement, la distance vient de la séance */
 (()=>{const M={"Forêt, boucle de 5 km": "Forêt", "Bord de mer, 5 km": "Bord de mer", "Montagne, 6 km": "Montagne", "Ville du futur, 4 km": "Ville du futur", "Jungle préhistorique, 5 km": "Jungle préhistorique", "Tour du lac, 3 km": "Tour du lac"};try{const all=store.get('runs',{});let ch=0;for(const k of Object.keys(all)){const [n,...r]=k.split('|');if(M[n]){const nk=M[n]+'|'+r.join('|');all[nk]=[...(all[nk]||[]),...all[k]];delete all[k];ch=1}}if(ch)store.set('runs',all)}catch(e){}})();
-function planDist(){if(LIVE.room&&LIVE.data&&LIVE.data.dist)return LIVE.data.dist;
+function planDist(){if(LIVE.room&&LIVE.data&&LIVE.data.dist)return LIVE.data.dshow||LIVE.data.dist;
   let st=null;if(workout&&run.state!=='idle')st=workout.steps;else{const w=$('wsel').value==='__test'?testWorkout():workouts().find(o=>o.name===$('wsel').value);if(w)st=w.steps||progSteps(w.name,parseWorkout(w.text))}
   if(st&&st.length){const d=st.reduce((a,s)=>a+(s.dist||s.dur*(s.v||speedFor(s))/3.6),0);if(d>50)return Math.max(d,run.dist)}
   return Math.max(5000,Math.ceil((run.dist+1000)/1000)*1000)}
@@ -2139,7 +2139,7 @@ setInterval(()=>{try{botTick()}catch(e){}
 async function liveGoX(){if(LIVE.local&&LIVE.data){LIVE.data.start=Date.now()+10000;LIVE.said={};liveUI();return}return liveGo()}
 async function liveLeaveX(){LIVE.randD=0;const pub=LIVE.pub,r=LIVE.room,local=LIVE.local;LIVE.pub=0;LIVE.autoAt=0;LIVE.lonely=0;if(pub&&r&&!local)fb(`rooms/_open/${pub}/${r}`,'DELETE').catch(()=>{});LIVE.local=false;if(local){LIVE.room=null;LIVE.data=null;liveUI();return}return liveLeave()}
 $('liveRandom').onclick=liveRandom;$('liveBots').onclick=liveBotsStart;$('liveGo').onclick=liveGoX;$('liveQuit').onclick=liveLeaveX;
-(()=>{const ui=liveUI;liveUI=function(){ui.apply(this,arguments);try{if(LIVE.local&&LIVE.room){$('liveTitle').textContent=`Contre l’ordinateur · ${LIVE.data.dname} · ${fmt(LIVE.data.dist/1000,LIVE.data.dist%1000?1:0)} km`;if(!LIVE.data.start)$('liveState').textContent='Tes adversaires sont prêts. Le départ part 10 secondes après avoir touché « Lancer le départ ».'}
+(()=>{const ui=liveUI;liveUI=function(){ui.apply(this,arguments);try{if(LIVE.local&&LIVE.room){$('liveTitle').textContent=LIVE.data.wk?`Contre l’ordinateur · ${LIVE.data.dname} · même séance, le plus de distance gagne`:`Contre l’ordinateur · ${LIVE.data.dname} · ${fmt(LIVE.data.dist/1000,LIVE.data.dist%1000?1:0)} km`;if(!LIVE.data.start)$('liveState').textContent='Tes adversaires sont prêts. Le départ part 10 secondes après avoir touché « Lancer le départ ».'}
   else if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.data.start){$('liveGo').hidden=true;$('liveState').textContent=`Course au hasard · ${Object.keys(LIVE.data.p||{}).length} coureur(s) inscrit(s).`}
   $('liveRandom').disabled=!LIVE.url()}catch(e){}}})();
 liveUI();
@@ -2294,6 +2294,19 @@ function coachStop(){try{speechSynthesis.cancel()}catch(e){}try{window.NativeTTS
   $('liveOff').append(tip);$('coachWarmLink').onclick=e=>{e.preventDefault();show('coach');setTimeout(()=>{const d=[...document.querySelectorAll('.cfiche')][4];if(d){d.open=true;d.scrollIntoView({behavior:'smooth'})}},60)};
 })();
 
+</script>
+<script>
+/* 1) « Terminer » pendant une course à plusieurs : bilan puis sortie de la course (abandon si pas arrivé)
+   2) contre l'ordinateur avec « Ma séance » : tout le monde fait la même séance, le classement se fait à la distance parcourue à la fin */
+(()=>{const st=$('stop').onclick;$('stop').onclick=async function(){const inRace=LIVE.room&&LIVE.data&&LIVE.data.start&&run.state!=='idle'&&run.state!=='done',ab=inRace&&!LIVE.fin;
+  if(ab){LIVE.abandon=Math.round(run.dist)}const r=await st.apply(this,arguments);if(inRace)setTimeout(()=>{try{liveLeaveX()}catch(e){}},1500);return r}})();
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);if(LIVE.abandon!=null){S.extra.push(`Course abandonnée à ${fmt(LIVE.abandon/1000,2)} km.`);S.podium=null;LIVE.abandon=null;store.set('lastBilan',S)}return S}})();
+(()=>{const lb=liveBotsStart;liveBotsStart=function(){lb.apply(this,arguments);const R=LIVE.data;if(R&&R.wk){R.dshow=R.dist;R.dist=1e9;liveUI();$('liveMsg').textContent='Trois coureurs ordinateur font ta séance avec toi, à ton niveau. À la fin de la séance, celui qui a parcouru le plus de distance gagne : accélère quand tu veux pour prendre la tête. Touche « Lancer le départ ».'}};$('liveBots').onclick=liveBotsStart})();
+(()=>{const lp=livePeople;livePeople=function(){const P=lp.apply(this,arguments);const R=LIVE.data;if(LIVE.local&&R&&R.wk)return P.map(p=>({...p,f:null})).sort((a,b)=>b.d-a.d);return P}})();
+setInterval(()=>{try{const R=LIVE.data;if(!(LIVE.local&&R&&R.wk&&R.start&&Date.now()>=R.start))return;const t=(Date.now()-R.start)/1000,end=R.sched&&R.sched.length?R.sched[R.sched.length-1][0]:0;
+  if(end)for(const p of Object.values(R.p))if(p.bot&&!p.f&&t>=end){p.f=Math.round(end)}
+  if(!LIVE.fin&&run.state==='running'&&workout&&run.step>=workout.steps.length){LIVE.fin=Math.round(run.time);const P=livePeople(),i=P.findIndex(p=>p.me);
+    say(`Séance terminée. Tu finis ${ordFr(i+1)} sur ${P.length}, avec ${spk(run.dist/1000)} kilomètres.`,`Workout complete. You finish number ${i+1} of ${P.length}.`);setTimeout(()=>$('stop').onclick(),800)}}catch(e){}},1000);
 </script>
 </body>
 </html>
