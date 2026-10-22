@@ -256,6 +256,8 @@ button.mini{padding:6px 10px;font-size:13px}
       <h2>Décors virtuels</h2>
       <p class="hint" style="margin-top:0">Pas de carte à charger : le décor est dessiné par l'appli, même sans internet. Le tapis suit ses pentes.</p>
       <div class="decors" id="decors"></div>
+      <div class="settings" style="margin-top:10px"><label>Relief<select id="relief"><option value="decor">celui du décor</option><option value="plat">plat</option><option value="lake">légèrement vallonné</option><option value="forest">vallonné</option><option value="mountain">montagne</option></select></label></div>
+      <p class="hint" id="reliefHint" style="margin-top:4px">Le décor, c’est le paysage. Le relief, c’est ce que fait la pente du tapis : tu peux courir en bord de mer avec un relief de montagne.</p>
     </div>
 
     <div class="panel" id="prepSession">
@@ -513,7 +515,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <p id="fbMsg" class="hint"></p>
       </div>
       <div id="liveOff">
-        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label id="raceVL">Vitesse de départ<select id="raceV"><option value="6">6 km/h</option><option value="7" selected>7 km/h</option><option value="8">8 km/h</option><option value="9">9 km/h</option><option value="10">10 km/h</option><option value="11">11 km/h</option><option value="12">12 km/h</option></select></label><label id="raceIL">Pente<select id="raceInc"><option value="0" selected>0 (plat)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="decor">suit le décor</option></select></label></div><p class="hint" id="raceSum" style="margin:6px 0 0"></p>
+        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label id="raceVL">Vitesse de départ<select id="raceV"><option value="6">6 km/h</option><option value="7" selected>7 km/h</option><option value="8">8 km/h</option><option value="9">9 km/h</option><option value="10">10 km/h</option><option value="11">11 km/h</option><option value="12">12 km/h</option></select></label><label id="raceIL">Pente<select id="raceInc"><option value="0" selected>0 (plat)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="decor">suit le relief</option></select></label></div><p class="hint" id="raceSum" style="margin:6px 0 0"></p>
         <div id="liveJoinBox">
           <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
           <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
@@ -549,7 +551,7 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="stat"><small>Distance km</small><b id="sDist">0,00</b></div>
       <div class="stat"><small>Temps</small><b id="sTime">0:00</b></div>
       <div class="stat climb"><small>D+ m</small><b id="sGain">0</b></div>
-      <div class="stat big"><span><small>À venir (200 m)</small><br><span id="sNext">–</span></span><span><small>Restant</small><br><span id="sLeft">–</span></span><span><small>Cardio</small><br><span id="sHr">–</span></span></div>
+      <div class="stat big"><span hidden><small>À venir (200 m)</small><br><span id="sNext">–</span></span><span><small>Restant</small><br><span id="sLeft">–</span></span><span><small>Cardio</small><br><span id="sHr">–</span></span></div>
       <div class="stat big zenbox" id="zenbox" hidden><span><small>Prochain repère</small><br><b id="zMark">–</b></span><b id="zGap">–</b></div>
       <div class="ghostline big" id="ghostbox" hidden><span><small>Défi</small><br><span id="gLabel">–</span></span><b id="gGap">–</b></div>
       <div class="ghostline big" id="livebox" hidden><span><small>Course en direct</small><br><span id="liveLines" class="livelines"></span></span><b id="liveRank">–</b></div>
@@ -688,7 +690,7 @@ function idxAt(x){const d=route.dist;let lo=0,hi=d.length-1;while(hi-lo>1){const
 function posAt(x){x=Math.max(0,Math.min(total(),x));const d=route.dist,i=idxAt(x),j=Math.min(i+1,d.length-1),seg=d[j]-d[i]||1,t=Math.min(1,Math.max(0,(x-d[i])/seg)),a=route.pts[i],b=route.pts[j];
   return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t]}
 const wrapX=x=>{const T=total();return T>0?((x%T)+T)%T:0};
-const eleAt=x=>posAt(x)[2];
+const eleAt=x=>{const r=window.reliefEle?window.reliefEle(x):null;return r!=null?r:posAt(x)[2]};
 const gradeAt=x=>(eleAt(x+40)-eleAt(x-40))/80*100;
 function gain(){let g=0;for(let i=1;i<route.pts.length;i++){const d=route.pts[i][2]-route.pts[i-1][2];if(d>0)g+=d}return g}
 
@@ -2367,7 +2369,7 @@ try{drawPrep()}catch(e){}
 /* course de base (sans séance) : distance au choix, vitesse de départ et pente affichées et réglables, plat par défaut */
 function raceBase(){return !seanceDist()}
 function raceSumUI(){const b=raceBase();$('raceVL').hidden=!b;$('raceIL').hidden=!b;const D=getD(),pi=$('raceInc').value;
-  $('raceSum').textContent=b?`Course : ${fmt(D/1000,D%1000?1:0)} km · départ à ${$('raceV').value} km/h · pente ${pi==='decor'?'qui suit le décor':pi==='0'?'0 (plat)':pi+(PTS()?' niv.':' %')}. Tu changes la vitesse et la pente pendant la course avec les boutons.`:'La séance choisie fixe la course : ses vitesses et ses pentes.'}
+  $('raceSum').textContent=b?`Course : ${fmt(D/1000,D%1000?1:0)} km · départ à ${$('raceV').value} km/h · pente ${pi==='decor'?'qui suit le relief':pi==='0'?'0 (plat)':pi+(PTS()?' niv.':' %')}. Tu changes la vitesse et la pente pendant la course avec les boutons.`:'La séance choisie fixe la course : ses vitesses et ses pentes.'}
 ['raceV','raceInc','liveDist'].forEach(id=>$(id).addEventListener('change',()=>{store.set(id,$(id).value);raceSumUI()}));
 $('raceV').value=store.get('raceV','7');$('raceInc').value=store.get('raceInc','0');
 setInterval(()=>{try{if(!LIVE.room)raceSumUI()}catch(e){}},1000);
@@ -2382,6 +2384,16 @@ raceSumUI();
 /* départ progressif des coureurs ordinateur, comme le tapis : ils atteignent leur vitesse en une quinzaine de secondes */
 (()=>{const prev=botTick;botTick=function(){const R=LIVE.data;const before=R&&R.p?Object.fromEntries(Object.entries(R.p).map(([k,p])=>[k,p.d])):{};const r=prev.apply(this,arguments);
   try{if(LIVE.local&&R&&R.start){const t=(Date.now()-R.start)/1000;if(t>=0&&t<15){const k=Math.max(0.12,t/15);for(const [id,p] of Object.entries(R.p)){if(!p.bot||p.f)continue;const d0=before[id]||0;p.d=d0+(p.d-d0)*k}}}}catch(e){}return r}})();
+</script>
+<script>
+/* relief indépendant du décor : profil d'altitude d'un autre décor (étiré à la longueur de la boucle) ou plat */
+const RELC={};
+function reliefMode(){return store.get('relief','decor')}
+window.reliefEle=function(x){try{if(!route||!route.decor)return null;const m=reliefMode();if(m==='decor'||m===route.decor)return null;if(m==='plat')return 0;
+  let c=RELC[m];if(!c){const pts=VR.routePts(m),d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+hav(pts[i-1],pts[i]));c=RELC[m]={pts,d,L:d[d.length-1]}}
+  const Lc=total()||1,xr=(((x%Lc)+Lc)%Lc)/Lc*c.L;let lo=0,hi=c.d.length-1;while(hi-lo>1){const mid=(lo+hi)>>1;c.d[mid]<=xr?lo=mid:hi=mid}
+  const f=(xr-c.d[lo])/((c.d[hi]-c.d[lo])||1);return c.pts[lo][2]+(c.pts[hi][2]-c.pts[lo][2])*f}catch(e){return null}};
+(()=>{const sel=$('relief');sel.value=reliefMode();sel.onchange=()=>{store.set('relief',sel.value);try{drawPrep();drawProfile($('profile'),-1);profRoute=null}catch(e){}}})();
 </script>
 </body>
 </html>

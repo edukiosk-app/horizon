@@ -22,7 +22,7 @@
 
   const CURVES = {
     forest: (th) => { const r = 1 + 0.2 * Math.sin(3 * th + 0.5) + 0.1 * Math.sin(5 * th + 1.3) + 0.05 * Math.sin(9 * th); return [1.35 * r * Math.cos(th), r * Math.sin(th)]; },
-    sea: (th) => [20 * Math.cos(th) + 0.25 * Math.sin(3 * th), Math.sin(th) + 0.15 * Math.sin(5 * th)],
+    sea: (th) => [20 * Math.cos(th) + 0.25 * Math.sin(3 * th), 0.32 * Math.sin(th) + 0.05 * Math.sin(5 * th)],
     mountain: (th) => { const r = 1 + 0.22 * Math.sin(2 * th + 0.4) + 0.12 * Math.sin(7 * th) + 0.05 * Math.sin(13 * th); return [1.2 * r * Math.cos(th), r * Math.sin(th)]; },
     lake: (th) => { const r = 1 + 0.08 * Math.sin(3 * th + 0.3) + 0.05 * Math.sin(5 * th + 1); return [1.15 * r * Math.cos(th), r * Math.sin(th)]; },
     scifi: (th) => { const r = 1 + 0.12 * Math.sin(2 * th) + 0.06 * Math.sin(5 * th + 0.7); return [2.2 * r * Math.cos(th), r * Math.sin(th)]; },
@@ -88,7 +88,7 @@
     const TH = {
       track: { sky: [0x3b82c4, 0xbcd8ef, 0xe8eef2], fog: [0xd4e3ee, 150, 700], sun: [-0.5, 0.55, -0.65], sunC: 0xfff1d6, sunI: 1.0, hemi: [0xcfe3ff, 0x4f6b3a, 0.75] },
       forest: { sky: [0x5b8fbf, 0xc9dbe2, 0xdfe8e0], fog: [0xbfd3c9, 30, 230], sun: [0.35, 0.45, -0.8], sunC: 0xffe8c2, sunI: 1.05, hemi: [0xd7e8ff, 0x3a4a2a, 0.65] },
-      sea: { sky: [0x40507a, 0xf0a36b, 0xffd59a], fog: [0xf4b98a, 90, 800], sun: [-0.2, 0.12, 0.95], sunC: 0xffc48a, sunI: 1.1, hemi: [0xffd2b0, 0x6b5a4a, 0.7] },
+      sea: { sky: [0x40507a, 0xf0a36b, 0xffd59a], fog: [0xf4b98a, 160, 1200], sun: [-0.2, 0.12, 0.95], sunC: 0xffc48a, sunI: 1.1, hemi: [0xffd2b0, 0x6b5a4a, 0.7] },
       mountain: { sky: [0x2f6fb5, 0xa9cdea, 0xe2edf5], fog: [0xcfe0ee, 220, 1450], sun: [0.4, 0.6, -0.6], sunC: 0xfff4e0, sunI: 1.05, hemi: [0xdbeaff, 0x5a5a48, 0.7] },
       scifi: { sky: [0x0b0730, 0x3a1a6e, 0xc2367a], fog: [0x2a1250, 60, 650], sun: [0.3, 0.5, -0.8], sunC: 0xffb3f0, sunI: 0.5, hemi: [0x8a7dff, 0x200a30, 0.6] },
       jungle: { sky: [0x7a9bb0, 0xe7c59a, 0xf3d7b0], fog: [0xd9c3a0, 40, 420], sun: [-0.3, 0.35, -0.9], sunC: 0xffd9a8, sunI: 1.05, hemi: [0xe8f0d8, 0x4a4a2a, 0.65] },
@@ -226,8 +226,8 @@
       const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : minY - 2; base.receiveShadow = true; scene.add(base);
       if (CF.sea) {
         const seaM = new T.Mesh(new T.PlaneGeometry(9000, 3000), new T.MeshPhongMaterial({ color: 0x1f6f8b, shininess: 90, specular: 0xffc48a, emissive: 0x0a2a3a }));
-        seaM.rotation.x = -Math.PI / 2; seaM.position.set(0, 0.15, 1500 + 95); scene.add(seaM);
-        const foam = new T.Mesh(new T.PlaneGeometry(9000, 2.5), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })); foam.rotation.x = -Math.PI / 2; foam.position.set(0, 0.17, 96); scene.add(foam); S_waves = [seaM, foam];
+        const shZ = Math.max(...P.map((p) => p.z)) + 9; seaM.rotation.x = -Math.PI / 2; seaM.position.set(0, 0.15, 1500 + shZ - 1); scene.add(seaM);
+        const foam = new T.Mesh(new T.PlaneGeometry(9000, 2.5), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })); foam.rotation.x = -Math.PI / 2; foam.position.set(0, 0.17, shZ); scene.add(foam); S_waves = [seaM, foam];
       }
       if (CF.lake) {
         const shp = new T.Shape(); for (let s2 = 0; s2 <= L; s2 += 10) { const A = at(s2, -12); if (s2 === 0) shp.moveTo(A.pos.x, -A.pos.z); else shp.lineTo(A.pos.x, -A.pos.z); }
@@ -246,7 +246,7 @@
       const spots = { pine: [], leaf: [], palm: [], fern: [] };
       for (let s2 = 0; s2 < L; s2 += CF.step) for (const side of [-1, 1]) {
         if (CF.lake && side < 0 && rnd() < 0.85) continue;                  // côté lac : peu d'arbres
-        if (CF.sea && side > 0 && at(s2).pos.z > 0) continue;               // pas de palmiers côté mer
+        if (CF.sea && at(s2, side * 5).pos.z > at(s2).pos.z) continue;               // pas de palmiers côté mer
         const off = side * (CF.pw + 2 + rnd() ** 1.6 * (CF.lake && side < 0 ? 6 : CF.far)); const A = at(s2 + rnd() * 2, off);
         if (near(A.pos.x, A.pos.z, CF.pw + 1.5)) continue; const t = pick(); spots[t].push([A.pos.x, A.pos.y - 0.1, A.pos.z, 0.75 + rnd() * 0.75, rnd() * 6.28]);
       }
@@ -284,7 +284,7 @@
           part(new T.SphereGeometry(1, 12, 8), 0, 5, 0, 4.5 * s2, 2.4 * s2, 2.2 * s2); part(new T.CylinderGeometry(0.5 * s2, 1.1 * s2, 9 * s2, 8), 4.5, 9, 0, 1, 1, 1, -0.7); part(new T.SphereGeometry(0.9 * s2, 10, 8), 8, 12.6, 0, 1.4, 0.8, 0.8);
           part(new T.ConeGeometry(1 * s2, 11 * s2, 8), -8.5, 4.2, 0, 1, 1, 1, Math.PI / 2 + 0.25); [[2.5, 1.2], [2.5, -1.2], [-2.5, 1.2], [-2.5, -1.2]].forEach(([a, b]) => part(new T.CylinderGeometry(0.6 * s2, 0.7 * s2, 4 * s2, 8), a, 2, b, 1, 1, 1));
           g.position.copy(A.pos); g.rotation.y = rot; scene.add(g); };
-        for (let i = 0; i < 7; i++) { const s2 = 300 + i * 700, A = at(s2, (i % 2 ? 1 : -1) * (35 + rnd() * 40)); herb(A, 1.2 + rnd() * 0.6, rnd() * 6.28); }
+        for (let i = 0; i < 16; i++) { const s2 = 150 + i * (L / 16), A = at(s2, (i % 2 ? 1 : -1) * (16 + rnd() * 14)); herb(A, 1.7 + rnd() * 0.7, rnd() * 6.28); }
         // ptérosaures qui tournent dans le ciel
         const pm = new T.MeshLambertMaterial({ color: 0x3a3028, side: T.DoubleSide }), birds = [];
         for (let i = 0; i < 6; i++) { const gg = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(-4, 0.6, -1), new T.Vector3(-0.5, 0, 1.2), new T.Vector3(0, 0, 0), new T.Vector3(4, 0.6, -1), new T.Vector3(0.5, 0, 1.2)]); gg.computeVertexNormals(); const b = new T.Mesh(gg, pm); b.scale.setScalar(1.5 + rnd()); scene.add(b); birds.push({ m: b, s: rnd() * L, r: 30 + rnd() * 40, h: 40 + rnd() * 30, ph: rnd() * 6 }); }
@@ -365,7 +365,7 @@
       if (!S.alive) return; S.raf = requestAnimationFrame(frame);
       const tF = performance.now(); if (tF - (S.lastDraw || 0) < (HQ ? 15 : 31)) return; S.lastDraw = tF;   // 30 images/s en qualité normale
       const w = el.clientWidth, h = el.clientHeight; if (!w || !h || el.offsetParent === null) return;
-      if (ren.domElement.width !== Math.round(w * ren.getPixelRatio())) { ren.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+      if (ren.domElement.width !== Math.round(w * ren.getPixelRatio())) { ren.setSize(w, h, false); cam.aspect = w / h; cam.fov = cam.aspect < 0.8 ? 74 : 60; cam.updateProjectionMatrix(); }
       const nowT = performance.now(), fdt = Math.min(0.1, (nowT - (S.lastF || nowT)) / 1000); S.lastF = nowT;
       const lv = window.trLive && window.trLive(); if (lv) S.me.v = lv.v;
       const xm = lv ? lv.x : (shown(S.me) ?? 0), A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
@@ -376,7 +376,7 @@
       if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
-      else { const back = at(xm - 9, laneMe), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4); look = fwd.pos.clone().setY(fwd.pos.y + 1.0); }
+      else { const back = at(xm - 9, laneMe), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
       const kk = 1 - Math.exp(-6 * Math.max(fdt, 0.016));
       camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, kk) : want.clone(); lookPos = lookPos && lookPos.distanceTo(look) < 60 ? lookPos.lerp(look, kk) : look.clone(); cam.position.copy(camPos); cam.lookAt(lookPos);
       if (board) { const lap = Math.floor((S.lapDist || 0) / 400) + 1, txt = 'TOUR ' + lap + '|' + ((S.lapDist || 0) / 1000).toFixed(2).replace('.', ',') + ' km';
