@@ -355,6 +355,9 @@
         if (!o) { const g = dot(p.c); g.add(label(String(p.n).slice(0, 12), p.c)); o = { g, s: { x: null, v: 0, t: 0, init: false }, lane: LANES[OTH.size % LANES.length] }; OTH.set(p.id, o); }
         o.tx = p.x; });
       for (const [id, o] of OTH) if (!seen.has(id)) { scene.remove(o.g); OTH.delete(id); } }
+    function react(id, txt) { const g = id === 'me' ? me : (OTH.get(id) || {}).g; if (!g) return; const cv = document.createElement('canvas'); cv.width = cv.height = 128; const c = cv.getContext('2d'); c.font = '96px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(txt, 64, 70);
+      const sp = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(cv), depthWrite: false, transparent: true })); sp.scale.set(1.5, 1.5, 1); sp.position.y = 3.1; g.add(sp); const t0 = performance.now();
+      const up = () => { const k = (performance.now() - t0) / 3000; if (k >= 1 || !S.alive) { g.remove(sp); return; } sp.position.y = 3.1 + k * 1.2; sp.material.opacity = k < 0.7 ? 1 : (1 - k) / 0.3; requestAnimationFrame(up); }; up(); }
 
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
@@ -396,6 +399,7 @@
       place(x, gx, total) { track(S.me, x); track(S.ref, gx); S.lapDist = total; },
       dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v, ref: ref.visible ? ref.position.toArray().map((v) => Math.round(v * 100) / 100) : null }; },
       others,
+      react,
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },

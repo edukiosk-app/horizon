@@ -254,7 +254,7 @@ button.mini{padding:6px 10px;font-size:13px}
 
     <div class="panel" id="prepBox">
       <h2>Préparer ma course</h2>
-      <p class="hint" style="margin-top:0">Tout est dessiné par l'appli, même sans internet. Fais glisser les cartes pour choisir.</p>
+      <p class="hint" style="margin-top:0">Tout est dessiné par l'appli, même sans internet. Fais glisser les cartes pour choisir.</p><p class="hint" id="feelTip" hidden style="color:var(--accent)"></p><div class="cbox" id="evSoon" hidden></div>
       <h3>1. Décor</h3>
       <div class="decors" id="decors"></div>
       <h3>2. Relief</h3>
@@ -530,6 +530,32 @@ button.mini{padding:6px 10px;font-size:13px}
         <div class="row" style="margin-top:8px"><button id="liveGo" class="primary">Lancer le départ</button><button id="liveQuit" class="danger">Quitter</button></div></div>
       <p id="liveMsg" class="hint"></p>
     </details>
+    <details class="panel" id="commPanel">
+      <summary class="real-sum"><h2 style="display:inline">Clubs, compétitions et défis</h2></summary>
+      <h3>Mes clubs</h3>
+      <p class="hint" style="margin-top:0">Un club virtuel additionne les kilomètres de ses membres dans un défi du mois. Crée le tien, rejoins celui d’un ami avec son code, ou entre dans le club ouvert à tous.</p>
+      <div id="clubList"></div>
+      <div class="row"><button id="clubOpen">Rejoindre le Club Treadverse (ouvert à tous)</button></div>
+      <div class="settings"><label>Nom du club<input id="clubName" type="text" maxlength="30" placeholder="ex. Running Freneuse"></label><label>Objectif du mois (km)<input id="clubGoal" type="number" value="200" min="10"></label></div>
+      <div class="row"><button id="clubNew" class="primary">Créer un club</button><input id="clubCode" type="text" maxlength="5" placeholder="CODE" style="width:110px;text-transform:uppercase"><button id="clubJoin">Rejoindre</button></div>
+      <p id="clubMsg" class="hint"></p>
+      <h3>Rendez-vous et compétitions</h3>
+      <p class="hint" style="margin-top:0">Des courses à heure fixe, ouvertes à tous ou réservées à un club, avec classement à l’arrivée. Inscris-toi, puis rejoins la ligne de départ dans les 10 minutes avant.</p>
+      <div id="evList"></div>
+      <details><summary style="cursor:pointer;font-weight:600;margin-top:8px">Créer un rendez-vous</summary>
+        <div class="settings"><label>Titre<input id="evTitle" type="text" maxlength="40" placeholder="ex. Le 10 km du mercredi"></label><label>Date et heure<input id="evAt" type="datetime-local"></label>
+          <label>Distance<select id="evDist"><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label>Décor<select id="evDecor"></select></label><label>Relief<select id="evRelief"><option value="decor">celui du décor</option><option value="plat">plat</option><option value="lake">légèrement vallonné</option><option value="forest">vallonné</option><option value="mountain">montagne</option></select></label>
+          <label>Pour<select id="evFor"><option value="">tout le monde</option></select></label><label>Répéter<select id="evRep"><option value="0">une seule fois</option><option value="7">chaque semaine</option></select></label></div>
+        <div class="row"><button id="evNew" class="primary">Créer le rendez-vous</button></div></details>
+      <p id="evMsg" class="hint"></p>
+      <h3>Mon palmarès</h3>
+      <div id="palmList"></div>
+      <h3>Défis entre amis</h3>
+      <p class="hint" style="margin-top:0">Après une course, touche « Défier un ami » dans le bilan : ton ami reçoit un code et court contre ton temps, dans le même décor et le même relief.</p>
+      <div class="row"><input id="chCode" type="text" maxlength="5" placeholder="CODE" style="width:110px;text-transform:uppercase"><button id="chGo" class="primary">Relever le défi</button></div>
+      <p id="chMsg" class="hint"></p>
+      <div id="chMine"></div>
+    </details>
 
 
     <div class="panel word" id="wordcard" hidden><small>Word of the run</small><b id="wWord">–</b><span id="wFr"></span><em id="wEx"></em></div>
@@ -557,7 +583,7 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="stat big"><span hidden><small>À venir (200 m)</small><br><span id="sNext">–</span></span><span><small>Restant</small><br><span id="sLeft">–</span></span><span><small>Cardio</small><br><span id="sHr">–</span></span></div>
       <div class="stat big zenbox" id="zenbox" hidden><span><small>Prochain repère</small><br><b id="zMark">–</b></span><b id="zGap">–</b></div>
       <div class="ghostline big" id="ghostbox" hidden><span><small>Défi</small><br><span id="gLabel">–</span></span><b id="gGap">–</b></div>
-      <div class="ghostline big" id="livebox" hidden><span><small>Course en direct</small><br><span id="liveLines" class="livelines"></span></span><b id="liveRank">–</b></div>
+      <div class="ghostline big" id="livebox" hidden><span><small>Course en direct</small><br><span id="liveLines" class="livelines"></span></span><b id="liveRank">–</b></div><div class="rxbar" id="rxBar" hidden></div><p id="rxFeed" class="hint" style="margin:4px 0 0"></p>
     </div>
 
     <div class="panel">
@@ -620,8 +646,8 @@ button.mini{padding:6px 10px;font-size:13px}
         <h2 style="margin-top:0">Bilan de la course</h2>
         <p id="bilanWhen" class="hint" style="margin-top:0"></p>
         <div class="bilan-grid" id="bilanGrid"></div>
-        <div id="bilanExtra" class="gains" style="margin-top:10px"></div>
-        <div class="row" style="margin-top:12px"><button id="bilanIv" class="primary">Envoyer sur Intervals.icu</button><button id="bilanClose">Fermer</button></div>
+        <div id="bilanExtra" class="gains" style="margin-top:10px"></div><div id="feelBox"><small class="hint">Ton ressenti</small><div class="rxbar" id="feelBar"></div><label class="hint" style="display:flex;align-items:center;gap:8px;margin-top:8px">Effort de 1 à 10<select id="feelRpe"><option value="">–</option></select></label></div>
+        <div class="row" style="margin-top:12px"><button id="bilanIv" class="primary">Envoyer sur Intervals.icu</button><button id="bilanShare">Partager</button><button id="bilanDefi">Défier un ami</button><button id="bilanClose">Fermer</button></div>
         <p id="bilanMsg" class="hint"></p>
       </div>
     </div>
@@ -637,10 +663,10 @@ button.mini{padding:6px 10px;font-size:13px}
           <div><small>Temps</small><b id="fsTime">0:00</b><i id="fsGain"></i></div>
           <div><small>Cardio</small><b id="fsHr">–</b><i>bpm</i></div>
         </div>
-        <div class="fs-gap" id="fsGap" hidden></div><div class="fs-gap" id="fsTer" hidden></div>
+        <div class="fs-gap" id="fsGap" hidden></div><div class="fs-gap" id="fsTer" hidden></div><div class="fs-gap" id="fsRx" hidden></div>
       </div>
       <div class="fs-bottom">
-        <div class="fs-ctl"><span>Vitesse</span><button data-a="s" data-v="-1">−1</button><button data-a="s" data-v="-0.5">−0,5</button><button data-a="s" data-v="0.5">+0,5</button><button data-a="s" data-v="1">+1</button></div>
+        <div class="rxbar" id="fsRxBar" hidden></div><div class="fs-ctl"><span>Vitesse</span><button data-a="s" data-v="-1">−1</button><button data-a="s" data-v="-0.5">−0,5</button><button data-a="s" data-v="0.5">+0,5</button><button data-a="s" data-v="1">+1</button></div>
         <div class="fs-ctl"><span>Pente</span><button data-a="i" data-v="-1">−1</button><button data-a="i" data-v="-0.5">−0,5</button><button data-a="i" data-v="0.5">+0,5</button><button data-a="i" data-v="1">+1</button><button data-a="i" data-v="auto">Auto</button></div>
         <div class="fs-act"><button id="fsPause">Pause</button><button id="fsSkip">Étape suivante</button><button id="fsStop" class="danger">Terminer</button><button id="fsExit">Réduire</button></div>
       </div>
@@ -1476,7 +1502,7 @@ $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
   try{const fd=new FormData();fd.append('file',new Blob([buildGPX()],{type:'application/gpx+xml'}),'horizon.gpx');
     const nm=encodeURIComponent((route?.name||'Course')+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${workout?', séance '+workout.name:''}.`);
     const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
-    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'VirtualRun',trainer:true})})}catch(e){}}
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
     m.textContent='Course envoyée dans Intervals.icu.';$('ivUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 
 /* ---------- cardio de la montre (Bluetooth) ---------- */
@@ -2094,10 +2120,10 @@ $('bilan').addEventListener('click',e=>{if(e.target.id==='bilan')$('bilan').hidd
 $('bilanOpen').onclick=()=>bilanShow();
 $('bilanIv').onclick=async()=>{const S=store.get('lastBilan',null),m=$('bilanMsg');if(!S||!S.gpx)return;m.textContent='Envoi…';
   try{const fd=new FormData();fd.append('file',new Blob([S.gpx],{type:'application/gpx+xml'}),'treadverse.gpx');
-    const nm=encodeURIComponent(S.name+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${S.w?', séance '+S.w:''}.`);
+    const C=S.comp,nm=encodeURIComponent(C?`${C.title}, ${C.place?(C.place===1?'1er':C.place+'e')+' sur '+C.of:'abandon'} (Treadverse)`:S.name+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${S.w?', séance '+S.w:''}.`+(C?`\n\nClassement :\n${C.rank.join('\n')}`:''));
     const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
-    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'VirtualRun',trainer:true})})}catch(e){}}
-    S.sent=true;store.set('lastBilan',S);$('bilanIv').disabled=true;$('bilanIv').textContent='Déjà envoyée sur Intervals.icu';m.textContent='Course envoyée dans Intervals.icu.';try{$('ivUpload').disabled=true;$('upMsg').textContent='Course envoyée dans Intervals.icu.'}catch(e){}}
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
+    S.sent=true;S.ivAct=id||null;store.set('lastBilan',S);$('bilanIv').disabled=true;$('bilanIv').textContent='Déjà envoyée sur Intervals.icu';m.textContent='Course envoyée dans Intervals.icu.';try{$('ivUpload').disabled=true;$('upMsg').textContent='Course envoyée dans Intervals.icu.'}catch(e){}}
   catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 if(store.get('lastBilan',null))$('bilanOpen').hidden=false;
 </script>
@@ -2484,5 +2510,192 @@ function decorScroll(){const box=$('decors'),on=box&&box.querySelector('.decor.o
 $('relief').addEventListener('change',()=>{try{reliefCards()}catch(e){}});
 reliefCards();
 </script>
+<style>
+.rxbar{display:flex;gap:6px;margin-top:8px}.rxbar button{flex:1;font-size:24px;padding:6px 0;line-height:1.1;min-width:0}
+.rxbar button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.fs-bottom .rxbar{margin:0 0 6px}.fs-bottom .rxbar button{background:#000000a6}
+.cbox{background:var(--tile);border-radius:10px;padding:10px 12px;margin:6px 0;display:grid;gap:4px}
+.cbox .row{margin:0}.cbar{height:8px;border-radius:9px;background:var(--line);overflow:hidden}.cbar i{display:block;height:100%;background:var(--accent)}
+</style>
+<script>
+/* ===== 1) réactions pendant une course à plusieurs ===== */
+const RX=['💪','👏','🔥','😅','😂','🥵'],RXSEEN={};let rxLast=0,rxVoice=0;
+[$('rxBar'),$('fsRxBar')].forEach(b=>RX.forEach(e=>{const x=document.createElement('button');x.type='button';x.textContent=e;x.onclick=()=>rxSend(e);b.append(x)}));
+const rxOn=()=>!!(LIVE.room&&LIVE.data&&LIVE.data.start&&(run.state==='running'||run.state==='paused')&&srvNow()>=LIVE.data.start&&Object.keys(LIVE.data.p||{}).length>1);
+function rxShow(id,n,e,me){const t=me?`Toi ${e}`:`${n} ${e}`;$('rxFeed').textContent=t;const f=$('fsRx');f.textContent=t;f.hidden=false;clearTimeout(f._t);f._t=setTimeout(()=>{f.hidden=true;$('rxFeed').textContent=''},3500);
+  try{if(RM.kind==='decor'&&RM.map&&RM.map.react)RM.map.react(me?'me':id,e)}catch(x){}
+  if(!me&&Date.now()-rxVoice>8000){const nm=String(n).replace(/ \((ordi|différé|défi)\)$/,'');const v={'💪':[`${nm} t'encourage`,`${nm} cheers you on`],'👏':[`${nm} t'applaudit`,`${nm} applauds you`],'🔥':[`${nm} attaque`,`${nm} is attacking`]}[e];if(v){rxVoice=Date.now();say(v[0],v[1])}}}
+function rxSend(e){if(!rxOn()||Date.now()-rxLast<2000)return;rxLast=Date.now();rxShow(LIVE.id,'Toi',e,true);
+  if(LIVE.local){rxBotReply(e);return}fb(`rooms/${LIVE.room}/rx/${LIVE.id}`,'PUT',{e,n:liveName(),at:{'.sv':'timestamp'}}).catch(()=>{})}
+function rxBots(){const R=LIVE.data;return Object.entries(R&&R.p||{}).filter(([k,p])=>p.bot&&!p.f)}
+function rxBotSay(id,e){const p=LIVE.data&&LIVE.data.p[id];if(p&&rxOn())rxShow(id,p.n,e,false)}
+function rxBotReply(e){const b=rxBots();if(!b.length||Math.random()>0.6)return;const [id]=b[Math.floor(Math.random()*b.length)];const r={'💪':'👏','👏':'💪','🔥':'💪','😂':'😂','😅':'😅','🥵':'💪'}[e]||'👏';setTimeout(()=>rxBotSay(id,r),1500+Math.random()*1500)}
+const RXP={};
+setInterval(()=>{try{const on=rxOn();$('rxBar').hidden=!on;$('fsRxBar').hidden=!on;if(!on)return;const R=LIVE.data;
+  if(!LIVE.local&&R.rx)for(const [id,v] of Object.entries(R.rx)){if(id===LIVE.id||!v||!v.at||RXSEEN[id]===v.at)continue;RXSEEN[id]=v.at;if(srvNow()-v.at<15000)rxShow(id,v.n||'Coureur',v.e,false)}
+  if(LIVE.local&&run.state==='running'){const me=run.dist,end=R.dist||1e9;for(const [id,p] of Object.entries(R.p)){if(!p.bot||p.f)continue;const ahead=p.d>me;if(RXP[id]!=null&&RXP[id]!==ahead){if(!ahead&&Math.random()<0.35)setTimeout(()=>rxBotSay(id,'😅'),600);else if(ahead&&me>0.6*end&&Math.random()<0.5)setTimeout(()=>rxBotSay(id,'🔥'),600)}RXP[id]=ahead}}}catch(e){}},700);
+/* ===== 2) ressenti après la course ===== */
+const FEEL=[['😌','facile',1],['🙂','bien',2],['😐','moyen',3],['😓','dur',4],['🥵','très dur',5]];
+(()=>{const s=$('feelRpe');for(let i=1;i<=10;i++){const o=document.createElement('option');o.value=i;o.textContent=i+(i===1?' (très facile)':i===10?' (maximal)':'');s.append(o)}
+  FEEL.forEach(([e,l],i)=>{const b=document.createElement('button');b.type='button';b.innerHTML=`${e}<br><small style="font-size:11px">${l}</small>`;b.onclick=()=>feelSet({feel:i});$('feelBar').append(b)});
+  s.onchange=()=>feelSet({rpe:+s.value||null})})();
+function ivFeel(S){const o={};if(S&&S.feel!=null)o.feel=FEEL[S.feel][2];if(S&&S.rpe)o.icu_rpe=S.rpe;return o}
+function feelSet(ch){const S=store.get('lastBilan',null);if(!S)return;Object.assign(S,ch);store.set('lastBilan',S);feelUI(S);
+  if(!S.sim){const h=store.get('feels',[]).filter(x=>x.date!==S.date);h.push({date:S.date,feel:S.feel,rpe:S.rpe,km:S.km});while(h.length>60)h.shift();store.set('feels',h)}
+  if(S.ivAct){iv(`/activity/${S.ivAct}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(ivFeel(S))}).then(()=>{$('bilanMsg').textContent='Ressenti ajouté à ta course dans Intervals.icu.'}).catch(()=>{})}
+  feelTip()}
+function feelUI(S){[...$('feelBar').children].forEach((b,i)=>b.classList.toggle('on',S&&S.feel===i));$('feelRpe').value=S&&S.rpe?S.rpe:''}
+function feelTip(){const el=$('feelTip');if(!el)return;const h=store.get('feels',[]),L=h[h.length-1];el.hidden=true;if(!L||Date.now()-new Date(L.date)>48*3600e3)return;
+  const hard=(L.feel!=null&&L.feel>=4)||(L.rpe&&L.rpe>=9),easy=(L.feel!=null&&L.feel<=0)&&(!L.rpe||L.rpe<=4);const tag=(L.feel!=null?FEEL[L.feel][0]+' ':'')+(L.rpe?`effort ${L.rpe}/10`:'');
+  if(hard){el.textContent=`Ta dernière course t'a paru dure (${tag.trim()}). Aujourd'hui, une course facile ou une récupération t'aidera à progresser.`;el.hidden=false}
+  else if(easy){el.textContent=`Ta dernière course t'a paru facile (${tag.trim()}). Tu peux viser une séance un peu plus soutenue.`;el.hidden=false}}
+(()=>{const bs=bilanShow;bilanShow=function(S){bs.apply(this,arguments);S=S||store.get('lastBilan',null);try{feelUI(S);$('bilanShare').hidden=!S;$('bilanDefi').hidden=!S||S.sim||S.km<1||!S.s||!LIVE.url()}catch(e){}}})();
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);try{S.decor=route&&route.decor||null;S.relief=S.decor?reliefMode():null;
+    if(LIVE.room&&LIVE.data&&LIVE.data.start){const P=livePeople(),i=P.findIndex(p=>p.me);if(i>=0&&LIVE.fin){S.place=i+1;S.of=P.length}}
+    const ch=LIVE.chal;if(ch){const fin=LIVE.fin;S.extra.push(fin?(fin<ch.t?`Défi gagné contre ${ch.n} : ${hdur(ch.t-fin)} d’avance.`:`${ch.n} garde ${hdur(fin-ch.t)} d’avance sur ce défi.`):`Défi de ${ch.n} non terminé.`)}
+    const s=[];for(let t=0;t<=run.time+10;t+=10){const d=distAtT(run.samples,t);s.push(Math.round(d));if(d>=run.dist-0.5)break}S.s=s;store.set('lastBilan',S)}catch(e){}return S}})();
+feelTip();
+/* ===== 3) carte à partager ===== */
+async function shareCard(S){const W=1080,H=1350,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  g.fillStyle='#0f172a';g.fillRect(0,0,W,H);const src=THUMB[S.decor]||THUMB.track;
+  if(src){const im=new Image();im.src=src;await new Promise(r=>{im.onload=r;im.onerror=r});try{g.drawImage(im,0,0,W,Math.round(W*9/16)+120)}catch(e){}}
+  const gr=g.createLinearGradient(0,380,0,840);gr.addColorStop(0,'rgba(15,23,42,0)');gr.addColorStop(1,'#0f172a');g.fillStyle=gr;g.fillRect(0,380,W,460);
+  const T=(t,x,y,sz,c,w,al)=>{g.font=`${w||700} ${sz}px "Barlow Condensed","Inter",sans-serif`;g.fillStyle=c||'#fff';g.textAlign=al||'left';g.fillText(t,x,y)};
+  g.fillStyle='rgba(15,23,42,.7)';g.fillRect(48,48,340,72);T('TREADVERSE',72,100,44,'#34d399',800);
+  const dn=S.decor&&VR.DEFS[S.decor]?VR.DEFS[S.decor].name:S.name;T(dn,72,790,52,'#cbd5e1',600);
+  T(fmt(S.km,2).replace('.',',')+' km',72,930,150,'#fff',800);
+  const cells=[['Durée',clock(S.t)],['Allure',S.sp>0.5?clock(3600/S.sp)+' /km':'–'],['D+',S.up+' m']];
+  cells.forEach(([l,v],i)=>{const x=[72,430,790][i];T(l.toUpperCase(),x,1030,34,'#94a3b8',600);T(v,x,1095,56,'#fff',700)});
+  if(S.place){T((S.place===1?'🏆 ':'')+(S.place===1?'1er':S.place+'e')+' sur '+S.of,72,1205,64,S.place===1?'#fbbf24':'#fb923c',800)}
+  else if(S.w)T('Séance : '+S.w,72,1195,40,'#cbd5e1',600);
+  T(new Date(S.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}),72,1290,34,'#64748b',500);
+  T('Course sur tapis · treadverse',W-72,1290,34,'#64748b',500,'right');
+  const url=cv.toDataURL('image/png'),txt=`${fmt(S.km,2)} km en ${hdur(S.t)} sur Treadverse${S.place?` : ${S.place===1?'1er':S.place+'e'} sur ${S.of}`:''} !`;
+  try{if(window.NativeShareImage){await window.NativeShareImage(url.split(',')[1],txt);return 'ok'}}catch(e){}
+  try{const bl=await (await fetch(url)).blob(),f=new File([bl],'treadverse-course.png',{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],text:txt});return 'ok'}}catch(e){}
+  const a=document.createElement('a');a.href=url;a.download='treadverse-course.png';document.body.append(a);a.click();a.remove();return 'dl'}
+$('bilanShare').onclick=async()=>{const S=store.get('lastBilan',null);if(!S)return;$('bilanMsg').textContent='Préparation de l’image…';try{const r=await shareCard(S);$('bilanMsg').textContent=r==='dl'?'Image enregistrée : tu peux la publier sur Instagram ou WhatsApp.':'Image prête à partager.'}catch(e){$('bilanMsg').textContent='Partage impossible : '+e.message}};
+/* ===== utilitaires communauté ===== */
+const C5=()=>{const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<5;i++)s+=A[Math.floor(Math.random()*A.length)];return s};
+const monthK=()=>new Date().toISOString().slice(0,7);
+const RLAB2={decor:'relief du décor',plat:'plat',lake:'légèrement vallonné',forest:'vallonné',mountain:'montagne'};
+function applyTerrain(decor,relief){if(decor&&VR.DEFS[decor]&&(!route||route.decor!==decor)){const d=VR.DEFS[decor];wps=[];$('rname').value=d.name;setRoute(VR.routePts(decor),d.name,decor);store.set('lastRoute','d:'+decor);drawPrep()}
+  if(relief){$('relief').value=relief;$('relief').onchange()}try{$('raceMode').value='decor';$('raceMode').onchange()}catch(e){}if(!$('view-run').hidden)RM.init()}
+/* ===== 4) clubs virtuels ===== */
+const CLUB_OPEN='TVERS';const CLC={};
+const myClubs=()=>store.get('clubs',[]);
+async function clubEnsureOpen(){try{const c=await fb('rooms/_clubs/'+CLUB_OPEN);if(!c||!c.name)await fb('rooms/_clubs/'+CLUB_OPEN,'PATCH',{name:'Club Treadverse',goal:5000,open:true,owner:''})}catch(e){}}
+async function clubJoin(code){code=(code||'').trim().toUpperCase();const m=$('clubMsg');if(!LIVE.url()){m.textContent='Active d’abord le serveur dans « Course en direct ».';return}
+  if(code===CLUB_OPEN)await clubEnsureOpen();m.textContent='Connexion…';try{const c=await fb('rooms/_clubs/'+code);if(!c||!c.name){m.textContent='Aucun club avec ce code.';return}
+    await fb(`rooms/_clubs/${code}/members/${LIVE.id}`,'PUT',{n:liveName(),at:{'.sv':'timestamp'}});const l=myClubs().filter(x=>x!==code);l.push(code);store.set('clubs',l);m.textContent=`Tu as rejoint « ${c.name} ».`;clubRender()}catch(e){m.textContent='Serveur injoignable : '+e.message}}
+$('clubJoin').onclick=()=>clubJoin($('clubCode').value);$('clubOpen').onclick=()=>clubJoin(CLUB_OPEN);
+$('clubNew').onclick=async()=>{const m=$('clubMsg'),n=$('clubName').value.trim(),goal=Math.max(10,+$('clubGoal').value||200);if(!n){m.textContent='Donne un nom au club.';return}if(!LIVE.url()){m.textContent='Active d’abord le serveur dans « Course en direct ».';return}
+  const code=C5();try{await fb('rooms/_clubs/'+code,'PUT',{name:n,goal,owner:LIVE.id,created:{'.sv':'timestamp'},members:{[LIVE.id]:{n:liveName(),at:{'.sv':'timestamp'}}}});const l=myClubs();l.push(code);store.set('clubs',l);
+    m.textContent=`Club « ${n} » créé. Code à donner aux membres : ${code}`;$('clubName').value='';clubRender();try{if(navigator.share)navigator.share({title:'Club Treadverse',text:`Rejoins mon club « ${n} » sur Treadverse : onglet Clubs › code ${code}`})}catch(e){}}catch(e){m.textContent='Serveur injoignable : '+e.message}};
+async function clubRender(){const box=$('clubList'),L=myClubs();$('clubOpen').hidden=L.includes(CLUB_OPEN);if(!L.length){box.innerHTML='<p class="hint" style="margin:0">Tu n’es dans aucun club pour l’instant.</p>';evForOpts();return}
+  if(!LIVE.url())return;const mk=monthK(),out=[];
+  for(const code of L){let c=null;try{c=await fb('rooms/_clubs/'+code)}catch(e){}if(!c){continue}CLC[code]=c;const km=(c.km&&c.km[mk])||{},mem=c.members||{};
+    const rows=Object.entries(km).map(([id,v])=>({n:(mem[id]&&mem[id].n)||'Coureur',v:+v||0,me:id===LIVE.id})).sort((a,b)=>b.v-a.v),tot=rows.reduce((a,r)=>a+r.v,0),pc=Math.min(100,tot/(c.goal||1)*100);
+    out.push(`<div class="cbox"><b>${esc(c.name)}</b><small class="hint" style="margin:0">Code ${code} · ${Object.keys(mem).length} membre(s)${c.open?' · ouvert à tous':''}</small>
+      <small>Défi du mois : ${fmt(tot,1)} / ${c.goal} km</small><div class="cbar"><i style="width:${pc}%"></i></div>
+      <small class="hint" style="margin:0">${rows.slice(0,5).map((r,i)=>`${i+1}. ${r.me?'<b>':''}${esc(r.n)} ${fmt(r.v,1)} km${r.me?'</b>':''}`).join(' · ')||'Personne n’a encore couru ce mois-ci.'}</small>
+      <div class="row"><button class="mini" data-cl="${code}">Quitter</button></div></div>`)}
+  box.innerHTML=out.join('');box.querySelectorAll('[data-cl]').forEach(b=>b.onclick=async()=>{const code=b.dataset.cl;store.set('clubs',myClubs().filter(x=>x!==code));try{await fb(`rooms/_clubs/${code}/members/${LIVE.id}`,'DELETE')}catch(e){}clubRender()});evForOpts()}
+function clubAddRun(){try{if(run.sim||run.dist<200||!LIVE.url())return;const mk=monthK(),K=store.get('clubKm',{});K[mk]=(K[mk]||0)+run.dist/1000;store.set('clubKm',K);
+  myClubs().forEach(code=>fb(`rooms/_clubs/${code}/km/${mk}/${LIVE.id}`,'PUT',Math.round(K[mk]*100)/100).catch(()=>{}))}catch(e){}}
+(()=>{const cr=chalRecord;chalRecord=function(){const r=cr.apply(this,arguments);clubAddRun();return r}})();
+/* ===== 5) rendez-vous et compétitions ===== */
+let EVS=[],EVAT=0;
+function evNextSunday(){const d=new Date();d.setHours(9,0,0,0);const add=(7-d.getDay())%7;d.setDate(d.getDate()+add);if(d.getTime()<Date.now()-30*60e3)d.setDate(d.getDate()+7);return d.getTime()}
+const EV_BUILTIN=()=>({id:'DIM5',title:'Le 5 km du dimanche',at:evNextSunday(),rep:7,dist:5000,decor:'sea',relief:'decor',club:'',by:'Treadverse',builtin:1});
+function evOcc(ev){if(ev.builtin)return ev.at;let a=ev.at;if(ev.rep&&a<Date.now()-30*60e3){const P=ev.rep*864e5;a+=Math.ceil((Date.now()-30*60e3-a)/P)*P}return a}
+const evKey=(ev,occ)=>new Date(occ).toISOString().slice(0,16).replace(/[-:T]/g,'');
+async function evLoad(){if(!LIVE.url())return;try{const all=await fb('rooms/_events')||{};const b=all.DIM5||{};EVS=[{...EV_BUILTIN(),reg:b.reg||{},res:b.res||{}}];
+  for(const [id,v] of Object.entries(all)){if(id==='DIM5'||!v||!v.at)continue;if(v.club&&!myClubs().includes(v.club))continue;EVS.push({...v,id})}EVAT=Date.now()}catch(e){}evRender()}
+function evRender(){const box=$('evList');if(!box)return;const now=Date.now(),items=EVS.map(ev=>({ev,occ:evOcc(ev)})).filter(x=>x.occ>now-30*60e3&&x.occ<now+31*864e5).sort((a,b)=>a.occ-b.occ);
+  if(!LIVE.url()){box.innerHTML='<p class="hint" style="margin:0">Active d’abord le serveur dans « Course en direct ».</p>';return}
+  box.innerHTML=items.map(({ev,occ})=>{const k=evKey(ev,occ),reg=(ev.reg&&ev.reg[k])||{},n=Object.keys(reg).length,mine=!!reg[LIVE.id],d=new Date(occ),open=now>=occ-10*60e3&&now<=occ+15e3,past=now>occ+15e3;
+    const res=(ev.res&&ev.res[k])||{},rr=Object.values(res).filter(r=>r&&r.t).sort((a,b)=>a.t-b.t);
+    return `<div class="cbox"><b>${esc(ev.title)}</b><small>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})} à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}${ev.rep?' · chaque semaine':''}</small>
+      <small class="hint" style="margin:0">${fmt(ev.dist/1000,ev.dist%1000?1:0)} km · ${esc(VR.DEFS[ev.decor]?VR.DEFS[ev.decor].name:'')} · ${RLAB2[ev.relief]||''} · ${n} inscrit(s)${ev.club&&CLC[ev.club]?' · club '+esc(CLC[ev.club].name):ev.club?' · club':''} · par ${esc(ev.by||'?')}</small>
+      ${rr.length?`<small>Classement : ${rr.slice(0,5).map((r,i)=>`${i+1}. ${esc(r.n)} ${hdur(r.t)}`).join(' · ')}</small>`:''}
+      <div class="row">${past?'':`<button class="mini" data-ev="${ev.id}" data-a="reg">${mine?'Inscrit ✓':'Je participe'}</button>`}${open?`<button class="mini primary" data-ev="${ev.id}" data-a="join">Rejoindre la course</button>`:''}${!ev.builtin&&ev.owner===LIVE.id?`<button class="mini danger" data-ev="${ev.id}" data-a="del">Supprimer</button>`:''}</div></div>`}).join('')||'<p class="hint" style="margin:0">Aucun rendez-vous à venir.</p>';
+  box.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>evAct(b.dataset.ev,b.dataset.a));evSoon(items)}
+function evSoon(items){const el=$('evSoon');if(!el)return;const now=Date.now();const x=(items||[]).find(({ev,occ})=>{const r=(ev.reg&&ev.reg[evKey(ev,occ)])||{};return r[LIVE.id]&&occ>now-15e3&&occ<now+30*60e3});
+  if(!x){el.hidden=true;return}const d=new Date(x.occ),open=now>=x.occ-10*60e3;el.hidden=false;el.innerHTML=`Rendez-vous « ${esc(x.ev.title)} » à ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}. ${open?'<button class="mini primary" id="evSoonGo">Rejoindre la course</button>':'Tu pourras rejoindre la course 10 minutes avant.'}`;
+  if(open)$('evSoonGo').onclick=()=>evAct(x.ev.id,'join')}
+async function evAct(id,a){const ev=EVS.find(e=>e.id===id),m=$('evMsg');if(!ev)return;const occ=evOcc(ev),k=evKey(ev,occ);
+  try{if(a==='reg'){const on=ev.reg&&ev.reg[k]&&ev.reg[k][LIVE.id];await fb(`rooms/_events/${id}/reg/${k}/${LIVE.id}`,on?'DELETE':'PUT',on?undefined:{n:liveName()});await evLoad();return}
+    if(a==='del'){await fb('rooms/_events/'+id,'DELETE');await evLoad();return}
+    if(a==='join'){if(run.state!=='idle'){m.textContent='Termine d’abord ta course en cours.';return}if(Date.now()>occ+15e3){m.textContent='Le départ est déjà donné.';return}
+      applyTerrain(ev.decor,ev.relief);await liveClock();const code='EV'+id+k;const r=await fb('rooms/'+code);
+      if(!r||!r.start)await fb('rooms/'+code,'PATCH',{host:ev.owner||LIVE.id,decor:ev.decor,dname:VR.DEFS[ev.decor].name,dist:ev.dist,wk:false,start:occ,created:{'.sv':'timestamp'}});
+      await fb(`rooms/${code}/p/${LIVE.id}`,'PUT',{n:liveName(),d:0,t:0,at:{'.sv':'timestamp'}});
+      if(!(ev.reg&&ev.reg[k]&&ev.reg[k][LIVE.id]))fb(`rooms/_events/${id}/reg/${k}/${LIVE.id}`,'PUT',{n:liveName()}).catch(()=>{});
+      LIVE.local=false;LIVE.room=code;LIVE.fin=false;LIVE.prev={};LIVE.said={};LIVE.ev={id,k};liveListen();liveUI();show('run');m.textContent=`Tu es sur la ligne de départ de « ${ev.title} ».`}}catch(e){m.textContent='Serveur injoignable : '+e.message}}
+function evForOpts(){const s=$('evFor');if(!s)return;const v=s.value;s.innerHTML='<option value="">tout le monde</option>'+myClubs().map(c=>`<option value="${c}">club ${esc(CLC[c]?CLC[c].name:c)}</option>`).join('');s.value=v}
+(()=>{const dc=$('evDecor');Object.entries(VR.DEFS).forEach(([k,d])=>{if(k==='hilly')return;const o=document.createElement('option');o.value=k;o.textContent=d.name;dc.append(o)});dc.value='sea';
+  const d=new Date(Date.now()+864e5);d.setHours(19,0,0,0);$('evAt').value=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16)})();
+$('evNew').onclick=async()=>{const m=$('evMsg'),t=$('evTitle').value.trim(),at=new Date($('evAt').value).getTime();if(!LIVE.url()){m.textContent='Active d’abord le serveur dans « Course en direct ».';return}
+  if(!t){m.textContent='Donne un titre au rendez-vous.';return}if(!(at>Date.now())){m.textContent='Choisis une date à venir.';return}
+  try{await fb('rooms/_events/'+C5(),'PUT',{title:t,at,rep:+$('evRep').value||0,dist:+$('evDist').value,decor:$('evDecor').value,relief:$('evRelief').value,club:$('evFor').value,by:liveName(),owner:LIVE.id,created:{'.sv':'timestamp'}});
+    m.textContent='Rendez-vous créé.';$('evTitle').value='';await evLoad()}catch(e){m.textContent='Serveur injoignable : '+e.message}};
+/* ===== 6) défis entre amis ===== */
+$('bilanDefi').onclick=async()=>{const S=store.get('lastBilan',null),m=$('bilanMsg');if(!S||!S.s)return;m.textContent='Création du défi…';
+  const code=C5(),dist=Math.floor(S.km*1000);try{await fb('rooms/_chal/'+code,'PUT',{n:liveName(),dist,t:Math.round(S.t),s:S.s,decor:S.decor||'track',relief:S.relief||'decor',date:new Date().toISOString().slice(0,10),owner:LIVE.id});
+    const l=store.get('myChals',[]);l.push(code);store.set('myChals',l.slice(-20));
+    const txt=`${liveName()} te défie sur Treadverse : ${fmt(dist/1000,2)} km en ${hdur(S.t)}${S.decor&&VR.DEFS[S.decor]?' ('+VR.DEFS[S.decor].name+')':''}. Dans l'appli : onglet Clubs › Défis entre amis › code ${code}`;
+    m.textContent=`Défi créé, code ${code}.`;try{if(navigator.share){await navigator.share({title:'Défi Treadverse',text:txt});return}}catch(e){}try{await navigator.clipboard.writeText(txt);m.textContent+=' Message copié : colle-le dans WhatsApp ou un SMS.'}catch(e){}}catch(e){m.textContent='Serveur injoignable : '+e.message}};
+$('chGo').onclick=async()=>{const m=$('chMsg'),code=$('chCode').value.trim().toUpperCase();if(!LIVE.url()){m.textContent='Active d’abord le serveur dans « Course en direct ».';return}if(run.state!=='idle'){m.textContent='Termine d’abord ta course en cours.';return}
+  m.textContent='Recherche du défi…';try{const c=await fb('rooms/_chal/'+code);if(!c||!c.s){m.textContent='Aucun défi avec ce code.';return}if(LIVE.room)await liveLeaveX();
+    applyTerrain(c.decor,c.relief);const now=Date.now();
+    LIVE.local=true;LIVE.room='DEFI';LIVE.fin=false;LIVE.prev={};LIVE.said={};LIVE.rank=0;LIVE.chal={code,n:c.n,t:c.t};
+    LIVE.data={host:LIVE.id,decor:c.decor,dname:route.name,dist:c.dist,wk:false,start:now+15000,p:{[LIVE.id]:{n:liveName(),d:0,t:0,at:now},gh0:{n:c.n+' (défi)',d:0,t:0,at:now,gh:{s:c.s,t:c.t}}}};
+    liveUI();show('run');m.textContent=`Défi de ${c.n} : ${fmt(c.dist/1000,2)} km en ${hdur(c.t)}. Départ dans 15 secondes.`;$('liveMsg').textContent=m.textContent}catch(e){m.textContent='Serveur injoignable : '+e.message}};
+(()=>{const st=$('stop').onclick;$('stop').onclick=async function(){const ch=LIVE.chal,ev=LIVE.ev,live=run.state==='running'||run.state==='paused';const r=await st.apply(this,arguments);
+  try{if(live&&ch){const fin=LIVE.fin;fb(`rooms/_chal/${ch.code}/res/${LIVE.id}`,'PUT',{n:liveName(),t:fin||null,d:Math.round(run.dist),at:{'.sv':'timestamp'}}).catch(()=>{});
+}
+    if(live&&ev&&LIVE.fin)fb(`rooms/_events/${ev.id}/res/${ev.k}/${LIVE.id}`,'PUT',{n:liveName(),t:LIVE.fin}).catch(()=>{})}catch(e){}
+  setTimeout(()=>{LIVE.chal=null;LIVE.ev=null},1000);return r}})();
+async function chMine(){const box=$('chMine');const L=store.get('myChals',[]);if(!L.length||!LIVE.url()){box.innerHTML='';return}const out=[];
+  for(const code of L.slice().reverse().slice(0,5)){let c=null;try{c=await fb('rooms/_chal/'+code)}catch(e){}if(!c)continue;const rs=Object.values(c.res||{});
+    out.push(`<div class="cbox"><b>Mon défi ${code} · ${fmt(c.dist/1000,2)} km en ${hdur(c.t)}</b><small class="hint" style="margin:0">${rs.length?rs.map(r=>r.t?`${esc(r.n)} ${hdur(r.t)} ${r.t<c.t?'(t’a battu)':'(battu)'}`:`${esc(r.n)} a abandonné à ${fmt(r.d/1000,2)} km`).join(' · '):'Personne ne l’a encore relevé.'}</small></div>`)}
+  box.innerHTML=out.join('')}
+/* chargement */
+function commRefresh(){if(!LIVE.url())return;clubRender();evLoad();chMine()}
+
+setTimeout(()=>{try{evLoad();clubRender()}catch(e){}},2500);setInterval(()=>{try{if(Date.now()-EVAT>60e3)evLoad();else evRender()}catch(e){}},15000);
+</script>
+<script>
+/* onglet « Clubs » : clubs, compétitions et défis, à part du reste */
+(()=>{const tabs=document.querySelector('.tabs');const b=document.createElement('button');b.className='tab';b.setAttribute('role','tab');b.id='tab-club';b.setAttribute('aria-selected','false');b.textContent='Clubs';tabs.insertBefore(b,$('tab-coach')||$('tab-out'));
+  const sec=document.createElement('section');sec.id='view-club';sec.className='wrap';sec.style.padding='0';sec.hidden=true;$('view-prep').parentNode.insertBefore(sec,$('view-prep'));
+  const P=$('commPanel'),d=document.createElement('div');d.className='panel';d.id='commBox';const h=document.createElement('h2');h.textContent='Clubs, compétitions et défis';d.append(h);
+  [...P.childNodes].forEach(n=>{if(n.tagName!=='SUMMARY')d.append(n)});P.replaceWith(d);sec.append(d);
+  const s0=show;show=function(v){s0(v);$('view-club').hidden=v!=='club';$('tab-club').setAttribute('aria-selected',v==='club');if(v==='club'){try{commRefresh()}catch(e){}window.scrollTo(0,0)}};
+  b.onclick=()=>show('club')})();
+</script>
+<script>
+/* palmarès et lien avec Intervals.icu */
+function compTitle(){if(LIVE.ev&&LIVE.ev.title)return LIVE.ev.title;if(LIVE.chal)return 'Défi de '+LIVE.chal.n;if(LIVE.local)return 'Course contre l’ordinateur';return 'Course en direct'}
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);try{if(LIVE.room&&LIVE.data&&LIVE.data.start&&run.time>=60){const P=livePeople(),i=P.findIndex(p=>p.me);
+    const rk=P.slice(0,10).map((p,k)=>`${k+1}. ${(p.me?liveName():p.n||'Coureur').replace(/ \((ordi|différé|défi)\)$/,'')} ${p.f?hdur(p.f):fmt((p.me?run.dist:p.d)/1000,2)+' km'}`);
+    S.comp={title:compTitle(),place:LIVE.fin&&i>=0?i+1:null,of:P.length,dist:LIVE.data.dist,rank:rk,kind:LIVE.ev?'rdv':LIVE.chal?'defi':LIVE.local?'ordi':'direct'};
+    if(!S.sim){const L=store.get('palmares',[]);L.push({date:S.date,title:S.comp.title,kind:S.comp.kind,dist:S.comp.dist,km:S.km,t:LIVE.fin||Math.round(run.time),place:S.comp.place,of:S.comp.of});while(L.length>300)L.shift();store.set('palmares',L)}
+    store.set('lastBilan',S)}}catch(e){}return S}})();
+function palmRender(){const box=$('palmList');if(!box)return;const L=store.get('palmares',[]);if(!L.length){box.innerHTML='<p class="hint" style="margin:0">Tes compétitions, courses à plusieurs et défis apparaîtront ici.</p>';return}
+  const win=L.filter(x=>x.place===1).length,pod=L.filter(x=>x.place&&x.place<=3).length;
+  box.innerHTML=`<div class="cbox"><b>${L.length} course${L.length>1?'s':''} · 🏆 ${win} victoire${win>1?'s':''} · ${pod} podium${pod>1?'s':''}</b></div>`+L.slice().reverse().slice(0,15).map(x=>`<div class="cbox"><b>${x.place===1?'🏆 ':x.place===2?'🥈 ':x.place===3?'🥉 ':''}${esc(x.title)}</b><small class="hint" style="margin:0">${new Date(x.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})} · ${fmt(x.km,2)} km en ${hdur(x.t)} · ${x.place?(x.place===1?'1er':x.place+'e')+' sur '+x.of:'abandon'}</small></div>`).join('')}
+(()=>{const cr=commRefresh;commRefresh=function(){palmRender();return cr.apply(this,arguments)}})();palmRender();
+/* inscription à un rendez-vous : la course arrive dans le calendrier Intervals.icu */
+async function ivRace(ev,occ,on){try{if(!(store.get('ivKey','')&&ivAth()!=='0'))return '';const M=store.get('ivRaces',{}),k=ev.id+'_'+evKey(ev,occ);
+    if(on){const d=new Date(occ),loc=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,19);
+      const r=await iv(`/athlete/${ivAth()}/events`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:'RACE_C',type:'Run',start_date_local:loc,name:ev.title+' (Treadverse)',description:`Compétition Treadverse sur tapis : ${fmt(ev.dist/1000,ev.dist%1000?1:0)} km, ${VR.DEFS[ev.decor]?VR.DEFS[ev.decor].name:''}, ${RLAB2[ev.relief]||''}.`,distance:ev.dist})});
+      if(r&&r.id){M[k]=r.id;store.set('ivRaces',M)}return ' Ajoutée à ton calendrier Intervals.icu.'}
+    else if(M[k]){await iv(`/athlete/${ivAth()}/events/${M[k]}`,{method:'DELETE'}).catch(()=>{});delete M[k];store.set('ivRaces',M);return ' Retirée de ton calendrier Intervals.icu.'}}catch(e){return ' (Intervals.icu : '+e.message+')'}return ''}
+(()=>{const ea=evAct;evAct=async function(id,a){const ev=EVS.find(e=>e.id===id);const occ=ev?evOcc(ev):0,was=ev&&ev.reg&&ev.reg[evKey(ev,occ)]&&ev.reg[evKey(ev,occ)][LIVE.id];
+  const r=await ea.apply(this,arguments);try{if(ev&&a==='join'&&LIVE.ev)LIVE.ev.title=ev.title;if(ev&&a==='reg'){const t=await ivRace(ev,occ,!was);$('evMsg').textContent=(was?'Désinscrit.':'Inscrit.')+t}}catch(e){}return r}})();
+</script>
 </body>
+
 </html>
