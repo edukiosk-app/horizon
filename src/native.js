@@ -4,6 +4,7 @@ import { BleClient, numberToUUID } from '@capacitor-community/bluetooth-le';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 if (Capacitor.isNativePlatform()) {
   const NAMES = { heart_rate: 0x180d, heart_rate_measurement: 0x2a37, fitness_machine: 0x1826 };
@@ -63,6 +64,12 @@ if (Capacitor.isNativePlatform()) {
 
   // Partage (WhatsApp, SMS…) : la WebView d'Android n'a pas navigator.share
   try { Object.defineProperty(navigator, 'share', { value: (o) => Share.share({ title: o.title, text: o.text, url: o.url, dialogTitle: 'Envoyer le défi' }), configurable: true }); } catch (e) {}
+
+  // Partage d'une image (carte de fin de course)
+  window.NativeShareImage = async (b64, text) => {
+    const f = await Filesystem.writeFile({ path: 'treadverse-course.png', data: b64, directory: Directory.Cache });
+    await Share.share({ title: 'Ma course Treadverse', text, files: [f.uri], dialogTitle: 'Partager ma course' });
+  };
 
   // Écran toujours allumé pendant la course
   try {
