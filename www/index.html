@@ -577,6 +577,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <button id="stop" class="danger" disabled>Terminer</button>
         <a id="sv" class="btn" href="#" target="_blank" rel="noopener">Voir la rue ici</a>
         <button id="fsOpen">Plein écran</button>
+        <button id="bilanOpen" hidden>Voir le bilan</button>
       </div>
       <p class="hint">Avant de démarrer, accroche la clé de sécurité du tapis. Tu peux toujours changer la vitesse sur le tapis lui-même : l'application suit jusqu'à l'étape suivante.</p>
     </div>
@@ -606,6 +607,17 @@ button.mini{padding:6px 10px;font-size:13px}
       <p id="fixMsg" class="hint">Ta montre a aussi enregistré la course ? Treadverse compare sa distance à celle du tapis et corrige la montre dans Intervals.icu.</p>
     </div>
 
+
+    <div id="bilan" class="bilan" hidden>
+      <div class="bilan-card">
+        <h2 style="margin-top:0">Bilan de la course</h2>
+        <p id="bilanWhen" class="hint" style="margin-top:0"></p>
+        <div class="bilan-grid" id="bilanGrid"></div>
+        <div id="bilanExtra" class="gains" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:12px"><button id="bilanIv" class="primary">Envoyer sur Intervals.icu</button><button id="bilanClose">Fermer</button></div>
+        <p id="bilanMsg" class="hint"></p>
+      </div>
+    </div>
     <div id="fs" hidden>
       <div class="fs-map" id="fsMap"></div>
       <div class="fs-top">
@@ -1446,11 +1458,11 @@ async function importActivity(a,btn){btn.textContent='Import…';btn.disabled=tr
 function buildGPX(){const t0=run.startedAt||Date.now()-run.time*1000,nm=esc((route?.name||'Course')+' (Treadverse)');
   const pts=run.samples.map(([t,d,h])=>{const p=posAt(wrapX(d));return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`}).join('\n');
   return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Treadverse" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts}\n</trkseg></trk></gpx>`}
-function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
+function showAfter(done){if(run.time<60)return;setTimeout(()=>{try{bilanShow(bilanBuild(done,window._lastGrant||null))}catch(e){log('Bilan : '+e.message)}},300);$('after').hidden=false;$('upMsg').textContent='';$('ivUpload').disabled=false;
   if(run.sim)$('afterGain').innerHTML='<span>Course simulée : elle ne compte ni dans tes kilomètres, ni dans ton niveau, tes badges ou tes records. Elle reste utilisable comme défi en simulation.</span>';
-  const g=grantRun(done);if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
+  const g=grantRun(done);window._lastGrant=g;if(g){const L=[`<span>+${g.xp} XP${g.up?` · <b>niveau ${g.up} atteint</b>`:''}</span>`];
     g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});(g.chal||[]).forEach(n=>L.push(`<span>Défi réussi : <b>${esc(n)}</b></span>`));$('afterGain').innerHTML=L.join('');
-    const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),...(g.chal||[]).map(n=>'Défi réussi : '+n),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
+    const spoken=[...g.recs.map(r=>'Nouveau record : '+spokDur(r)),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),...(g.chal||[]).map(n=>'Défi réussi : '+n),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
     if(spoken)setTimeout(()=>say(spoken,(g.recs.length?'New personal best. ':'')+(g.news.length?g.news.length+' new badge'+(g.news.length>1?'s':''):'')+(g.up?'. Level '+g.up:'')),2500)}
   $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${hdur(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
 $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
@@ -1527,7 +1539,7 @@ function grantRun(done){if(run.time<60||run.sim)return null;const P=prof(),km=ru
   if(t5){g('f5_30',t5<1800);g('f5_25',t5<1500);g('f5_20',t5<1200);g('pb5',!!(P.records[5000]&&t5<P.records[5000].t))}
   if(t10){g('f10_60',t10<3600);g('f10_50',t10<3000);g('f10_45',t10<2700);g('f10_40',t10<2400);g('pb10',!!(P.records[10000]&&t10<P.records[10000].t))}
   let chal=[];try{const c=chalRecord(P);xp+=c.xp;chal=c.done}catch(e){}
-  RECS.forEach(([D,lab])=>{const t=bestTime(run.samples,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
+  RECS.forEach(([D,lab])=>{const t=bestTime(run.samples,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${hdur(t)}`)}});
   const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
   return{xp,news,recs,chal,up:lv>lv0?lv:0}}
 function badgeSVG(on){return`<svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="${on?'#f5c542':'#30353b'}" stroke="${on?'#ffffff':'#3a4047'}" stroke-width="2"/><path d="M17 9.5l2.3 4.7 5.2.8-3.8 3.6.9 5.1-4.6-2.4-4.6 2.4.9-5.1-3.8-3.6 5.2-.8z" fill="${on?'#b8860b':'#4b5259'}"/></svg>`}
@@ -1695,7 +1707,7 @@ function oAfter(){if(O.t<60){return}$('oAfter').hidden=false;$('oMsg').textConte
   gb('week3',P.dates.filter(d=>now-new Date(d)<7*864e5).length>=3);gb('k5',O.d>=5000);gb('k10',O.d>=10000);gb('english',EN());
   gb('record',beat&&['dist','route'].includes($('oRef').value));gb('duel',beat&&$('oRef').value==='friend');gb('outdoor',beat&&$('oRef').value==='watch');
   const h=new Date(O.startedAt).getHours();gb('early',h<7);gb('night',h>=21);
-  RECS.forEach(([D,lab])=>{const t=bestTime(O.s,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${clock(t)}`)}});
+  RECS.forEach(([D,lab])=>{const t=bestTime(O.s,D);if(t&&(!P.records[D]||t<P.records[D].t)){P.records[D]={t,date:now.toISOString()};recs.push(`${lab} en ${hdur(t)}`)}});
   const lv0=levelOf(P.xp);P.xp+=xp;const lv=levelOf(P.xp);store.set('profile',P);renderProfile();
   const L=[`<span>+${xp} XP${lv>lv0?` · <b>niveau ${lv} atteint</b>`:''}</span>`];recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));
   news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});$('oGain').innerHTML=L.join('');
@@ -1841,7 +1853,7 @@ function chalList(dt=new Date()){const m=dt.getMonth(),y=dt.getFullYear(),mk=`${
 function chalVal(c){return store.get('hist',[]).filter(h=>{const d=new Date(h.d);return d>=c.from&&d<c.to}).reduce((a,h)=>a+c.f(h),0)}
 function chalRecord(P){const up=Math.round(Math.max(run.gain||0,run.vert||0));const h=store.get('hist',[]);h.push({d:new Date().toISOString(),km:Math.round(run.dist)/1000,up,t:Math.round(run.time)});while(h.length>400)h.shift();store.set('hist',h);
   P.chal=P.chal||{};let xp=0;const done=[];chalList().forEach(c=>{if(!P.chal[c.id]&&chalVal(c)>=c.goal){P.chal[c.id]=new Date().toISOString();xp+=c.xp;done.push(c.name)}});
-  try{leaguePush()}catch(e){}return{xp,done}}
+  try{leaguePush().catch(()=>{})}catch(e){}return{xp,done}}
 function chalUI(){const box=$('pfChal');if(!box)return;const P=prof(),now=new Date();
   box.innerHTML=chalList().map(c=>{const v=chalVal(c),ok=!!(P.chal||{})[c.id]||v>=c.goal,pc=Math.min(100,Math.round(v/c.goal*100)),days=Math.ceil((c.to-now)/864e5);
     return`<div class="chal${ok?' on':''}${c.season?' season':''}"><div><b>${esc(c.name)}</b><small>${ok?'Réussi':`${c.u==='km'?fmt(v,1):Math.round(v).toLocaleString('fr-FR')} / ${c.goal.toLocaleString('fr-FR')} ${c.u} · encore ${days} jour${days>1?'s':''}`} · +${c.xp} XP</small></div><div class="xpbar"><i style="width:${pc}%"></i></div></div>`}).join('');
@@ -2045,5 +2057,43 @@ function addWalk(steps){let i=0,t=0;while(i<steps.length&&steps[i].type==='warm'
     ed.push(n>1?{rep:n,items:[inner,...(parseVal(V('esRs'))?[{t:'rec',v:V('esRs')}]:[])]}:inner);box.hidden=true;edDraw()};
 })();
 </script>
+<style>
+.bilan{position:fixed;inset:0;z-index:9999;background:rgba(5,8,12,.78);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.bilan[hidden]{display:none}
+.bilan-card{background:var(--panel,#1f2329);color:inherit;border-radius:18px;padding:18px;width:100%;max-width:520px;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.bilan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bilan-grid div{background:rgba(148,163,184,.1);border-radius:12px;padding:10px}
+.bilan-grid small{display:block;opacity:.7;font-size:.78em;text-transform:uppercase;letter-spacing:.04em}.bilan-grid b{font-size:1.35em}
+</style>
+<script>
+/* bilan de fin de course : reste affiché jusqu'à « Fermer », se rouvre avec « Voir le bilan », envoi Intervals.icu au choix */
+function bilanBuild(done,g){const hr=run.samples.map(x=>x[2]).filter(v=>v>0),avgHr=hr.length?Math.round(hr.reduce((a,b)=>a+b,0)/hr.length):0;
+  const km=run.dist/1000,sp=run.time>0?run.dist/run.time*3.6:0,up=Math.round(Math.max(run.gain||0,run.vert||0));
+  const extra=[];if(run.sim)extra.push('Course simulée : elle ne compte pas dans tes kilomètres, ton niveau, tes badges ni tes records.');
+  if(g){g.recs.forEach(r=>extra.push('Nouveau record : '+r));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);if(b)extra.push('Badge débloqué : '+b[1])});(g.chal||[]).forEach(n=>extra.push('Défi réussi : '+n));if(g.xp)extra.push(`+${g.xp} XP${g.up?' · niveau '+g.up+' atteint':''}`)}
+  const G=run.ghost;if(G){const gt=gTimeAt(G,run.dist);if(gt!=null){const d=gt-run.time,R=refName();extra.push(d>=0?`Défi gagné contre ${R.fr}, avec ${hdur(d)} d'avance.`:`${R.Fr} garde ${hdur(-d)} d'avance.`)}}
+  if(LIVE.room&&LIVE.fin){const P=livePeople(),i=P.findIndex(p=>p.me);extra.push(`Course en direct : ${i?i+1+'e':'1er'} sur ${P.length}.`)}
+  let gpx='';try{gpx=buildGPX()}catch(e){}
+  const S={date:new Date().toISOString(),name:route?route.name:'Course',w:workout?workout.name:'',km,t:run.time,sp,up,hr:avgHr,extra,sim:!!run.sim,done,gpx,sent:false};store.set('lastBilan',S);return S}
+function bilanShow(S){S=S||store.get('lastBilan',null);if(!S)return;
+  $('bilanWhen').textContent=`${S.name}${S.w?' · '+S.w:''} · ${new Date(S.date).toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}`;
+  const cell=(l,v)=>`<div><small>${l}</small><b>${v}</b></div>`;
+  $('bilanGrid').innerHTML=cell('Distance',fmt(S.km,2)+' km')+cell('Durée',hdur(S.t))+cell('Allure moyenne',S.sp>0.5?clock(3600/S.sp)+' /km':'–')+cell('Vitesse moyenne',fmt(S.sp,1)+' km/h')+cell('Dénivelé',S.up+' m')+cell('Cardio moyen',S.hr?S.hr+' bpm':'–');
+  $('bilanExtra').innerHTML=S.extra.map(x=>`<span>${esc(x)}</span>`).join('');
+  const b=$('bilanIv');b.hidden=S.sim||!S.gpx;b.disabled=!!S.sent;b.textContent=S.sent?'Déjà envoyée sur Intervals.icu':'Envoyer sur Intervals.icu';
+  $('bilanMsg').textContent=S.sim?'Les courses simulées ne s’envoient pas sur Intervals.icu.':S.sent?'':'Si ta montre a aussi enregistré cette course, ne l’envoie pas : elle apparaîtrait deux fois.';
+  $('bilan').hidden=false;$('bilanOpen').hidden=false}
+$('bilanClose').onclick=()=>{$('bilan').hidden=true};
+$('bilan').addEventListener('click',e=>{if(e.target.id==='bilan')$('bilan').hidden=true});
+$('bilanOpen').onclick=()=>bilanShow();
+$('bilanIv').onclick=async()=>{const S=store.get('lastBilan',null),m=$('bilanMsg');if(!S||!S.gpx)return;m.textContent='Envoi…';
+  try{const fd=new FormData();fd.append('file',new Blob([S.gpx],{type:'application/gpx+xml'}),'treadverse.gpx');
+    const nm=encodeURIComponent(S.name+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${S.w?', séance '+S.w:''}.`);
+    const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'VirtualRun',trainer:true})})}catch(e){}}
+    S.sent=true;store.set('lastBilan',S);$('bilanIv').disabled=true;$('bilanIv').textContent='Déjà envoyée sur Intervals.icu';m.textContent='Course envoyée dans Intervals.icu.';try{$('ivUpload').disabled=true;$('upMsg').textContent='Course envoyée dans Intervals.icu.'}catch(e){}}
+  catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
+if(store.get('lastBilan',null))$('bilanOpen').hidden=false;
+</script>
+<script>function spokDur(t){return t.replace(/(\d+) h (\d+) min/g,(a,h,m)=>h+(h>1?' heures ':' heure ')+(+m)).replace(/(\d+) min (\d+) s/g,'$1 minutes $2').replace(/(\d+) min\b/g,'$1 minutes').replace(/(\d+) s\b/g,'$1 secondes')}</script>
 </body>
 </html>
