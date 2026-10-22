@@ -51,16 +51,16 @@
   };
 
   const DEFS = {
-    track: { name: 'Piste de 400 m', desc: 'Le stade, tout plat. Idéal pour le fractionné : un tour = 400 m.', len: 400,
+    track: { name: 'Piste de 400 m', desc: 'Le stade et ses couloirs. Un tour = 400 m, idéal pour le fractionné.', len: 400,
       xy: (s) => trackXY(s), ele: () => 0 },
-    hilly: { name: 'Piste vallonnée', desc: 'La même piste… avec une bosse sur la ligne opposée et une petite sur la ligne droite.', len: 400,
+    hilly: { name: 'Piste vallonnée', desc: 'La même piste, avec une bosse.', len: 400,
       xy: (s) => trackXY(s), ele: hillyEle },
-    forest: { name: 'Forêt', desc: 'Un chemin entre les arbres, des montées et des descentes, un panneau à chaque kilomètre.', len: 5000, loop: true },
-    sea: { name: 'Bord de mer', desc: 'Une promenade en planches le long de la plage, palmiers et coucher de soleil. Tout plat.', len: 5000, loop: true },
-    mountain: { name: 'Montagne', desc: 'Des lacets qui montent vers les sommets enneigés (jusqu\'à 7 %), puis la descente.', len: 6000, loop: true },
+    forest: { name: 'Forêt', desc: 'Un chemin entre les arbres, un panneau à chaque kilomètre.', len: 5000, loop: true },
+    sea: { name: 'Bord de mer', desc: 'Une promenade le long de la plage, palmiers et coucher de soleil.', len: 5000, loop: true },
+    mountain: { name: 'Montagne', desc: 'Des lacets face aux sommets enneigés.', len: 6000, loop: true },
     scifi: { name: 'Ville du futur', desc: 'Une piste suspendue entre les tours de néon, sous une planète à anneaux. Arches lumineuses à traverser.', len: 4000, loop: true },
     jungle: { name: 'Jungle préhistorique', desc: 'Un sentier entre les fougères géantes, des dinosaures au loin et un volcan qui fume.', len: 5000, loop: true },
-    lake: { name: 'Tour du lac', desc: 'Une boucle presque plate autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
+    lake: { name: 'Tour du lac', desc: 'Une boucle autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
   };
   function routePts(k) {
     const d = DEFS[k];
