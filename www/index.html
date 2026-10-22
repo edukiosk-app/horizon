@@ -2095,5 +2095,17 @@ $('bilanIv').onclick=async()=>{const S=store.get('lastBilan',null),m=$('bilanMsg
 if(store.get('lastBilan',null))$('bilanOpen').hidden=false;
 </script>
 <script>function spokDur(t){return t.replace(/(\d+) h (\d+) min/g,(a,h,m)=>h+(h>1?' heures ':' heure ')+(+m)).replace(/(\d+) min (\d+) s/g,'$1 minutes $2').replace(/(\d+) min\b/g,'$1 minutes').replace(/(\d+) s\b/g,'$1 secondes')}</script>
+<script>
+/* coureur de référence pendant une séance : il fait la même séance que toi, à son niveau */
+function refSteps(){if(workout&&run.state!=='idle')return workout.steps;const v=$('wsel').value;if(!v)return null;if(v==='__test')return testWorkout().steps;const w=workouts().find(o=>o.name===v);return w?progSteps(w.name,parseWorkout(w.text)):null}
+function refRatio(id){return refKmh(id)/Math.max(5,+$('v10k').value||11)}
+(()=>{const base=refRun;refRun=function(id){const st=refSteps();if(!st||!st.length)return base(id);const k=refRatio(id),s=[[0,0,0]];let t=0,d=0;
+  for(const x of st){const v=Math.max(3,(x.v||speedFor(x))*k)/3.6;if(x.dur){const n=Math.max(1,Math.round(x.dur/10));for(let i=1;i<=n;i++){t+=x.dur/n;d+=v*x.dur/n;s.push([Math.round(t),Math.round(d),0])}}else if(x.dist){const dt=x.dist/v,n=Math.max(1,Math.round(dt/10));for(let i=1;i<=n;i++){t+=dt/n;d+=x.dist/n;s.push([Math.round(t),Math.round(d),0])}}}
+  const v=refKmh(id)/3.6;for(let i=1;i<=360;i++){t+=10;d+=v*10;s.push([Math.round(t),Math.round(d),0])}
+  return{date:new Date().toISOString(),time:t,dist:Math.round(d),done:false,s,ref:id,wk:true}}})();
+(()=>{const ug=updateGhostInfo;updateGhostInfo=function(){ug.apply(this,arguments);try{if($('gsel').value==='ref'&&refSteps()){const id=$('refLvl').value,p=Math.round(refRatio(id)*100),L=(REF_LV.find(x=>x[0]===id)||REF_LV[1])[1];
+  $('ginfo').textContent=`Le point bleu fait la même séance que toi, au niveau « ${L} » : ${p} % de tes vitesses programmées, bloc par bloc. Pour le battre, accélère au-dessus du programme avec les boutons +.`}}catch(e){}}})();
+$('refLvl').addEventListener('change',()=>{try{updateGhostInfo()}catch(e){}});
+</script>
 </body>
 </html>
