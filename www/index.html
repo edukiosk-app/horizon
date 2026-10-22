@@ -2568,6 +2568,7 @@ async function shareCard(S){const W=1080,H=1350,cv=document.createElement('canva
   cells.forEach(([l,v],i)=>{const x=[72,430,790][i];T(l.toUpperCase(),x,1030,34,'#94a3b8',600);T(v,x,1095,56,'#fff',700)});
   if(S.place){T((S.place===1?'🏆 ':'')+(S.place===1?'1er':S.place+'e')+' sur '+S.of,72,1205,64,S.place===1?'#fbbf24':'#fb923c',800)}
   else if(S.w)T('Séance : '+S.w,72,1195,40,'#cbd5e1',600);
+  if(S.comp&&S.comp.sponsor)T('Présenté par '+S.comp.sponsor,W-72,1205,36,'#94a3b8',600,'right');
   T(new Date(S.date).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}),72,1290,34,'#64748b',500);
   T('Course sur tapis · treadverse',W-72,1290,34,'#64748b',500,'right');
   const url=cv.toDataURL('image/png'),txt=`${fmt(S.km,2)} km en ${hdur(S.t)} sur Treadverse${S.place?` : ${S.place===1?'1er':S.place+'e'} sur ${S.of}`:''} !`;
@@ -2695,6 +2696,36 @@ async function ivRace(ev,occ,on){try{if(!(store.get('ivKey','')&&ivAth()!=='0'))
     else if(M[k]){await iv(`/athlete/${ivAth()}/events/${M[k]}`,{method:'DELETE'}).catch(()=>{});delete M[k];store.set('ivRaces',M);return ' Retirée de ton calendrier Intervals.icu.'}}catch(e){return ' (Intervals.icu : '+e.message+')'}return ''}
 (()=>{const ea=evAct;evAct=async function(id,a){const ev=EVS.find(e=>e.id===id);const occ=ev?evOcc(ev):0,was=ev&&ev.reg&&ev.reg[evKey(ev,occ)]&&ev.reg[evKey(ev,occ)][LIVE.id];
   const r=await ea.apply(this,arguments);try{if(ev&&a==='join'&&LIVE.ev)LIVE.ev.title=ev.title;if(ev&&a==='reg'){const t=await ivRace(ev,occ,!was);$('evMsg').textContent=(was?'Désinscrit.':'Inscrit.')+t}}catch(e){}return r}})();
+</script>
+<style>
+.adcard{display:flex;align-items:center;gap:10px;background:var(--tile);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;color:inherit;text-decoration:none;position:relative}
+.adcard img{width:44px;height:44px;object-fit:contain;border-radius:8px;background:#fff}
+.adcard span{display:flex;flex-direction:column;gap:2px}.adcard small{color:var(--muted)}
+.adcard em{position:absolute;top:6px;right:10px;font:600 10px var(--body);font-style:normal;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.adcard.on{border-style:solid}
+</style>
+<script>
+/* espaces partenaires : réglés à distance (rooms/_ads), sans mettre l'appli à jour */
+let ADS=store.get('ads',{});
+async function adsLoad(){if(!LIVE.url())return;try{const a=await fb('rooms/_ads');if(a&&typeof a==='object'){ADS=a;store.set('ads',a)}}catch(e){}adsRender()}
+const adSafe=u=>/^https:\/\//.test(u||'')?u:'';
+function adHTML(slot,ph){const a=ADS[slot];if(a&&a.name){const u=adSafe(a.url),img=/^(https:|data:image\/)/.test(a.logo||'')?`<img src="${esc(a.logo)}" alt="">`:'';
+    return `<${u?'a':'div'} class="adcard on"${u?` href="${esc(u)}" target="_blank" rel="noopener sponsored"`:''}>${img}<span><b>${esc(a.title||a.name)}</b>${a.text?`<small>${esc(a.text)}</small>`:''}</span><em>Partenaire</em></${u?'a':'div'}>`}
+  return ph?`<div class="adcard"><span><b>Espace partenaire</b><small>${ph}</small></span><em>Partenaire</em></div>`:''}
+function adsRender(){const put=(id,slot,ph,where)=>{let el=$(id);if(!el){const ref=where&&where();if(!ref)return;el=document.createElement('div');el.id=id;ref.parentNode.insertBefore(el,ref.nextSibling)}el.innerHTML=adHTML(slot,ph)};
+  put('adPrep','banner','Votre marque ici, vue par chaque coureur avant sa séance.',()=>$('prepBox'));
+  put('adClub','events','Votre marque peut présenter les compétitions Treadverse.',()=>{const h=[...document.querySelectorAll('#commBox h3')].find(x=>/Rendez-vous/.test(x.textContent));return h&&h.nextElementSibling});
+  put('adBilan','bilan','',()=>$('feelBox'));
+  try{gearRender()}catch(e){}try{evRender()}catch(e){}}
+/* sponsor d'un rendez-vous précis : ADS.ev[id] = {name} */
+(()=>{const er=evRender;evRender=function(){er.apply(this,arguments);try{const E=ADS.ev||{};document.querySelectorAll('#evList .cbox').forEach(c=>{const b=c.querySelector('[data-ev]');const id=b&&b.dataset.ev,sp=id&&E[id];if(sp&&sp.name&&!c.querySelector('.evsp')){const s=document.createElement('small');s.className='evsp';s.style.color='var(--accent)';s.textContent='Présenté par '+sp.name;c.children[0].after(s)}})}catch(e){}}})();
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);try{if(LIVE.ev){const sp=(ADS.ev||{})[LIVE.ev.id];if(sp&&sp.name&&S.comp){S.comp.sponsor=sp.name;store.set('lastBilan',S)}}}catch(e){}return S}})();
+/* équipement conseillé (liens partenaires) dans Coaching : ADS.gear = [{name,text,url}] */
+function gearRender(){const host=$('coachList');if(!host)return;let el=$('gearBox');const G=Object.values(ADS.gear||{}).filter(g=>g&&g.name&&adSafe(g.url));
+  if(!G.length){if(el)el.remove();return}if(!el){el=document.createElement('div');el.id='gearBox';host.after(el)}
+  el.innerHTML=`<h3>Équipement conseillé</h3><p class="hint" style="margin-top:0">Liens partenaires : un achat par ces liens soutient Treadverse, sans surcoût pour toi.</p>`+G.map(g=>`<a class="adcard on" href="${esc(g.url)}" target="_blank" rel="noopener sponsored"><span><b>${esc(g.name)}</b>${g.text?`<small>${esc(g.text)}</small>`:''}</span><em>Partenaire</em></a>`).join('')}
+(()=>{const cr=coachRender;coachRender=function(){const r=cr.apply(this,arguments);try{gearRender()}catch(e){}return r}})();
+adsRender();setTimeout(adsLoad,3000);
 </script>
 </body>
 
