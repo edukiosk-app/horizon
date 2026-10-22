@@ -349,7 +349,20 @@ button.mini{padding:6px 10px;font-size:13px}
       <div class="row" id="edAdd" style="margin-top:8px">
         <button class="mini" data-t="warm">+ Échauffement</button><button class="mini" data-t="foot">+ Footing</button><button class="mini" data-t="work">+ Effort</button>
         <button class="mini" data-t="w10">+ Allure 10k</button><button class="mini" data-t="hill">+ Côte</button><button class="mini" data-t="rec">+ Récup</button>
-        <button class="mini" data-t="rep">+ Répétition</button><button class="mini" data-t="cool">+ Retour au calme</button>
+        <button class="mini" data-t="rep">+ Répétition</button><button class="mini" id="edSerBtn" type="button">+ Séries (boucle)</button><button class="mini" data-t="cool">+ Retour au calme</button>
+      </div>
+            <div id="edSer" class="edrep" hidden style="margin-top:8px">
+        <b>Séries de fractionné</b>
+        <div class="settings" style="margin-top:6px">
+          <label>Séries<input id="esN" type="number" min="1" value="3"></label>
+          <label>Répétitions par série<input id="esR" type="number" min="1" value="6"></label>
+          <label>Effort (durée ou distance)<input id="esW" type="text" value="0:40" placeholder="0:40 ou 400 m"></label>
+          <label>Vitesse de l'effort (km/h)<input id="esV" type="number" step="0.1" placeholder="vide : mes allures"></label>
+          <label>Récup entre répétitions<input id="esRc" type="text" value="0:30"></label>
+          <label>Récup entre séries<input id="esRs" type="text" value="2:00"></label>
+        </div>
+        <p class="hint" id="esInfo" style="margin:6px 0"></p>
+        <div class="row"><button class="mini primary" id="esAdd" type="button">Ajouter à la séance</button><button class="mini" id="esCancel" type="button">Annuler</button></div>
       </div>
       <div class="bar" id="edBar" style="margin-top:10px"></div>
       <p id="edTotal" class="hint"></p>
@@ -762,7 +775,7 @@ async function importChallenge(){const h=location.hash;if(!h.startsWith('#defi='
   if(d.wt){const ws=store.get('workouts',[]).filter(x=>x.name!==d.w);ws.push({name:d.w,text:d.wt});store.set('workouts',ws)}
   store.set('friend',{route:name,by:d.by||'',run:d.run});listRoutes();listWorkouts();$('rname').value=name;map.fitBounds(line.getBounds());
   const b=$('defibanner');b.hidden=false;
-  b.innerHTML=`<b>${esc(by)} te lance un défi</b><span>Parcours « ${esc(name)} », ${fmt(total()/1000,2)} km, D+ ${Math.round(gain())} m${d.w?', séance « '+esc(d.w)+' »':''}. Temps à battre : <b style="font-size:18px">${clock(d.run.time)}</b>.</span><div class="row"><button class="primary" id="takeDefi">Relever le défi</button></div>`;
+  b.innerHTML=`<b>${esc(by)} te lance un défi</b><span>Parcours « ${esc(name)} », ${fmt(total()/1000,2)} km, D+ ${Math.round(gain())} m${d.w?', séance « '+esc(d.w)+' »':''}. Temps à battre : <b style="font-size:18px">${hdur(d.run.time)}</b>.</span><div class="row"><button class="primary" id="takeDefi">Relever le défi</button></div>`;
   $('takeDefi').onclick=()=>{$('wsel').value=d.w||'';$('gsel').value='friend';b.hidden=true;resetRun();updateGhostInfo();renderWSpeeds();show('run')}}
 $('save').onclick=()=>{if(!route)return;const name=$('rname').value.trim()||route.name;route.name=name;
   const rs=store.get('routes',[]).filter(r=>r.name!==name);
@@ -953,7 +966,7 @@ $('aiApply').onclick=()=>{const raw=$('aiJson').value;const a=raw.indexOf('{'),b
   const name=($('aiName').value.trim()||j?.name||'Séance IA').slice(0,60);
   const ws=store.get('workouts',[]).filter(w=>w.name!==name);ws.push({name,text,folder:'Assistant IA'});store.set('workouts',ws);listWorkouts();
   const tot=st.reduce((x,s)=>x+stepSec({...s,v:speedFor(s)}),0);
-  $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${clock(tot)}. Tu peux la choisir dans « Séance sur ce parcours ».`;
+  $('aiMsg').textContent=`« ${name} » ajoutée dans Séances guidées › Assistant IA : ${st.length} étapes, ${hdur(tot)}. Tu peux la choisir dans « Séance sur ce parcours ».`;
   $('wsel').value=name;$('wsel').onchange();$('aiJson').value=''};
 (function(){const box=$('decors');if(!box||!window.VR)return;Object.entries(VR.DEFS).forEach(([k,d])=>{const b=document.createElement('button');b.type='button';b.className='decor';b.dataset.k=k;
   b.innerHTML=`<b>${esc(d.name)}</b><small>${esc(d.desc)}</small>`;
@@ -970,9 +983,9 @@ const refKmh=id=>10/(refT10(id)/3600);
 function refRun(id){const v=refKmh(id)/3.6,s=[];for(let t=0;t<=6*3600;t+=10)s.push([t,Math.round(v*t),0]);return{date:new Date().toISOString(),time:6*3600,dist:Math.round(v*6*3600),done:false,s,ref:id}}
 function formLevel(){const P=prof(),r10=P.records[10000],r5=P.records[5000];let t=r10?r10.t:r5?r5.t*Math.pow(2,1.06):null;if(t==null)return null;
   let lv=null;for(const l of REF_LV)if(t<=refT10(l[0])+1)lv=l;return{t,lv,src:r10?'ton record sur 10 km':'ton record sur 5 km'}}
-function refUI(){const sel=$('refLvl'),cur=store.get('refLvl','forme');sel.innerHTML=REF_LV.map(([id,n])=>`<option value="${id}">${n} · ${clock(refT10(id))} au 10 km (${fmt(refKmh(id))} km/h)</option>`).join('');sel.value=cur;
+function refUI(){const sel=$('refLvl'),cur=store.get('refLvl','forme');sel.innerHTML=REF_LV.map(([id,n])=>`<option value="${id}">${n} · ${hdur(refT10(id))} au 10 km (${fmt(refKmh(id))} km/h)</option>`).join('');sel.value=cur;
   $('refLvlL').hidden=$('gsel').value!=='ref';const ok=store.get('refAge',0)&&store.get('refSex','');
-  const f=formLevel();$('pfForm').textContent=!ok?'Indique ton âge et ton sexe : Treadverse en déduit les repères de forme et le coureur de référence.':f?(f.lv?`Ton niveau d'après ${f.src} : « ${f.lv[1]} » (équivalent ${clock(f.t)} au 10 km).`:`D'après ${f.src} (équivalent ${clock(f.t)} au 10 km), le niveau « Débutant » est à ${clock(refT10('deb'))} : tu y es presque.`):`Repères pour toi : « En forme » = ${clock(refT10('forme'))} au 10 km, « Confirmé » = ${clock(refT10('conf'))}. Cours 5 ou 10 km pour connaître ton niveau.`}
+  const f=formLevel();$('pfForm').textContent=!ok?'Indique ton âge et ton sexe : Treadverse en déduit les repères de forme et le coureur de référence.':f?(f.lv?`Ton niveau d'après ${f.src} : « ${f.lv[1]} » (équivalent ${hdur(f.t)} au 10 km).`:`D'après ${f.src} (équivalent ${hdur(f.t)} au 10 km), le niveau « Débutant » est à ${hdur(refT10('deb'))} : tu y es presque.`):`Repères pour toi : « En forme » = ${hdur(refT10('forme'))} au 10 km, « Confirmé » = ${hdur(refT10('conf'))}. Cours 5 ou 10 km pour connaître ton niveau.`}
 function refName(){const m=$('gsel').value,f=store.get('friend',null),by=(f&&f.by)||'';
   if(m==='goal')return{fr:'ton objectif',Fr:'Ton objectif',en:'your target',En:'Your target',lab:'Objectif'};
   if(m==='ref'){const l=REF_LV.find(x=>x[0]===$('refLvl').value)||REF_LV[1];return{fr:'le coureur de niveau '+l[1].toLowerCase(),Fr:'Le coureur de niveau '+l[1].toLowerCase(),en:'the '+l[1]+' pacer',En:'The '+l[1]+' pacer',lab:'Référence « '+l[1]+' »'}}
@@ -992,9 +1005,9 @@ function gDistAt(g,t){const s=g.s;if(t<=0)return 0;if(t>=s[s.length-1][0])return
 function gTimeAt(g,d){const s=g.s;if(d>s[s.length-1][1])return null;let i=0;while(s[i+1]&&s[i+1][1]<d)i++;const a=s[i],b=s[i+1]||a;return a[0]+(b[0]-a[0])*(d-a[1])/((b[1]-a[1])||1)}
 function updateGhostInfo(){const list=(store.get('runs',{})[runKey()]||[]).filter(r=>!r.sim||isSim());try{refUI()}catch(e){}
   if($('gsel').value==='ref'){const id=$('refLvl').value;$('ginfo').textContent=(store.get('refAge',0)&&store.get('refSex','')?'':'Indique ton âge et ton sexe dans Mon profil pour des repères justes. ')+`Le point bleu court à ${fmt(refKmh(id))} km/h (${clock(refT10(id)/10)} /km) : c'est l'allure « ${(REF_LV.find(x=>x[0]===id)||REF_LV[1])[1]} » sur 10 km.`;return}
-  if($('gsel').value==='goal'){let g=null;try{g=goalGhost()}catch(e){}$('ginfo').textContent=g?`Le point bleu court ton objectif : ${clock(g.time)} pour ${fmt(g.dist/1000,2)} km, en suivant les allures prévues kilomètre par kilomètre.`:'Choisis une séance « Course objectif » (Préparer › Objectif course).';return}
-  if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${clock(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
-  if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${clock(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
+  if($('gsel').value==='goal'){let g=null;try{g=goalGhost()}catch(e){}$('ginfo').textContent=g?`Le point bleu court ton objectif : ${hdur(g.time)} pour ${fmt(g.dist/1000,2)} km, en suivant les allures prévues kilomètre par kilomètre.`:'Choisis une séance « Course objectif » (Préparer › Objectif course).';return}
+  if($('gsel').value==='watch'){const w=route&&store.get('watchRuns',{})[route.name];$('ginfo').textContent=w?`Ta sortie dehors : ${hdur(w.time)} pour ${fmt(w.dist/1000,2)} km.`:'Aucune sortie de la montre pour ce parcours. Importe-la depuis « Mes dernières sorties ».';return}
+  if($('gsel').value==='friend'){const f=store.get('friend',null);$('ginfo').textContent=f&&route&&f.route===route.name?`${refName().lab} : ${hdur(f.run.time)} à battre.`:'Aucun défi reçu pour ce parcours.';return}
   $('ginfo').textContent=list.length?`${list.length} course${list.length>1?'s':''} enregistrée${list.length>1?'s':''} sur ce parcours avec cette séance.`:'Aucune course encore sur ce parcours avec cette séance : ce sera ta référence.'}
 $('gsel').onchange=()=>{if(run.state==='done')startOver();updateGhostInfo()};
 function saveRun(done){if(run.time<60||!route)return;const all=store.get('runs',{}),k=runKey(),list=all[k]||[];
@@ -1249,7 +1262,7 @@ function finishTest(){const t=run.stepT,d=run.stepD;if(t<180||d<300){log('Test t
   Object.keys(res).forEach(k=>res[k]=Math.max(4,Math.min(vmax,r1(res[k]))));
   testRes=res;const avg=d/t*3.6;
   const L={vWarm:'Échauffement',vFoot:'Footing',vRec:'Récupération',vCool:'Retour au calme',v10k:'Allure 10k',v5k:'Allure 5k',vShort:'Effort court',vSprint:'Sprint'};
-  $('testtxt').innerHTML=`<p class="hint" style="margin:0 0 8px">${Math.round(d)} m en ${clock(t)}, soit ${fmt(avg)} km/h de moyenne. Estimations : 5 km en ${clock(T(5000))}, 10 km en ${clock(T(10000))}.</p><div class="tl">`+
+  $('testtxt').innerHTML=`<p class="hint" style="margin:0 0 8px">${Math.round(d)} m en ${hdur(t)}, soit ${fmt(avg)} km/h de moyenne. Estimations : 5 km en ${clock(T(5000))}, 10 km en ${clock(T(10000))}.</p><div class="tl">`+
     Object.keys(L).map(k=>`<span>${L[k]}</span><span>${fmt(res[k])} km/h · ${clock(3600/res[k])}/km</span>`).join('')+'</div>';
   $('testres').hidden=false;$('testmsg').textContent='';
   say(`Test terminé. Ta vitesse moyenne : ${spk(avg)} kilomètres par heure. Tes allures sont prêtes.`,`Test complete. Your average speed was ${fmtEn(r1(avg))} kilometres per hour.`);log('Test : '+Math.round(d)+' m en '+clock(t))}
@@ -1257,7 +1270,7 @@ $('testapply').onclick=()=>{if(!testRes)return;Object.keys(testRes).forEach(k=>$
 $('stop').onclick=async()=>{if(run.state==='done')return;const done=workout?run.step>=workout.steps.length:run.dist>=total()-5;
   if(bt.ok){await setIncline(S().min);await cmd([0x08,0x01],'Tapis arrêté')}
   run.state='done';run.speed=0;['start','pause','stop','skip'].forEach(i=>$(i).disabled=true);wake?.release?.();exitFS();
-  saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${clock(run.time)}, D+ ${Math.round(run.gain)} m`);
+  saveRun(done);showAfter(done);log(`Terminé : ${fmt(run.dist/1000,2)} km en ${hdur(run.time)}, D+ ${Math.round(run.gain)} m`);
   const g=run.ghost;if(g){const gt=gTimeAt(g,run.dist);if(gt!=null){const d=Math.round(Math.abs(gt-run.time)),R=refName();say(gt>run.time?`Bravo ! Victoire sur ${R.fr}, avec ${gapFr(d)} d'avance.`:`${R.Fr} garde ${gapFr(d)} d'avance. Ce sera pour la prochaine fois.`,gt>run.time?`Well done, you beat ${R.en} by ${d} seconds.`:`${R.En} is ${d} seconds ahead. Next time.`)}}
   $('start').textContent='Nouvelle course';$('start').disabled=false;$('start').onclick=startOver;$('wsel').disabled=false;$('gsel').disabled=false;wpickLabel()};
 const startOrig=$('start').onclick;
@@ -1346,7 +1359,7 @@ function render(){const pk=route&&(route.name+'|'+$('wsel').value+'|'+(typeof LI
     const gt=gTimeAt(g,run.dist),el=$('gGap');
     if(run.time<1){el.textContent='Prêt';el.className=''}
     else if(gt==null){el.textContent='Plus loin que jamais';el.className='ahead'}
-    else{const d=gt-run.time,a=Math.abs(d),txt=a<60?Math.round(a)+' s':clock(a);el.textContent=d>=0?txt+" d'avance":txt+' de retard';el.className=d>=0?'ahead':'behind'}}
+    else{const d=gt-run.time,a=Math.abs(d),txt=hdur(a);el.textContent=d>=0?txt+" d'avance":txt+' de retard';el.className=d>=0?'ahead':'behind'}}
   if(zen&&route){const nm=nextMark(x);$('zMark').textContent=nm?nm.m.fr:'–';$('zGap').textContent=nm?(nm.gap>=1000?fmt(nm.gap/1000,1)+' km':Math.round(nm.gap/10)*10+' m'):'–'}
   if(route){const g2=(eleAt(x+200)-eleAt(x))/2;$('sNext').textContent=(g2>=0.5?'Montée ':g2<=-0.5?'Descente ':'Plat ')+fmt(g2)+' %';
     $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):route.decor?(typeof LIVE!=='undefined'&&LIVE.room&&LIVE.data&&LIVE.data.dist?fmt(Math.max(0,LIVE.data.dist-run.dist)/1000,2)+' km':'libre'):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
@@ -1439,7 +1452,7 @@ function showAfter(done){if(run.time<60)return;$('after').hidden=false;$('upMsg'
     g.recs.forEach(r=>L.push(`<span>Nouveau record : ${r}</span>`));g.news.forEach(id=>{const b=BADGES.find(x=>x[0]===id);L.push(`<span>Badge débloqué : <b>${b[1]}</b> (${b[2]})</span>`)});(g.chal||[]).forEach(n=>L.push(`<span>Défi réussi : <b>${esc(n)}</b></span>`));$('afterGain').innerHTML=L.join('');
     const spoken=[...g.recs.map(r=>'Nouveau record : '+r),...g.news.map(id=>'Badge '+BADGES.find(x=>x[0]===id)[1]),...(g.chal||[]).map(n=>'Défi réussi : '+n),g.up?'Niveau '+g.up+' atteint':''].filter(Boolean).join('. ');
     if(spoken)setTimeout(()=>say(spoken,(g.recs.length?'New personal best. ':'')+(g.news.length?g.news.length+' new badge'+(g.news.length>1?'s':''):'')+(g.up?'. Level '+g.up:'')),2500)}
-  $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${clock(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
+  $('afterTxt').textContent=`${fmt(run.dist/1000,2)} km en ${hdur(run.time)}${run.gain?`, D+ ${Math.round(run.gain)} m`:''}. Si ta montre a aussi enregistré cette course, ne l'envoie pas ici : elle apparaîtrait deux fois dans Intervals.icu.`}
 $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
   try{const fd=new FormData();fd.append('file',new Blob([buildGPX()],{type:'application/gpx+xml'}),'horizon.gpx');
     const nm=encodeURIComponent((route?.name||'Course')+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${workout?', séance '+workout.name:''}.`);
@@ -1522,7 +1535,7 @@ function renderProfile(){const P=prof(),lv=levelOf(P.xp),a=xpFor(lv),b=xpFor(lv+
   $('lvlPill').textContent=`Niveau ${lv}`;$('pfLvl').textContent=`Niveau ${lv}`;$('pfXp').textContent=`${P.xp} XP · encore ${b-P.xp} XP pour le niveau ${lv+1}`;
   $('pfBar').style.width=Math.round((P.xp-a)/(b-a)*100)+'%';
   $('pfStats').innerHTML=`<span>${fmt(P.km,1)} km</span><span>${P.runs} course${P.runs>1?'s':''}</span><span>${n}/${BADGES.length} badges</span>`;
-  $('pfRecs').innerHTML=RECS.map(([D,lab])=>`<span>${lab}</span><span>${P.records[D]?clock(P.records[D].t)+' · '+new Date(P.records[D].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'–'}</span>`).join('');
+  $('pfRecs').innerHTML=RECS.map(([D,lab])=>`<span>${lab}</span><span>${P.records[D]?hdur(P.records[D].t)+' · '+new Date(P.records[D].date).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):'–'}</span>`).join('');
   $('pfBadges').innerHTML=BADGES.map(([id,name,how])=>{const on=!!P.badges[id];return`<div class="badge${on?' on':''}" title="${esc(how)}">${badgeSVG(on)}<b>${esc(name)}</b><small>${esc(how)}</small></div>`}).join('');try{refUI()}catch(e){}try{chalUI()}catch(e){}}
 
 /* ================= MODE ZEN ET REPÈRES DU PARCOURS ================= */
@@ -1565,7 +1578,7 @@ function edRow(b,list,i){const d=document.createElement('div');d.className='edro
   const inp=document.createElement('input');inp.type='text';inp.value=b.v;inp.placeholder='5:00 ou 400 m';inp.style.width='92px';inp.onchange=()=>{b.v=inp.value;edDraw()};
   const pin=document.createElement('input');pin.type='text';pin.inputMode='decimal';pin.value=b.inc??'';pin.placeholder=PTS()?'pente niv.':'pente %';pin.title='Pente du tapis (vide : suit le parcours)';pin.style.width='76px';pin.onchange=()=>{b.inc=pin.value.trim();edDraw()};
   const o=parseVal(b.v);const info=document.createElement('span');info.className='hint';info.style.margin='0';
-  info.textContent=o?fmt(speedFor({label:b.label&&b.lt===b.t?b.label:TY[b.t][0],type:{warm:'warm',cool:'cool',rec:'rec',foot:'foot'}[b.t]||'work',dur:o.dur||0,dist:o.dist||0}))+' km/h':'durée ?';
+  info.textContent=o?fmt(b.pv||speedFor({label:b.label&&b.lt===b.t?b.label:TY[b.t][0],type:{warm:'warm',cool:'cool',rec:'rec',foot:'foot'}[b.t]||'work',dur:o.dur||0,dist:o.dist||0}))+' km/h':'durée ?';
   const btn=(t,f)=>{const x=document.createElement('button');x.textContent=t;x.className='mini';x.onclick=f;return x};
   d.append(sel,inp,pin,info,btn('Haut',()=>{if(i>0){[list[i-1],list[i]]=[list[i],list[i-1]];edDraw()}}),btn('Bas',()=>{if(i<list.length-1){[list[i+1],list[i]]=[list[i],list[i+1]];edDraw()}}),btn('Suppr.',()=>{list.splice(i,1);edDraw()}));return d}
 function edDraw(){const box=$('edBlocks');box.innerHTML='';
@@ -1578,7 +1591,7 @@ function edDraw(){const box=$('edBlocks');box.innerHTML='';
     else box.append(edRow(b,ed,i))});
   const steps=parseWorkout(edText()).map(s=>({...s,v:speedFor(s)})),tot=steps.reduce((a,s)=>a+stepSec(s),0)||1;
   $('edBar').innerHTML=steps.map(s=>`<i class="${s.type==='work'?'w done':'done'}" style="flex:${stepSec(s)/tot}"></i>`).join('');
-  $('edTotal').textContent=steps.length?`${steps.length} étapes · ${clock(tot)} · environ ${fmt(steps.reduce((a,s)=>a+(s.dist||s.dur*s.v/3.6),0)/1000,1)} km`:''}
+  $('edTotal').textContent=steps.length?`${steps.length} étape${steps.length>1?"s":""} · ${hdur(tot)} · environ ${fmt(steps.reduce((a,s)=>a+(s.dist||s.dur*s.v/3.6),0)/1000,1)} km`:''}
 document.querySelectorAll('#edAdd [data-t]').forEach(b=>b.onclick=()=>{const t=b.dataset.t;
   if(t==='rep')ed.push({rep:6,items:[{t:'work',v:'0:30'},{t:'rec',v:'0:30'}]});else ed.push({t,v:{warm:'10:00',cool:'5:00',foot:'20:00',rec:'2:00'}[t]||'5:00'});edDraw()});
 $('edClear').onclick=()=>{ed=[];$('edName').value='';$('edMsg').textContent='';edDraw()};
@@ -1664,7 +1677,7 @@ function oRender(){if($('view-out').hidden)return;
   if(ref&&$('oRef').value){const rt=gTimeAt(ref,O.d);
     if(rt==null){$('oRec').textContent='terminé';$('oGap').textContent=O.d>0?'Plus loin que jamais':'Prêt';$('oGap').className='duo-gap ahead';lead='me'}
     else{$('oRec').textContent=clock(rt);const d=rt-O.t;
-      if(O.t<1){$('oGap').textContent='Prêt';$('oGap').className='duo-gap'}else{const a=Math.abs(d),tx=a<60?Math.round(a)+' s':clock(a);$('oGap').textContent=d>=0?tx+" d'avance":tx+' de retard';$('oGap').className='duo-gap '+(d>=0?'ahead':'behind');lead=d>=0?'me':'ref'}}}
+      if(O.t<1){$('oGap').textContent='Prêt';$('oGap').className='duo-gap'}else{const a=Math.abs(d),tx=hdur(a);$('oGap').textContent=d>=0?tx+" d'avance":tx+' de retard';$('oGap').className='duo-gap '+(d>=0?'ahead':'behind');lead=d>=0?'me':'ref'}}}
   else{$('oRec').textContent='–';$('oGap').textContent=O.t>0?'Course libre':'Prêt';$('oGap').className='duo-gap'}
   const md='<span class="mini-medal">'+medalHTML('#f5c542')+'</span>';$('oMeMedal').innerHTML=lead==='me'?md:'';$('oRefMedal').innerHTML=lead==='ref'?md:'';
   if(O.map&&O.lastFix){const p=O.lastFix.p;O.me.setLatLng([p[0],p[1]]);if(!O.me._map)O.me.addTo(O.map);
@@ -1796,7 +1809,7 @@ function goalPlan(r,T,mode){const pts=r.pts,d=[0];for(let i=1;i<pts.length;i++)d
 function goalCreate(){const msg=$('goalMsg'),rs=store.get('routes',[]),r=rs.find(x=>x.name===$('goalRoute').value),T=parseClock($('goalTime').value);
   if(!r){msg.textContent='Choisis le parcours de ta course (importe son GPX dans « Parcours réel »).';return}
   if(!T){msg.textContent='Indique ton temps visé, par exemple 1:45:00 ou 50:00.';return}
-  const mode=$('goalMode').value,{L,seg}=goalPlan(r,T,mode),avg=Math.round(L/T*3.6*10)/10,tl=clock(T),folder='Objectif · '+r.name;
+  const mode=$('goalMode').value,{L,seg}=goalPlan(r,T,mode),avg=Math.round(L/T*3.6*10)/10,tl=hdur(T),folder='Objectif · '+r.name;
   const gw=g=>g>=0.5?`montée ${fmt(Math.round(g*10)/10)} %`:g<=-0.5?`descente ${fmt(Math.round(-g*10)/10)} %`:'plat';
   const main=`Main set\n`+seg.map((x,i)=>`- Kilomètre ${i+1}, ${gw(x.g)} ${x.len>=999?'1km':Math.round(x.len)+'mtr'} ${x.v}km/h intensity=interval`).join('\n');
   const hard=seg.filter(x=>x.len>=999).reduce((a,b)=>!a||b.g>a.g?b:a,null);
@@ -1882,9 +1895,9 @@ function liveUI(){const on=!!LIVE.room,R=LIVE.data||{};$('liveOff').hidden=on;$(
   $('liveTitle').textContent=`Course ${LIVE.room} · ${R.dname||''} · ${fmt((R.dist||0)/1000,R.dist%1000?1:0)} km`;
   $('liveGo').hidden=!host||!!R.start;
   $('liveState').textContent=!R.start?(host?`${P.length} coureur${P.length>1?'s':''} inscrit${P.length>1?'s':''}. Lance le départ quand tout le monde est prêt (tapis connecté) : un compte à rebours de 15 secondes démarre chez tous.`:'En attente du départ donné par le créateur.'):now<R.start?`Départ dans ${Math.ceil((R.start-now)/1000)} s`:'Course en cours';
-  $('livePeople').innerHTML=P.map((p,i)=>`<div class="lrow${p.me?' me':''}"><span>${R.start?i+1+'. ':''}${esc(p.n||'Coureur')}${p.me?' (toi)':''}</span><span>${p.f?clock(p.f):R.start?fmt(p.d/1000,2)+' km':'prêt'}</span></div>`).join('');
+  $('livePeople').innerHTML=P.map((p,i)=>`<div class="lrow${p.me?' me':''}"><span>${R.start?i+1+'. ':''}${esc(p.n||'Coureur')}${p.me?' (toi)':''}</span><span>${p.f?hdur(p.f):R.start?fmt(p.d/1000,2)+' km':'prêt'}</span></div>`).join('');
   const box=$('livebox');box.hidden=!(R.start&&run.state!=='idle');if(!box.hidden){const i=P.findIndex(p=>p.me),me=P[i];
-    $('liveRank').textContent=`${i+1}e / ${P.length}`;$('liveLines').innerHTML=P.slice(0,5).map((p,k)=>`<span class="${p.me?'me':''}">${k+1}. ${esc(p.n||'Coureur')} ${p.f?clock(p.f):p.me?fmt(p.d/1000,2)+' km':(p.d>=me.d?'+':'−')+Math.round(Math.abs(p.d-me.d))+' m'}</span>`).join('')}}
+    $('liveRank').textContent=`${i+1}e / ${P.length}`;$('liveLines').innerHTML=P.slice(0,5).map((p,k)=>`<span class="${p.me?'me':''}">${k+1}. ${esc(p.n||'Coureur')} ${p.f?hdur(p.f):p.me?fmt(p.d/1000,2)+' km':(p.d>=me.d?'+':'−')+Math.round(Math.abs(p.d-me.d))+' m'}</span>`).join('')}}
 function liveTick(){if(!LIVE.room||!LIVE.data)return;const R=LIVE.data,now=srvNow();
   if(R.start&&run.state==='idle'&&!LIVE.fin){const left=(R.start-now)/1000;
     for(const n of[10,5,3,2,1])if(left<=n&&left>n-1&&!LIVE.said[n]){LIVE.said[n]=1;say(n===10?'Départ dans 10 secondes.':String(n),n===10?'Start in 10 seconds.':String(n))}
@@ -1973,6 +1986,64 @@ setInterval(()=>{try{tipTick()}catch(e){}},1000);
 function spk(v){v=Math.round(v*10)/10;return v%1?String(v).replace('.',','):String(v)}
 function ordFr(n){return['','premier','deuxième','troisième','quatrième','cinquième','sixième','septième','huitième','neuvième','dixième'][n]||n+'ième'}
 function gapFr(s){s=Math.round(Math.abs(s));if(s<60)return s+(s>1?' secondes':' seconde');const m=Math.floor(s/60),r=s%60;return m+(m>1?' minutes':' minute')+(r?' '+r:'')}
+</script>
+<script>
+/* durées lisibles dans les résultats : 30 s, 7 min 30 s, 1 h 05 min */
+function hdur(t){t=Math.round(t||0);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60,p=n=>String(n).padStart(2,'0');return h?`${h} h ${p(m)} min${s?' '+p(s)+' s':''}`:m?`${m} min${s?' '+p(s)+' s':''}`:`${s} s`}
+/* boucles imbriquées : « 3x [ … ] » répète tout le bloc, y compris des « 6x » à l'intérieur ;
+   la dernière récupération du bloc (entre les répétitions) n'est pas faite après la dernière */
+function expandLoops(text){let t=text.replace(/\r/g,'');const re=/^[ \t]*(\d+)\s*x\s*\[[ \t]*\n((?:(?![ \t]*\d+\s*x\s*\[[ \t]*\n)[\s\S])*?)^[ \t]*\][ \t]*$/m;let g=0;
+  while(re.test(t)&&g++<50)t=t.replace(re,(a,n,body)=>{const lines=body.replace(/\s+$/,'').split('\n');let last=lines.length-1;while(last>=0&&!lines[last].trim())last--;
+    const isRec=last>0&&lines[last].trim().startsWith('-')&&!lines[last-1].trim()&&/intensity=recovery|r[ée]cup/i.test(lines[last]);
+    const full=lines.join('\n'),short=isRec?lines.slice(0,last).join('\n'):full;const out=[];for(let i=0;i<+n;i++)out.push(i<+n-1?full:short);return '\n'+out.join('\n\n')+'\n'});
+  return t}
+(()=>{const pw=parseWorkout;parseWorkout=t=>pw(expandLoops(t))})();
+(()=>{const lo=lineOf;lineOf=b=>{let l=lo(b);if(l&&b.pv&&!/km\/h/.test(l))l=/ intensity=/.test(l)?l.replace(' intensity=',` ${b.pv}km/h intensity=`):l+` ${b.pv}km/h`;return l}})();
+function edEmit(b){if(!b.rep)return lineOf(b);if(b.items.some(x=>x.rep))return`${b.rep}x [\n${b.items.map(edEmit).filter(Boolean).join('\n\n')}\n]`;const ls=b.items.map(lineOf).filter(Boolean);return ls.length?`${b.rep}x\n${ls.join('\n')}`:''}
+edText=function(){return ed.map(edEmit).filter(Boolean).join('\n\n')};
+edFromText=function(text){const res=[];const stack=[res];let cur=null,section=null;
+  for(const raw of text.replace(/\r/g,'').split('\n')){const l=raw.trim();const box=stack[stack.length-1];
+    if(!l){cur=null;section=null;continue}if(/^warm\s*up$/i.test(l)){section='warmup';continue}if(/^cool\s*down$/i.test(l)){section='cooldown';continue}
+    let m=l.match(/^(\d+)\s*x\s*\[$/i);if(m){const g={rep:+m[1],items:[]};box.push(g);stack.push(g.items);cur=null;continue}
+    if(l===']'){if(stack.length>1)stack.pop();cur=null;continue}
+    m=l.match(/^(\d+)\s*x$/i);if(m){cur={rep:+m[1],items:[]};box.push(cur);continue}if(!l.startsWith('-'))continue;
+    const st=parseWorkout(l)[0];if(!st)continue;const im=l.match(/intensity=(\w+)/i),int=section||(im?im[1].toLowerCase():'');const t=typeOf(st.label,int);
+    const b={t,v:valTxt(st),label:st.label,lt:t};if(st.pv)b.pv=Math.round(st.pv*10)/10;if(st.inc!=null)b.inc=String(st.inc).replace('.',',');(cur?cur.items:box).push(b)}
+  return res};
+edDraw=function(){const box=$('edBlocks');box.innerHTML='';
+  if(!ed.length)box.innerHTML='<p class="hint" style="margin:0">Ajoute des blocs avec les boutons ci-dessous. Durée en minutes (10 ou 1:30) ou distance (400 m, 1 km). Pente si tu veux une côte, sinon laisse vide. Une répétition peut contenir une autre répétition (ex. 3 fois 6 × 40 s) : la dernière récupération n’est pas refaite après le dernier tour.</p>';
+  const group=(b,list,i,depth)=>{const g=document.createElement('div');g.className='edrep';g.style.marginLeft=depth?'10px':'';
+    const h=document.createElement('div');h.className='row';h.innerHTML=`<b>${depth?'Répéter (dans la boucle)':'Répéter'}</b>`;const n=document.createElement('input');n.type='number';n.min=1;n.value=b.rep;n.style.width='64px';n.onchange=()=>{b.rep=Math.max(1,+n.value||1);edDraw()};
+    const x=document.createElement('button');x.className='mini';x.textContent='Suppr. la répétition';x.onclick=()=>{list.splice(i,1);edDraw()};h.append(n,document.createTextNode('fois'),x);g.append(h);
+    b.items.forEach((it,j)=>g.append(it.rep?group(it,b.items,j,depth+1):edRow(it,b.items,j)));
+    const add=document.createElement('div');add.className='row';[['work','+ Effort'],['rec','+ Récup'],['sprint','+ Sprint'],['hill','+ Côte']].forEach(([t,l])=>{const a=document.createElement('button');a.className='mini';a.textContent=l;a.onclick=()=>{b.items.push({t,v:'1:00'});edDraw()};add.append(a)});
+    if(depth<2){const a=document.createElement('button');a.className='mini';a.textContent='+ Répétition dedans';a.onclick=()=>{b.items.push({rep:2,items:[{t:'work',v:'1:00'},{t:'rec',v:'1:00'}]});edDraw()};add.append(a)}
+    g.append(add);return g};
+  ed.forEach((b,i)=>box.append(b.rep?group(b,ed,i,0):edRow(b,ed,i)));
+  const steps=parseWorkout(edText()).map(s=>({...s,v:speedFor(s)})),tot=steps.reduce((a,s)=>a+stepSec(s),0)||1;
+  $('edBar').innerHTML=steps.map(s=>`<i class="${s.type==='work'?'w done':'done'}" style="flex:${stepSec(s)/tot}"></i>`).join('');
+  $('edTotal').textContent=steps.length?`${steps.length} étape${steps.length>1?"s":""} · ${hdur(tot)} · environ ${fmt(steps.reduce((a,s)=>a+(s.dist||s.dur*s.v/3.6),0)/1000,1)} km`:''};
+</script>
+<script>
+/* séances Intervals.icu : 5 minutes de marche après un échauffement d'au moins 30 minutes */
+function addWalk(steps){let i=0,t=0;while(i<steps.length&&steps[i].type==='warm'){t+=stepSec(steps[i]);i++}
+  if(!i||t<29*60)return steps;const nx=steps[i];if(nx&&/marche|walk/i.test(nx.label)&&stepSec(nx)>=300)return steps;
+  const out=steps.slice();out.splice(i,0,{label:'Marche',type:'rec',dur:300,dist:0,v:5,inc:0,walk:true});return out}
+(()=>{const ps=progSteps;progSteps=(name,steps)=>{const r=ps(name,steps);const w=workouts().find(o=>o.name===name);return w&&w.ivId?addWalk(r):r}})();
+</script>
+<script>
+/* séries de fractionné en un seul formulaire : 3 séries de 6 × 40 s, récup entre séries */
+(()=>{const box=$('edSer'),V=id=>$(id).value.trim();
+  const info=()=>{const n=Math.max(1,+V('esN')||1),r=Math.max(1,+V('esR')||1),w=parseVal(V('esW')),rc=parseVal(V('esRc')),rs=parseVal(V('esRs'));
+    $('esInfo').textContent=w?`${n} série${n>1?'s':''} de ${r} × ${V('esW')}${V('esV')?' à '+V('esV')+' km/h':''}${rc?', '+V('esRc')+' de récup':''}${n>1&&rs?', puis '+V('esRs')+' entre les séries (pas après la dernière)':''}.`:'Indique la durée (0:40) ou la distance (400 m) de l’effort.'};
+  ['esN','esR','esW','esV','esRc','esRs'].forEach(i=>$(i).oninput=info);
+  $('edSerBtn').onclick=()=>{box.hidden=!box.hidden;info();if(!box.hidden)box.scrollIntoView({block:'nearest',behavior:'smooth'})};
+  $('esCancel').onclick=()=>{box.hidden=true};
+  $('esAdd').onclick=()=>{const n=Math.max(1,+V('esN')||1),r=Math.max(1,+V('esR')||1);if(!parseVal(V('esW'))){info();return}
+    const eff={t:'work',v:V('esW')};const sp=parseFloat(V('esV').replace(',','.'));if(sp>0)eff.pv=sp;
+    const inner={rep:r,items:[eff,...(parseVal(V('esRc'))?[{t:'rec',v:V('esRc')}]:[])]};
+    ed.push(n>1?{rep:n,items:[inner,...(parseVal(V('esRs'))?[{t:'rec',v:V('esRs')}]:[])]}:inner);box.hidden=true;edDraw()};
+})();
 </script>
 </body>
 </html>
