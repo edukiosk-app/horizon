@@ -40,3 +40,22 @@ if (fs.existsSync(gradle)) {
   fs.writeFileSync(gradle, gx);
   console.log('Version Android :', n);
 }
+
+// Toujours la même signature : la clé du dépôt (resources/debug.keystore) est indiquée explicitement à Gradle
+if (fs.existsSync(gradle) && fs.existsSync(path.join(root, 'resources/debug.keystore'))) {
+  let gx = fs.readFileSync(gradle, 'utf8');
+  if (!gx.includes('treadverse-signing')) {
+    gx = gx.replace(/android\s*\{/, `android {
+    // treadverse-signing
+    signingConfigs {
+        debug {
+            storeFile rootProject.file('../resources/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }`);
+    fs.writeFileSync(gradle, gx);
+    console.log('Signature : clé du dépôt');
+  }
+}
