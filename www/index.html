@@ -2119,7 +2119,7 @@ async function liveRandom(){const msg=$('liveMsg');if(!LIVE.url()||!okStart())re
     const c=Object.entries(open).filter(([k,v])=>v&&v.at>now-45000&&v.host!==LIVE.id).sort((a,b)=>a[1].at-b[1].at);
     for(const [code] of c){const r=await fb('rooms/'+code);if(r&&r.decor&&!r.start&&Object.keys(r.p||{}).length<6){$('liveCodeIn').value=code;await liveJoin();if(LIVE.room){LIVE.pub=D;msg.textContent=`Adversaire trouvé : ${Object.values(r.p||{}).map(x=>x.n).join(', ')}. Décor « ${r.dname} ». Le départ part tout seul dans quelques secondes.`}return}}
     await liveCreate();if(!LIVE.room)return;LIVE.pub=D;LIVE.pubSince=Date.now();await fb(`rooms/${LIVE.room}`,'PATCH',{pub:D});await fb(`rooms/_open/${D}/${LIVE.room}`,'PUT',{at:{'.sv':'timestamp'},host:LIVE.id});
-    msg.textContent='En attente d’un adversaire… Le départ part tout seul dès qu’un coureur te rejoint.'}catch(e){msg.textContent='Recherche impossible : '+e.message}}
+    msg.textContent='En attente d’un adversaire… Le départ part tout seul dès qu’un coureur te rejoint. Sans personne en ligne d’ici 25 secondes, tu cours contre de vrais coureurs en différé.'}catch(e){msg.textContent='Recherche impossible : '+e.message}}
 function liveBotsStart(){if(!okStart())return;if(LIVE.room)liveLeave();const D=+$('liveDist').value,lv=$('botLvl').value,k={facile:0.92,egal:1,dur:1.06}[lv]||1;
   const base=(D<=5000?+$('v5k').value:+$('v10k').value*(D>=21000?0.95:1))||10,now=Date.now(),tac=['regulier','rapide','final'].sort(()=>Math.random()-0.5),names=BOTN.slice().sort(()=>Math.random()-0.5);
   const p={[LIVE.id]:{n:liveName(),d:0,t:0,at:now}};[-0.03,0,0.03].forEach((o,i)=>{p['bot'+i]={n:names[i]+' (ordi)',d:0,t:0,at:now,bot:{v:base*k*(1+o),tac:tac[i],seed:Math.random()*6}}});
@@ -2143,6 +2143,32 @@ $('liveRandom').onclick=liveRandom;$('liveBots').onclick=liveBotsStart;$('liveGo
   else if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.data.start){$('liveGo').hidden=true;$('liveState').textContent=`Course au hasard · ${Object.keys(LIVE.data.p||{}).length} coureur(s) inscrit(s).`}
   $('liveRandom').disabled=!LIVE.url()}catch(e){}}})();
 liveUI();
+</script>
+<script>
+/* courses en différé : chaque vraie course est partagée de façon anonyme (prénom seulement),
+   et sert d'adversaire quand personne n'est en ligne ; complété par l'ordinateur si besoin */
+const RACE_D=[1000,3000,5000,10000,21097];
+function distAtT(S,t){if(t<=0)return 0;let i=0;while(i<S.length-2&&S[i+1][0]<t)i++;const a=S[i],b=S[i+1]||a;if(t>=b[0])return b[1];return a[1]+(b[1]-a[1])*(t-a[0])/((b[0]-a[0])||1)}
+async function runsPush(){if(!LIVE.url()||run.sim)return;const S=run.samples;if(!S||S.length<3)return;
+  for(const D of RACE_D){if(run.dist<D)break;const s=[];let t=0,tD=0;for(;t<=run.time+10;t+=10){const d=distAtT(S,t);if(d>=D){let lo=t-10,hi=t;for(let k=0;k<12;k++){const m=(lo+hi)/2;distAtT(S,m)>=D?hi=m:lo=m}tD=Math.round(hi);s.push(D);break}s.push(Math.round(d))}
+    if(!tD)continue;await fb(`rooms/_runs/${D}/${LIVE.id}_${Date.now()}`,'PUT',{n:liveName(),t:tD,s,date:new Date().toISOString().slice(0,10)})}}
+(()=>{const cr=chalRecord;chalRecord=function(P){const r=cr.apply(this,arguments);try{runsPush().catch(()=>{})}catch(e){}return r}})();
+function myTime(D){const v=(D<=5000?+$('v5k').value:+$('v10k').value*(D>=21000?0.95:1))||10;return D/(v/3.6)}
+async function liveFill(note){const D=LIVE.pub||+$('liveDist').value,decor=(LIVE.data&&LIVE.data.decor)||(route&&route.decor);
+  if(LIVE.room&&!LIVE.local){const r=LIVE.room;try{fb(`rooms/_open/${D}/${r}`,'DELETE').catch(()=>{});fb(`rooms/${r}/p/${LIVE.id}`,'DELETE').catch(()=>{})}catch(e){}if(LIVE.es)LIVE.es.close();LIVE.es=null}
+  LIVE.pub=0;LIVE.autoAt=0;let ghosts=[];
+  try{const all=await fb(`rooms/_runs/${D}`)||{};const T=myTime(D);
+    ghosts=Object.entries(all).filter(([k,v])=>v&&v.s&&v.t&&!k.startsWith(LIVE.id+'_')).map(([k,v])=>({k,...v,gap:Math.abs(v.t-T)/T})).filter(g=>g.gap<0.25).sort((a,b)=>a.gap-b.gap).slice(0,3)}catch(e){}
+  if(decor&&(!route||route.decor!==decor))liveSetDecor(decor);
+  const now=Date.now(),p={[LIVE.id]:{n:liveName(),d:0,t:0,at:now}};
+  ghosts.forEach((g,i)=>{p['gh'+i]={n:(g.n||'Coureur')+' (différé)',d:0,t:0,at:now,gh:{s:g.s,t:g.t}}});
+  const need=Math.max(0,3-ghosts.length),base=(D<=5000?+$('v5k').value:+$('v10k').value*(D>=21000?0.95:1))||10,names=BOTN.slice().sort(()=>Math.random()-0.5),tac=['regulier','rapide','final'];
+  for(let i=0;i<need;i++)p['bot'+i]={n:names[i]+' (ordi)',d:0,t:0,at:now,bot:{v:base*(1+[-0.03,0,0.03][i]),tac:tac[i],seed:Math.random()*6}};
+  LIVE.local=true;LIVE.room='ORDI';LIVE.fin=false;LIVE.prev={};LIVE.said={};LIVE.rank=0;LIVE.data={host:LIVE.id,decor:route.decor,dname:route.name,dist:D,start:now+15000,p};liveUI();
+  $('liveMsg').textContent=(note||'')+(ghosts.length?`${ghosts.length} vrai${ghosts.length>1?'s':''} coureur${ghosts.length>1?'s':''} en différé, de ton niveau${need?`, et ${need} coureur${need>1?'s':''} ordinateur`:''}. Départ dans 15 secondes.`:'Pas encore de course enregistrée à ton niveau sur cette distance : trois coureurs ordinateur prennent le départ dans 15 secondes.')}
+(()=>{const bt0=botTick;botTick=function(){bt0.apply(this,arguments);if(!LIVE.local||!LIVE.data||!LIVE.data.start)return;const R=LIVE.data,now=Date.now();if(now<R.start)return;const t=(now-R.start)/1000;
+  for(const p of Object.values(R.p)){if(!p.gh||p.f)continue;const i=t/10,a=Math.floor(i),s=p.gh.s;const d=a>=s.length-1?s[s.length-1]:s[a]+(s[a+1]-s[a])*(i-a);p.d=Math.min(R.dist,d);p.t=Math.round(t);p.at=now;if(p.d>=R.dist)p.f=p.gh.t}}})();
+setInterval(()=>{try{if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.local&&LIVE.data.host===LIVE.id&&!LIVE.data.start&&Object.keys(LIVE.data.p||{}).length<2&&Date.now()-(LIVE.pubSince||Date.now())>25000){LIVE.pubSince=Date.now()+1e9;liveFill('Personne en ligne pour l’instant. ')}}catch(e){}},1000);
 </script>
 </body>
 </html>
