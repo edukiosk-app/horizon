@@ -2344,5 +2344,9 @@ setInterval(()=>{try{gpxOthers()}catch(e){}},500);
 setInterval(()=>{try{if(LIVE.local&&LIVE.room&&route&&!route.decor&&!$('view-run').hidden&&run.state==='running')drawProfile($('runprofile'),wrapX(run.dist),run.ghost?gDistAt(run.ghost,run.time):null)}catch(e){}},1000);
 try{liveDistUI(true)}catch(e){}
 </script>
+<script>
+/* la distance « Ma séance » suit toujours la séance choisie, quel que soit l'endroit où on l'a choisie */
+(()=>{let lw=null,lr=null;setInterval(()=>{try{const w=$('wsel').value,r=route?route.name:'';if(w!==lw||r!==lr){lw=w;lr=r;if(!LIVE.room)liveDistUI(true)}}catch(e){}},700)})();
+</script>
 </body>
 </html>
