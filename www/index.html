@@ -518,7 +518,7 @@ button.mini{padding:6px 10px;font-size:13px}
           <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
           <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
         <div class="row" style="margin-top:10px"><button id="liveRandom" class="primary">Adversaire au hasard</button><select id="randDist"><option value="5000">5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option></select><span class="hint" style="margin:0">un coureur connecté, en France ou ailleurs</span></div>
-        <div class="row" style="margin-top:8px"><button id="liveBots">Contre l’ordinateur</button><select id="botLvl"><option value="facile">facile</option><option value="egal" selected>à mon niveau</option><option value="dur">difficile</option></select></div>
+        <div class="row" style="margin-top:8px"><button id="liveBots">Contre l’ordinateur</button><select id="botLvl"><option value="facile">facile</option><option value="egal" selected>à mon niveau</option><option value="dur">difficile</option></select><select id="botN"><option value="1">1 adversaire</option><option value="2">2 adversaires</option><option value="3" selected>3 adversaires</option><option value="4">4 adversaires</option><option value="5">5 adversaires</option></select></div>
         </div>
       </div>
       <div id="liveOn" hidden><b id="liveTitle"></b><p id="liveState" class="hint"></p><div id="livePeople" class="league"></div>
@@ -2127,7 +2127,7 @@ function liveBotsStart(){if(!okStart())return;LIVE.randD=0;if(LIVE.room)liveLeav
   $('liveMsg').textContent=`Trois coureurs ordinateur (${lv==='facile'?'un peu plus lents que toi':lv==='dur'?'un peu plus rapides que toi':'à ton niveau'}) t’attendent. Touche « Lancer le départ ».`}
 function botTick(){if(!LIVE.local||!LIVE.data||!LIVE.data.start)return;const R=LIVE.data,now=Date.now();if(now<R.start)return;
   for(const [id,p] of Object.entries(R.p)){if(!p.bot||p.f)continue;const t=(now-R.start)/1000,dt=Math.min(2,(now-(p.lastT||R.start))/1000);p.lastT=now;const fr=p.d/R.dist,b=p.bot;
-    let m=b.tac==='rapide'?(fr<0.3?1.06:fr<0.7?1:0.96):b.tac==='final'?(fr<0.8?0.97:1.1):1;m*=1+0.015*Math.sin(t/23+b.seed)+0.01*Math.sin(t/7+b.seed*2);
+    let m=b.tac==='rapide'?(fr<0.3?1.06:fr<0.7?1:0.96):b.tac==='final'?(fr<0.8?0.97:1.1):1;if(!b.exact)m*=1+0.015*Math.sin(t/23+b.seed)+0.01*Math.sin(t/7+b.seed*2);
     p.d=Math.min(R.dist,p.d+b.v*m/3.6*dt);p.t=Math.round(t);p.at=now;if(p.d>=R.dist)p.f=Math.round(t)}
   const me=R.p[LIVE.id];if(me){me.d=run.dist;me.t=Math.round(run.time);me.at=now}}
 setInterval(()=>{try{botTick()}catch(e){}
@@ -2307,6 +2307,19 @@ setInterval(()=>{try{const R=LIVE.data;if(!(LIVE.local&&R&&R.wk&&R.start&&Date.n
   if(end)for(const p of Object.values(R.p))if(p.bot&&!p.f&&t>=end){p.f=Math.round(end)}
   if(!LIVE.fin&&run.state==='running'&&workout&&run.step>=workout.steps.length){LIVE.fin=Math.round(run.time);const P=livePeople(),i=P.findIndex(p=>p.me);
     say(`Séance terminée. Tu finis ${ordFr(i+1)} sur ${P.length}, avec ${spk(run.dist/1000)} kilomètres.`,`Workout complete. You finish number ${i+1} of ${P.length}.`);setTimeout(()=>$('stop').onclick(),800)}}catch(e){}},1000);
+</script>
+<script>
+/* nombre d'adversaires ordinateur au choix ; avec « Ma séance » : un coureur suit exactement le programme, les autres sont un peu plus rapides */
+(()=>{const lb=liveBotsStart;liveBotsStart=function(){lb.apply(this,arguments);const R=LIVE.data;if(!R||!LIVE.local)return;store.set('botN',$('botN').value);
+  const N=Math.max(1,Math.min(5,+$('botN').value||3)),lv=$('botLvl').value,wk=!!R.wk,now=Date.now();
+  for(const k of Object.keys(R.p))if(R.p[k].bot)delete R.p[k];
+  const names=BOTN.slice().sort(()=>Math.random()-0.5),base=((R.dshow||R.dist)<=5000?+$('v5k').value:+$('v10k').value)||10,kLv={facile:0.92,egal:1,dur:1.06}[lv]||1,step={facile:0.02,egal:0.04,dur:0.06}[lv]||0.04,tac=['rapide','final','regulier'];
+  for(let i=0;i<N;i++){let b;
+    if(wk)b=i===0?{exact:true,tac:'regulier',k:1,v:base,seed:0,name:'Programme'}:{tac:tac[(i-1)%3],k:1+step*i,v:base,seed:Math.random()*6};
+    else{const o=N===1?0:-0.03+0.06*i/(N-1);b={v:base*kLv*(1+o),tac:['regulier','rapide','final'][i%3],seed:Math.random()*6}}
+    R.p['bot'+i]={n:(b.name||names[i])+' (ordi)',d:0,t:0,at:now,bot:b}}
+  liveUI();if(wk)$('liveMsg').textContent=N===1?'« Programme » fait exactement ta séance aux vitesses prévues. Fais mieux en accélérant quand tu veux.':`« Programme » fait exactement ta séance aux vitesses prévues, ${N-1===1?'l’autre va':'les autres vont'} un peu plus vite (${Array.from({length:N-1},(_,i)=>'+'+Math.round(step*(i+1)*100)+' %').join(', ')}). Accélère quand tu veux pour prendre la tête. Touche « Lancer le départ ».`};
+  $('liveBots').onclick=liveBotsStart;$('botN').value=store.get('botN','3')})();
 </script>
 </body>
 </html>
