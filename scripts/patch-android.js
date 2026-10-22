@@ -30,3 +30,13 @@ const res = path.join(root, 'android/app/src/main/res');
 const bg = path.join(res, 'values/ic_launcher_background.xml');
 if (fs.existsSync(bg)) fs.writeFileSync(bg, '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#1C1F23</color>\n</resources>\n');
 console.log('Projet Android préparé pour Treadverse.');
+
+// Numéro de version qui augmente à chaque construction : Android accepte alors la mise à jour par-dessus l'ancienne version
+const gradle = path.join(root, 'android/app/build.gradle');
+if (fs.existsSync(gradle)) {
+  const n = parseInt(process.env.GITHUB_RUN_NUMBER || '1', 10) + 100;
+  let gx = fs.readFileSync(gradle, 'utf8');
+  gx = gx.replace(/versionCode\s+\d+/, 'versionCode ' + n).replace(/versionName\s+"[^"]*"/, 'versionName "1.0.' + (process.env.GITHUB_RUN_NUMBER || '0') + '"');
+  fs.writeFileSync(gradle, gx);
+  console.log('Version Android :', n);
+}
