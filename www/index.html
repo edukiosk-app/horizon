@@ -2348,5 +2348,12 @@ try{liveDistUI(true)}catch(e){}
 /* la distance « Ma séance » suit toujours la séance choisie, quel que soit l'endroit où on l'a choisie */
 (()=>{let lw=null,lr=null;setInterval(()=>{try{const w=$('wsel').value,r=route?route.name:'';if(w!==lw||r!==lr){lw=w;lr=r;if(!LIVE.room)liveDistUI(true)}}catch(e){}},700)})();
 </script>
+<script>
+/* une séance choisie fixe toujours la course à plusieurs (sauf « au hasard ») : plus de distance contradictoire */
+(()=>{const g1=getD;getD=function(){if(!LIVE.randD&&seanceDist())return seanceDist();return g1.apply(this,arguments)}})();
+(()=>{const u1=liveDistUI;liveDistUI=function(){u1.apply(this,arguments);const d=seanceDist(),sel=$('liveDist');if(d){sel.value='0';sel.disabled=true;sel.title='La séance choisie fixe la course';}else sel.disabled=false}})();
+(()=>{const lb=liveBotsStart;liveBotsStart=function(){lb.apply(this,arguments);const R=LIVE.data;if(R&&LIVE.local&&!R.wk){const n=Object.values(R.p).filter(x=>x.bot).length,lv=$('botLvl').value;$('liveMsg').textContent=`${n} coureur${n>1?'s':''} ordinateur (${lv==='facile'?'un peu plus lents que toi':lv==='dur'?'un peu plus rapides que toi':'à ton niveau'}) sur ${fmt(R.dist/1000,R.dist%1000?1:0)} km. Touche « Lancer le départ ».`}};$('liveBots').onclick=liveBotsStart})();
+(()=>{let lw=null;setInterval(()=>{try{const w=$('wsel').value;if(w!==lw){lw=w;liveDistUI(true);if(LIVE.local&&LIVE.data&&!LIVE.data.start){liveBotsStart()}}}catch(e){}},700)})();
+</script>
 </body>
 </html>
