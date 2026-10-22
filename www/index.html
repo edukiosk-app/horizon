@@ -2611,7 +2611,7 @@ function evNextSunday(){const d=new Date();d.setHours(9,0,0,0);const add=(7-d.ge
 const EV_BUILTIN=()=>({id:'DIM5',title:'Le 5 km du dimanche',at:evNextSunday(),rep:7,dist:5000,decor:'sea',relief:'decor',club:'',by:'Treadverse',builtin:1});
 function evOcc(ev){if(ev.builtin)return ev.at;let a=ev.at;if(ev.rep&&a<Date.now()-30*60e3){const P=ev.rep*864e5;a+=Math.ceil((Date.now()-30*60e3-a)/P)*P}return a}
 const evKey=(ev,occ)=>new Date(occ).toISOString().slice(0,16).replace(/[-:T]/g,'');
-async function evLoad(){if(!LIVE.url())return;try{const all=await fb('rooms/_events')||{};const b=all.DIM5||{};EVS=[{...EV_BUILTIN(),reg:b.reg||{},res:b.res||{}}];
+async function evLoad(){if(!LIVE.url())return;try{const all=await fb('rooms/_events')||{};const b=all.DIM5||{};EVS=[{...EV_BUILTIN(),reg:b.reg||{},res:b.res||{},kudos:b.kudos||{}}];
   for(const [id,v] of Object.entries(all)){if(id==='DIM5'||!v||!v.at)continue;if(v.club&&!myClubs().includes(v.club))continue;EVS.push({...v,id})}EVAT=Date.now()}catch(e){}evRender()}
 function evRender(){const box=$('evList');if(!box)return;const now=Date.now(),items=EVS.map(ev=>({ev,occ:evOcc(ev)})).filter(x=>x.occ>now-30*60e3&&x.occ<now+31*864e5).sort((a,b)=>a.occ-b.occ);
   if(!LIVE.url()){box.innerHTML='<p class="hint" style="margin:0">Active d’abord le serveur dans « Course en direct ».</p>';return}
@@ -2726,6 +2726,55 @@ function gearRender(){const host=$('coachList');if(!host)return;let el=$('gearBo
   el.innerHTML=`<h3>Équipement conseillé</h3><p class="hint" style="margin-top:0">Liens partenaires : un achat par ces liens soutient Treadverse, sans surcoût pour toi.</p>`+G.map(g=>`<a class="adcard on" href="${esc(g.url)}" target="_blank" rel="noopener sponsored"><span><b>${esc(g.name)}</b>${g.text?`<small>${esc(g.text)}</small>`:''}</span><em>Partenaire</em></a>`).join('')}
 (()=>{const cr=coachRender;coachRender=function(){const r=cr.apply(this,arguments);try{gearRender()}catch(e){}return r}})();
 adsRender();setTimeout(adsLoad,3000);
+</script>
+<style>
+.kud{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.kud button{font-size:13px;padding:6px 10px}
+.wall summary{cursor:pointer;font-weight:600;margin-top:4px}.wl{display:grid;gap:6px;margin:8px 0;max-height:320px;overflow:auto}
+.wm{background:var(--bg,#0b1220);border-radius:8px;padding:6px 8px}.wm small{color:var(--muted)}.wm .act{display:flex;gap:10px;margin-top:2px}.wm .act a{font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline}
+</style>
+<script>
+/* ===== 1) messages tout prêts (félicitations) ===== */
+const KUDOS=['Bravo !','Belle course','Merci pour la course','Bien joué le sprint final','Revanche dimanche ?','À la prochaine !'];
+const kKey=()=>Date.now()+'_'+LIVE.id;
+function kudosHTML(list){const v=Object.values(list||{}).filter(x=>x&&x.m!=null&&KUDOS[x.m]).sort((a,b)=>(b.at||0)-(a.at||0));if(!v.length)return'';
+  return `<small>💬 ${v.slice(0,6).map(x=>`${esc(x.n||'Coureur')} : ${KUDOS[x.m]}`).join(' · ')}${v.length>6?` · +${v.length-6}`:''}</small>`}
+function kudosBar(onPick){const d=document.createElement('div');d.className='kud';KUDOS.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.className='mini';b.textContent=t;b.onclick=async()=>{d.querySelectorAll('button').forEach(x=>x.disabled=true);try{await onPick(i);b.textContent='Envoyé : '+t}catch(e){b.textContent='Envoi impossible'}};d.append(b)});return d}
+/* dans le bilan d'une course à plusieurs (vrais coureurs) */
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);try{if(S.comp&&LIVE.room&&!LIVE.local){S.comp.room=LIVE.room;if(LIVE.ev)S.comp.ev={id:LIVE.ev.id,k:LIVE.ev.k};store.set('lastBilan',S);
+      const L=store.get('palmares',[]),x=L[L.length-1];if(x&&x.date===S.date){x.room=LIVE.room;store.set('palmares',L)}}}catch(e){}return S}})();
+(()=>{const bs=bilanShow;bilanShow=function(S){bs.apply(this,arguments);S=S||store.get('lastBilan',null);let box=$('bilanKud');if(!box){box=document.createElement('div');box.id='bilanKud';$('feelBox').after(box)}box.innerHTML='';
+  if(!S||!S.comp||!S.comp.room||!LIVE.url())return;const h=document.createElement('small');h.className='hint';h.textContent='Un mot pour les autres coureurs :';box.append(h);
+  box.append(kudosBar(async i=>{const m={n:liveName(),m:i,at:{'.sv':'timestamp'}},k=kKey();await fb(`rooms/${S.comp.room}/kudos/${k}`,'PUT',m);if(S.comp.ev)await fb(`rooms/_events/${S.comp.ev.id}/kudos/${S.comp.ev.k}/${k}`,'PUT',m)}))}})();
+/* sous chaque compétition, dans l'onglet Clubs */
+(()=>{const er=evRender;evRender=function(){er.apply(this,arguments);try{document.querySelectorAll('#evList .cbox').forEach(c=>{const b=c.querySelector('[data-ev]');if(!b||c.querySelector('.kfil'))return;const ev=EVS.find(e=>e.id===b.dataset.ev);if(!ev)return;
+    const occ=evOcc(ev),last=Date.now()>occ+15e3?occ:(ev.rep?occ-ev.rep*864e5:0);if(!last)return;const k=evKey(ev,last),res=ev.res&&ev.res[k],kd=ev.kudos&&ev.kudos[k];if(!res&&!kd)return;
+    const w=document.createElement('div');w.className='kfil';w.innerHTML=`<small class="hint" style="margin:0">Dernière édition, le ${new Date(last).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}${res?' : '+Object.values(res).filter(r=>r&&r.t).sort((a,b)=>a.t-b.t).slice(0,3).map((r,i)=>`${i+1}. ${esc(r.n)}`).join(' · '):''}</small>${kudosHTML(kd)}`;
+    const btn=document.createElement('button');btn.type='button';btn.className='mini';btn.textContent='Féliciter les coureurs';btn.onclick=()=>{btn.replaceWith(kudosBar(async i=>{await fb(`rooms/_events/${ev.id}/kudos/${k}/${kKey()}`,'PUT',{n:liveName(),m:i,at:{'.sv':'timestamp'}})}))};w.append(btn);c.append(w)})}catch(e){}}})();
+/* messages reçus, dans le palmarès */
+(()=>{const pr=palmRender;palmRender=function(){pr.apply(this,arguments);if(!LIVE.url())return;const L=store.get('palmares',[]).slice().reverse().slice(0,15),cards=[...document.querySelectorAll('#palmList .cbox')].slice(1);
+  L.forEach((x,i)=>{if(!x.room||!cards[i])return;fb(`rooms/${x.room}/kudos`).then(kd=>{const h=kudosHTML(kd);if(h&&!cards[i].querySelector('.kr')){const s=document.createElement('div');s.className='kr';s.innerHTML=h;cards[i].append(s)}}).catch(()=>{})})}})();
+/* ===== 2) mur du club ===== */
+const BADW=['connard','connasse','salope','salaud','pute','putain','encule','enculé','fdp','ntm','nique','niquer','batard','bâtard','merde','abruti','debile','débile','pd','tg','ta gueule'];
+function wallClean(t){t=String(t||'').replace(/\s+/g,' ').trim().slice(0,280).replace(/(https?:\/\/|www\.)\S+/gi,'[lien retiré]');
+  BADW.forEach(w=>{t=t.replace(new RegExp('(^|[^\\p{L}])('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')(?=$|[^\\p{L}])','giu'),(m,a,b)=>a+'•'.repeat(b.length))});return t}
+const blocked=()=>store.get('blocked',[]);let wallLast=0;
+async function wallLoad(code,box){let c;try{c=await fb('rooms/_clubs/'+code)}catch(e){box.querySelector('.wl').innerHTML='<small class="hint">Serveur injoignable.</small>';return}
+  const W=c&&c.wall||{},R=c&&c.rep||{},B=blocked(),own=c&&c.owner===LIVE.id,hid=store.get('hiddenMsg',[]);
+  const L=Object.entries(W).filter(([k,m])=>m&&m.t&&!B.includes(m.id)&&!hid.includes(k)&&Object.keys(R[k]||{}).length<3).sort((a,b)=>(a[1].at||0)-(b[1].at||0)).slice(-30);
+  const wl=box.querySelector('.wl');wl.innerHTML=L.map(([k,m])=>`<div class="wm"><small>${esc(m.n||'Coureur')} · ${m.at?new Date(m.at).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}</small><div>${esc(wallClean(m.t))}</div>
+    <div class="act">${m.id===LIVE.id||own?`<a data-a="del" data-k="${k}">Supprimer</a>`:''}${m.id!==LIVE.id?`<a data-a="rep" data-k="${k}">Signaler</a><a data-a="blk" data-u="${esc(m.id)}" data-n="${esc(m.n||'')}">Bloquer</a>`:''}</div></div>`).join('')||'<small class="hint">Aucun message pour l’instant. Lance la discussion !</small>';
+  wl.scrollTop=wl.scrollHeight;box.querySelector('summary').textContent=`Mur du club (${L.length})`;
+  wl.querySelectorAll('[data-a]').forEach(a=>a.onclick=async()=>{const k=a.dataset.k;try{
+    if(a.dataset.a==='del'){await fb(`rooms/_clubs/${code}/wall/${k}`,'DELETE')}
+    else if(a.dataset.a==='rep'){await fb(`rooms/_clubs/${code}/rep/${k}/${LIVE.id}`,'PUT',1);const h=store.get('hiddenMsg',[]);h.push(k);store.set('hiddenMsg',h.slice(-500))}
+    else if(a.dataset.a==='blk'){if(!confirm(`Ne plus voir les messages de ${a.dataset.n||'ce coureur'} ?`))return;const b=blocked();b.push(a.dataset.u);store.set('blocked',b)}}catch(e){}wallLoad(code,box)})}
+function wallMount(code,card){const d=document.createElement('details');d.className='wall';d.innerHTML=`<summary>Mur du club</summary><div class="wl"></div><div class="row" style="margin:0"><input type="text" maxlength="280" placeholder="Écris aux membres du club" style="flex:1;min-width:0"><button class="mini primary">Envoyer</button></div><small class="hint" style="margin:4px 0 0">Reste sympa : pas d’insulte ni de lien. « Signaler » masque un message ; trois signalements le retirent pour tout le monde.</small>`;
+  const inp=d.querySelector('input'),send=d.querySelector('button');let tm=null;
+  d.addEventListener('toggle',()=>{clearInterval(tm);if(d.open){wallLoad(code,d);tm=setInterval(()=>{if(!d.isConnected||$('view-club').hidden){clearInterval(tm);return}wallLoad(code,d)},20000)}});
+  send.onclick=async()=>{const t=wallClean(inp.value);if(!t)return;if(Date.now()-wallLast<10000){inp.placeholder='Attends quelques secondes entre deux messages.';return}wallLast=Date.now();send.disabled=true;
+    try{await fb(`rooms/_clubs/${code}/wall/${kKey()}`,'PUT',{n:liveName(),id:LIVE.id,t,at:{'.sv':'timestamp'}});inp.value=''}catch(e){inp.placeholder='Envoi impossible.'}send.disabled=false;wallLoad(code,d)};
+  inp.onkeydown=e=>{if(e.key==='Enter')send.onclick()};card.querySelector('.row').before(d)}
+(()=>{const cr=clubRender;clubRender=async function(){await cr.apply(this,arguments);try{document.querySelectorAll('#clubList .cbox').forEach(c=>{const b=c.querySelector('[data-cl]');if(b&&!c.querySelector('.wall'))wallMount(b.dataset.cl,c)})}catch(e){}}})();
 </script>
 </body>
 
