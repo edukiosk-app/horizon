@@ -2395,5 +2395,17 @@ window.reliefEle=function(x){try{if(!route||!route.decor)return null;const m=rel
   const f=(xr-c.d[lo])/((c.d[hi]-c.d[lo])||1);return c.pts[lo][2]+(c.pts[hi][2]-c.pts[lo][2])*f}catch(e){return null}};
 (()=>{const sel=$('relief');sel.value=reliefMode();sel.onchange=()=>{store.set('relief',sel.value);try{drawPrep();drawProfile($('profile'),-1);profRoute=null}catch(e){}}})();
 </script>
+<script>
+/* relief appliqué au parcours lui-même (profil, pente du tapis ET décor 3D) : les pentes du relief choisi sont conservées, la boucle se referme */
+window.reliefEle=()=>null;
+function reliefPts(pts,k){try{const m=reliefMode();if(!k||!window.VR||m==='decor'||m===k)return pts;
+  const b0=Math.min(...pts.map(p=>p[2]??0));if(m==='plat')return pts.map(p=>[p[0],p[1],b0]);
+  const cum=a=>{const d=[0];for(let i=1;i<a.length;i++)d.push(d[i-1]+hav(a[i-1],a[i]));return d};
+  const src=VR.routePts(m),sd=cum(src),Ls=sd[sd.length-1],bd=cum(pts),Lc=bd[bd.length-1]||1,sc=Lc/Ls,smin=Math.min(...src.map(p=>p[2]));
+  let j=0;return pts.map((p,i)=>{const u=bd[i]/sc;while(j<sd.length-2&&sd[j+1]<u)j++;if(sd[j]>u)j=0;while(j<sd.length-2&&sd[j+1]<u)j++;const f=Math.max(0,Math.min(1,(u-sd[j])/((sd[j+1]-sd[j])||1)));const e=src[j][2]+(src[j+1][2]-src[j][2])*f;return [p[0],p[1],b0+(e-smin)*sc]})}catch(e){return pts}}
+(()=>{const sr=setRoute;setRoute=function(pts,name,decor){return sr.call(this,reliefPts(pts,decor),name,decor)};
+  const sel=$('relief'),old=sel.onchange;sel.onchange=()=>{old&&old();try{if(route&&route.decor&&run.state!=='running'&&run.state!=='paused'){setRoute(VR.routePts(route.decor),route.name,route.decor);if(!$('view-run').hidden)RM.init()}}catch(e){}};
+  try{if(route&&route.decor&&reliefMode()!=='decor')setRoute(VR.routePts(route.decor),route.name,route.decor)}catch(e){}})();
+</script>
 </body>
 </html>

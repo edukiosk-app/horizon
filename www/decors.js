@@ -219,9 +219,11 @@
         jungle: { ground: 0x5d6b2e, base: 0x55632a, path: 0x8a6a46, pw: 1.8, trees: [['fern', 0.8], ['palm', 0.2]], step: 6, far: 40, rocks: 50, ferns: 400, hills: true, jungle: true },
       }[k];
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6;
+      const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6, SEAREL = CF.sea && Math.max(...P.map((p) => p.y)) - minY > 4;
       if (CF.lake) { ribbon(-14, -2, 3, lam(CF.ground), -0.08, (o, s2) => o <= -14 ? waterY - 0.3 - at(s2).pos.y : 0); ribbon(-2, 45, 4, lam(CF.ground), -0.08); }
       else if (!CF.sea) ribbon(-45, 45, 4, lam(CF.ground), -0.08);
+      else if (SEAREL) { const sg = lam(CF.ground), drop = (o, s2) => Math.abs(o) > 10 ? -at(s2).pos.y - 0.4 : 0;
+        ribbon(-6, 6, 4, sg, -0.08); ribbon(6, 18, 4, sg, -0.08, drop); ribbon(-18, -6, 4, sg, -0.08, drop); }
       ribbon(-CF.pw, CF.pw, 2, lam(CF.path), 0.0);
       const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : minY - 2; base.receiveShadow = true; scene.add(base);
       if (CF.sea) {
@@ -248,7 +250,7 @@
         if (CF.lake && side < 0 && rnd() < 0.85) continue;                  // côté lac : peu d'arbres
         if (CF.sea && at(s2, side * 5).pos.z > at(s2).pos.z) continue;               // pas de palmiers côté mer
         const off = side * (CF.pw + 2 + rnd() ** 1.6 * (CF.lake && side < 0 ? 6 : CF.far)); const A = at(s2 + rnd() * 2, off);
-        if (near(A.pos.x, A.pos.z, CF.pw + 1.5)) continue; const t = pick(); spots[t].push([A.pos.x, A.pos.y - 0.1, A.pos.z, 0.75 + rnd() * 0.75, rnd() * 6.28]);
+        if (near(A.pos.x, A.pos.z, CF.pw + 1.5)) continue; const t = pick(); spots[t].push([A.pos.x, (SEAREL && Math.abs(off) > 12 ? 0 : A.pos.y) - 0.1, A.pos.z, 0.75 + rnd() * 0.75, rnd() * 6.28]);
       }
       const m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(), col = new T.Color(), e = new T.Euler();
       const inst = (geo, mat, n, shadow = true) => { const m = new T.InstancedMesh(geo, mat, Math.max(1, n)); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
