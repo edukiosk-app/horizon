@@ -1859,8 +1859,8 @@ const LIVE={url:()=>(store.get('fbUrl','')||FB_DEFAULT).trim().replace(/\/+$/,''
   room:null,data:null,es:null,off:0,lastSend:0,said:{},rank:0,rankAt:0,fin:false,prev:{}};
 const LCOL=[0x22c55e,0xa855f7,0xec4899,0xeab308,0x06b6d4,0xf43f5e,0x84cc16];
 function liveName(){return(store.get('liveName','')||'').trim()||'Coureur'}
-async function fb(path,method='GET',body){const r=await fetch(`${LIVE.url()}/${path}.json`,{method,headers:{'Content-Type':'application/json'},body:body!==undefined?JSON.stringify(body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}
-async function liveClock(){const t0=Date.now();let v=await fb('rooms/_clk/'+LIVE.id,'PUT',{'.sv':'timestamp'});const t1=Date.now();if(typeof v!=='number')v=await fb('rooms/_clk/'+LIVE.id);if(typeof v==='number')LIVE.off=v-(t0+t1)/2}
+async function fb(path,method='GET',body){const w=method!=='GET';const r=await fetch(`${LIVE.url()}/${path}.json${w?'?print=silent':''}`,{method,headers:{'Content-Type':'application/json'},body:body!==undefined?JSON.stringify(body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);if(w)return null;const t=await r.text();if(!t)return null;try{return typeof t==='string'?JSON.parse(t):t}catch(e){return t}}
+async function liveClock(){const t0=Date.now();await fb('rooms/_clk/'+LIVE.id,'PUT',{t:{'.sv':'timestamp'}});const o=await fb('rooms/_clk/'+LIVE.id);const t1=Date.now();const v=o&&+o.t;if(v>0)LIVE.off=v-(t0+t1)/2}
 const srvNow=()=>Date.now()+LIVE.off;
 function liveApply(path,data){const k=path.split('/').filter(Boolean);if(!k.length){LIVE.data=data||{};return}LIVE.data=LIVE.data||{};let o=LIVE.data;
   for(let i=0;i<k.length-1;i++){if(!o[k[i]]||typeof o[k[i]]!=='object')o[k[i]]={};o=o[k[i]]}const last=k[k.length-1];if(data===null)delete o[last];else o[last]=data}
@@ -1897,7 +1897,7 @@ function liveUI(){const on=!!LIVE.room,R=LIVE.data||{};$('liveOff').hidden=on;$(
   $('liveState').textContent=!R.start?(host?`${P.length} coureur${P.length>1?'s':''} inscrit${P.length>1?'s':''}. Lance le départ quand tout le monde est prêt (tapis connecté) : un compte à rebours de 15 secondes démarre chez tous.`:'En attente du départ donné par le créateur.'):now<R.start?`Départ dans ${Math.ceil((R.start-now)/1000)} s`:'Course en cours';
   $('livePeople').innerHTML=P.map((p,i)=>`<div class="lrow${p.me?' me':''}"><span>${R.start?i+1+'. ':''}${esc(p.n||'Coureur')}${p.me?' (toi)':''}</span><span>${p.f?hdur(p.f):R.start?fmt(p.d/1000,2)+' km':'prêt'}</span></div>`).join('');
   const box=$('livebox');box.hidden=!(R.start&&run.state!=='idle');if(!box.hidden){const i=P.findIndex(p=>p.me),me=P[i];
-    $('liveRank').textContent=`${i+1}e / ${P.length}`;$('liveLines').innerHTML=P.slice(0,5).map((p,k)=>`<span class="${p.me?'me':''}">${k+1}. ${esc(p.n||'Coureur')} ${p.f?hdur(p.f):p.me?fmt(p.d/1000,2)+' km':(p.d>=me.d?'+':'−')+Math.round(Math.abs(p.d-me.d))+' m'}</span>`).join('')}}
+    $('liveRank').textContent=`${i?i+1+'e':'1er'} / ${P.length}`;$('liveLines').innerHTML=P.slice(0,5).map((p,k)=>`<span class="${p.me?'me':''}">${k+1}. ${esc(p.n||'Coureur')} ${p.f?hdur(p.f):p.me?fmt(p.d/1000,2)+' km':(p.d>=me.d?'+':'−')+Math.round(Math.abs(p.d-me.d))+' m'}</span>`).join('')}}
 function liveTick(){if(!LIVE.room||!LIVE.data)return;const R=LIVE.data,now=srvNow();
   if(R.start&&run.state==='idle'&&!LIVE.fin){const left=(R.start-now)/1000;
     for(const n of[10,5,3,2,1])if(left<=n&&left>n-1&&!LIVE.said[n]){LIVE.said[n]=1;say(n===10?'Départ dans 10 secondes.':String(n),n===10?'Start in 10 seconds.':String(n))}
@@ -1916,7 +1916,7 @@ function liveDots(){if(!LIVE.room||!LIVE.data||!LIVE.data.start||RM.kind!=='deco
 function xtTick(dt,dd){const st=curStep();run.vert=(run.vert||0)+dd*Math.max(0,run.inc||0)*IR()/100;try{coachTick(st)}catch(e){}try{voiceTick(st)}catch(e){}}
 function xtRender(){const z=hrZone(run.hr);$('sHr').textContent=run.hr?`${run.hr} bpm${z?' · Z'+z:''}`:'–';const c=$('coachInfo');if(c)c.textContent=coachTxt()?coachTxt()+` (FC max ${hrMax()})`:'';liveDots()}
 function xtFS(){$('fsHr').textContent=run.hr||'–';const z=hrZone(run.hr);$('fsHr').nextElementSibling.textContent=z?'bpm · Z'+z:'bpm';
-  if(!$('livebox').hidden){$('fsGap').hidden=false;$('fsGap').className='fs-gap '+($('liveRank').textContent.startsWith('1e')?'ahead':'');$('fsGap').textContent='Course en direct : '+$('liveRank').textContent}}
+  if(!$('livebox').hidden){$('fsGap').hidden=false;$('fsGap').className='fs-gap '+($('liveRank').textContent.startsWith('1er')?'ahead':'');$('fsGap').textContent='Course en direct : '+$('liveRank').textContent}}
 setInterval(()=>{try{liveTick()}catch(e){}},500);
 (()=>{const sel=$('coach');sel.value=store.get('coach','off');sel.onchange=()=>{store.set('coach',sel.value);render()};
   const vc=$('vcoach');vc.checked=store.get('vcoach',true);vc.onchange=()=>store.set('vcoach',vc.checked);
