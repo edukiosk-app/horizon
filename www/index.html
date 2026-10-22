@@ -2186,5 +2186,39 @@ liveDistUI(true);
   if(!R.sched){const st=refSteps()||[],sch=[];let T=0;st.forEach(s=>{const v=s.v||speedFor(s);const d=s.dur||(s.dist/(v/3.6));T+=d;sch.push([T,v])});R.sched=sch;R.ref=+$('v10k').value||11}
   for(const p of Object.values(R.p)){if(!p.bot)continue;if(p.bot.k==null)p.bot.k=p.bot.v/((R.dist<=5000?+$('v5k').value:R.ref)||10);const seg=R.sched.find(x=>x[0]>=t*(1));const v=seg?seg[1]:R.ref;p.bot.v=v*p.bot.k}}}catch(e){}return prev.apply(this,arguments)}})();
 </script>
+<style>
+.podium-box{text-align:center;margin:-4px 0 12px}
+.podium-box .cup{width:96px;height:96px;margin:0 auto;animation:cupIn .8s cubic-bezier(.2,1.6,.4,1) both}
+.podium-box .rank{font-size:1.5em;font-weight:800;margin:4px 0 10px}
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:6px;height:150px}
+.podium .st{width:31%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center}
+.podium .st b{font-size:.85em;line-height:1.15;margin-bottom:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium .st small{font-size:.72em;opacity:.8;margin-bottom:4px}
+.podium .blk{width:100%;border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;font-weight:800;font-size:1.4em;padding-top:6px;color:#1f2329;animation:rise .7s ease-out both}
+.podium .p1 .blk{height:84px;background:linear-gradient(#fde68a,#f59e0b);animation-delay:.35s}.podium .p2 .blk{height:60px;background:linear-gradient(#f1f5f9,#94a3b8);animation-delay:.2s}.podium .p3 .blk{height:44px;background:linear-gradient(#fed7aa,#c2703d);animation-delay:.05s}
+.podium .me b{color:#fb923c}
+@keyframes rise{from{transform:scaleY(0);transform-origin:bottom}to{transform:scaleY(1);transform-origin:bottom}}
+@keyframes cupIn{from{transform:scale(.2) rotate(-25deg);opacity:0}to{transform:none;opacity:1}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:10000;overflow:hidden}.confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(105vh) rotate(720deg)}}
+</style>
+<script>
+/* coupe et podium à la fin d'une course à plusieurs (en direct, au hasard, en différé, contre l'ordinateur) */
+function cupSVG(c){const col={1:['#fde68a','#f59e0b','#b45309'],2:['#f8fafc','#cbd5e1','#64748b'],3:['#fed7aa','#d97706','#7c2d12']}[c]||['#e2e8f0','#94a3b8','#475569'];
+  return`<svg class="cup" viewBox="0 0 100 100"><defs><linearGradient id="cg${c}" x1="0" x2="1"><stop offset="0" stop-color="${col[0]}"/><stop offset=".55" stop-color="${col[1]}"/><stop offset="1" stop-color="${col[2]}"/></linearGradient></defs>
+  <path d="M27 14h46v14c0 17-10 29-23 31C37 57 27 45 27 28z" fill="url(#cg${c})"/><path d="M27 20H14c0 13 7 21 16 22M73 20h13c0 13-7 21-16 22" fill="none" stroke="${col[1]}" stroke-width="5" stroke-linecap="round"/>
+  <rect x="45" y="58" width="10" height="14" fill="${col[1]}"/><rect x="32" y="72" width="36" height="8" rx="2" fill="${col[2]}"/><rect x="26" y="80" width="48" height="9" rx="2" fill="${col[1]}"/>
+  <text x="50" y="41" text-anchor="middle" font-size="18" font-weight="800" fill="#fff" opacity=".9">${c<=3?c:''}</text></svg>`}
+function confetti(){const c=document.createElement('div');c.className='confetti';const cols=['#f59e0b','#22c55e','#3b82f6','#ec4899','#a855f7','#fb923c'];
+  for(let i=0;i<70;i++){const e=document.createElement('i');e.style.left=Math.random()*100+'%';e.style.background=cols[i%cols.length];e.style.animationDuration=(2+Math.random()*2.5)+'s';e.style.animationDelay=Math.random()*0.8+'s';c.append(e)}
+  document.body.append(c);setTimeout(()=>c.remove(),5500)}
+(()=>{const bb=bilanBuild;bilanBuild=function(done,g){const S=bb.apply(this,arguments);try{if(LIVE.room&&LIVE.data&&LIVE.fin){const P=livePeople(),i=P.findIndex(p=>p.me);
+  S.podium={rank:i+1,n:P.length,top:P.slice(0,3).map(p=>({n:p.me?'Toi':p.n,me:!!p.me,v:p.f?hdur(p.f):fmt(p.d/1000,2)+' km'}))};store.set('lastBilan',S)}}catch(e){}return S}})();
+(()=>{const bs=bilanShow;bilanShow=function(S){bs.apply(this,arguments);S=S||store.get('lastBilan',null);const card=document.querySelector('.bilan-card');let box=$('podiumBox');
+  if(!S||!S.podium){if(box)box.remove();return}if(!box){box=document.createElement('div');box.id='podiumBox';box.className='podium-box';card.insertBefore(box,card.children[1])}
+  const P=S.podium,r=P.rank,st=k=>{const p=P.top[k-1];return p?`<div class="st p${k}${p.me?' me':''}"><b>${esc(p.n)}</b><small>${esc(p.v)}</small><div class="blk">${k}</div></div>`:`<div class="st p${k}"></div>`};
+  box.innerHTML=cupSVG(r)+`<div class="rank">${r===1?'Victoire !':r===2?'Deuxième place':r===3?'Troisième place':ordFr(r).replace(/^./,c=>c.toUpperCase())+' place'} · ${r} sur ${P.n}</div><div class="podium">${st(2)}${st(1)}${st(3)}</div>`;
+  if(r===1&&!S.shownCup){S.shownCup=true;store.set('lastBilan',S);confetti()}}})();
+</script>
 </body>
 </html>
