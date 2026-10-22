@@ -513,7 +513,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <p id="fbMsg" class="hint"></p>
       </div>
       <div id="liveOff">
-        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="21097">Semi (21,1 km)</option></select></label></div>
+        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label id="raceVL">Vitesse de départ<select id="raceV"><option value="6">6 km/h</option><option value="7" selected>7 km/h</option><option value="8">8 km/h</option><option value="9">9 km/h</option><option value="10">10 km/h</option><option value="11">11 km/h</option><option value="12">12 km/h</option></select></label><label id="raceIL">Pente<select id="raceInc"><option value="0" selected>0 (plat)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="decor">suit le décor</option></select></label></div><p class="hint" id="raceSum" style="margin:6px 0 0"></p>
         <div id="liveJoinBox">
           <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
           <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
@@ -1376,7 +1376,7 @@ function render(){const pk=route&&(route.name+'|'+$('wsel').value+'|'+(typeof LI
     else{const d=gt-run.time,a=Math.abs(d),txt=hdur(a);el.textContent=d>=0?txt+" d'avance":txt+' de retard';el.className=d>=0?'ahead':'behind'}}
   if(zen&&route){const nm=nextMark(x);$('zMark').textContent=nm?nm.m.fr:'–';$('zGap').textContent=nm?(nm.gap>=1000?fmt(nm.gap/1000,1)+' km':Math.round(nm.gap/10)*10+' m'):'–'}
   if(route){const g2=(eleAt(x+200)-eleAt(x))/2;$('sNext').textContent=(g2>=0.5?'Montée ':g2<=-0.5?'Descente ':'Plat ')+fmt(g2)+' %';
-    $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):route.decor?(typeof LIVE!=='undefined'&&LIVE.room&&LIVE.data&&LIVE.data.dist?fmt(Math.max(0,LIVE.data.dist-run.dist)/1000,2)+' km':'libre'):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
+    $('sLeft').textContent=workout&&run.state!=='idle'&&!zen?clock(workout.steps.slice(Math.max(0,run.step)).reduce((a,s)=>a+stepSec(s),0)-(curStep()?(curStep().dur?run.stepT:run.stepD/(curStep().v/3.6)):0)):route.decor?(typeof LIVE!=='undefined'&&LIVE.room&&LIVE.data&&LIVE.data.dist&&!LIVE.data.wk?fmt(Math.max(0,LIVE.data.dist-run.dist)/1000,2)+' km':'libre'):fmt(Math.max(0,total()-run.dist)/1000,2)+' km';
     const p=posAt(x);$('sv').hidden=!!route.decor;$('sv').href=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${p[0].toFixed(6)},${p[1].toFixed(6)}`;
     const now=performance.now();if(RM.map&&!replaying&&!$('view-run').hidden&&now-lastMap>1000){lastMap=now;
       lastGx=gx;const gp=gx!=null?posAt(wrapX(gx)):null;
@@ -2362,6 +2362,26 @@ try{liveDistUI(true)}catch(e){}
   if(ch)store.set('runs',all);store.set('decorMerged',1)}catch(e){}})();
 (()=>{const dp=drawPrep;drawPrep=function(){dp.apply(this,arguments);try{$('prepSesTitle').textContent=route&&!route.decor?'Séance sur ce parcours':'Séance';$('go').textContent=route&&route.decor?'Courir':'Courir ce parcours'}catch(e){}}})();
 try{drawPrep()}catch(e){}
+</script>
+<script>
+/* course de base (sans séance) : distance au choix, vitesse de départ et pente affichées et réglables, plat par défaut */
+function raceBase(){return !seanceDist()}
+function raceSumUI(){const b=raceBase();$('raceVL').hidden=!b;$('raceIL').hidden=!b;const D=getD(),pi=$('raceInc').value;
+  $('raceSum').textContent=b?`Course : ${fmt(D/1000,D%1000?1:0)} km · départ à ${$('raceV').value} km/h · pente ${pi==='decor'?'qui suit le décor':pi==='0'?'0 (plat)':pi+(PTS()?' niv.':' %')}. Tu changes la vitesse et la pente pendant la course avec les boutons.`:'La séance choisie fixe la course : ses vitesses et ses pentes.'}
+['raceV','raceInc','liveDist'].forEach(id=>$(id).addEventListener('change',()=>{store.set(id,$(id).value);raceSumUI()}));
+$('raceV').value=store.get('raceV','7');$('raceInc').value=store.get('raceInc','0');
+setInterval(()=>{try{if(!LIVE.room)raceSumUI()}catch(e){}},1000);
+(()=>{const ti=targetInc;targetInc=function(x){try{const R=LIVE.data;if(LIVE.room&&R&&!R.wk&&raceBase()&&$('raceInc').value!=='decor'){const s=S(),v=(+$('raceInc').value||0)+incAdj;return Math.max(s.min,Math.min(s.max,v))}}catch(e){}return ti.apply(this,arguments)}})();
+setInterval(()=>{try{const R=LIVE.data;if(LIVE.room&&R&&R.start&&!R.wk&&raceBase()&&run.state==='idle'&&!LIVE.fin&&Date.now()>R.start-4000&&!R.baseSet){R.baseSet=1;incAdj=0;run.target=+$('raceV').value||7;render()}}catch(e){}},300);
+(()=>{const lb=liveBotsStart;liveBotsStart=function(){lb.apply(this,arguments);const R=LIVE.data;if(!R||!LIVE.local||R.wk||!raceBase())return;const v0=+$('raceV').value||7,lv=$('botLvl').value,kLv={facile:0.95,egal:1,dur:1.07}[lv]||1,bots=Object.values(R.p).filter(x=>x.bot),N=bots.length;
+  bots.forEach((p,i)=>{const o=N===1?0:-0.03+0.06*i/(N-1);p.bot.v=v0*kLv*(1+o)});
+  $('liveMsg').textContent=`${N} coureur${N>1?'s':''} ordinateur sur ${fmt(R.dist/1000,R.dist%1000?1:0)} km, autour de ${v0} km/h (${lv==='facile'?'un peu moins vite':lv==='dur'?'un peu plus vite':'même vitesse'}). Accélère quand tu veux pour les dépasser. Touche « Lancer le départ ».`};$('liveBots').onclick=liveBotsStart})();
+raceSumUI();
+</script>
+<script>
+/* départ progressif des coureurs ordinateur, comme le tapis : ils atteignent leur vitesse en une quinzaine de secondes */
+(()=>{const prev=botTick;botTick=function(){const R=LIVE.data;const before=R&&R.p?Object.fromEntries(Object.entries(R.p).map(([k,p])=>[k,p.d])):{};const r=prev.apply(this,arguments);
+  try{if(LIVE.local&&R&&R.start){const t=(Date.now()-R.start)/1000;if(t>=0&&t<15){const k=Math.max(0.12,t/15);for(const [id,p] of Object.entries(R.p)){if(!p.bot||p.f)continue;const d0=before[id]||0;p.d=d0+(p.d-d0)*k}}}}catch(e){}return r}})();
 </script>
 </body>
 </html>
