@@ -517,6 +517,8 @@ button.mini{padding:6px 10px;font-size:13px}
         <div id="liveJoinBox">
           <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
           <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
+        <div class="row" style="margin-top:10px"><button id="liveRandom" class="primary">Adversaire au hasard</button><span class="hint" style="margin:0">un coureur connecté, en France ou ailleurs</span></div>
+        <div class="row" style="margin-top:8px"><button id="liveBots">Contre l’ordinateur</button><select id="botLvl"><option value="facile">facile</option><option value="egal" selected>à mon niveau</option><option value="dur">difficile</option></select></div>
         </div>
       </div>
       <div id="liveOn" hidden><b id="liveTitle"></b><p id="liveState" class="hint"></p><div id="livePeople" class="league"></div>
@@ -2106,6 +2108,41 @@ function refRatio(id){return refKmh(id)/Math.max(5,+$('v10k').value||11)}
 (()=>{const ug=updateGhostInfo;updateGhostInfo=function(){ug.apply(this,arguments);try{if($('gsel').value==='ref'&&refSteps()){const id=$('refLvl').value,p=Math.round(refRatio(id)*100),L=(REF_LV.find(x=>x[0]===id)||REF_LV[1])[1];
   $('ginfo').textContent=`Le point bleu fait la même séance que toi, au niveau « ${L} » : ${p} % de tes vitesses programmées, bloc par bloc. Pour le battre, accélère au-dessus du programme avec les boutons +.`}}catch(e){}}})();
 $('refLvl').addEventListener('change',()=>{try{updateGhostInfo()}catch(e){}});
+</script>
+<script>
+/* adversaire au hasard (file d'attente publique) et course contre l'ordinateur (coureurs simulés) */
+(()=>{const f0=fb;fb=function(path){if(LIVE.local&&String(path).startsWith('rooms/ORDI'))return Promise.resolve(null);return f0.apply(this,arguments)}})();
+const BOTN=['Léa','Karim','Sofia','Tom','Yuki','Diego','Inès','Lucas','Amara','Noah'];
+const okStart=()=>{const msg=$('liveMsg');if(!route||!route.decor){msg.textContent='Choisis d’abord un décor virtuel dans Préparer.';return false}if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return false}store.set('liveName',$('liveName').value.trim());return true};
+async function liveRandom(){const msg=$('liveMsg');if(!LIVE.url()||!okStart())return;msg.textContent='Recherche d’un adversaire…';
+  try{await liveClock();const D=+$('liveDist').value,now=srvNow(),open=await fb('rooms/_open/'+D)||{};
+    const c=Object.entries(open).filter(([k,v])=>v&&v.at>now-45000&&v.host!==LIVE.id).sort((a,b)=>a[1].at-b[1].at);
+    for(const [code] of c){const r=await fb('rooms/'+code);if(r&&r.decor&&!r.start&&Object.keys(r.p||{}).length<6){$('liveCodeIn').value=code;await liveJoin();if(LIVE.room){LIVE.pub=D;msg.textContent=`Adversaire trouvé : ${Object.values(r.p||{}).map(x=>x.n).join(', ')}. Décor « ${r.dname} ». Le départ part tout seul dans quelques secondes.`}return}}
+    await liveCreate();if(!LIVE.room)return;LIVE.pub=D;LIVE.pubSince=Date.now();await fb(`rooms/${LIVE.room}`,'PATCH',{pub:D});await fb(`rooms/_open/${D}/${LIVE.room}`,'PUT',{at:{'.sv':'timestamp'},host:LIVE.id});
+    msg.textContent='En attente d’un adversaire… Le départ part tout seul dès qu’un coureur te rejoint.'}catch(e){msg.textContent='Recherche impossible : '+e.message}}
+function liveBotsStart(){if(!okStart())return;if(LIVE.room)liveLeave();const D=+$('liveDist').value,lv=$('botLvl').value,k={facile:0.92,egal:1,dur:1.06}[lv]||1;
+  const base=(D<=5000?+$('v5k').value:+$('v10k').value*(D>=21000?0.95:1))||10,now=Date.now(),tac=['regulier','rapide','final'].sort(()=>Math.random()-0.5),names=BOTN.slice().sort(()=>Math.random()-0.5);
+  const p={[LIVE.id]:{n:liveName(),d:0,t:0,at:now}};[-0.03,0,0.03].forEach((o,i)=>{p['bot'+i]={n:names[i]+' (ordi)',d:0,t:0,at:now,bot:{v:base*k*(1+o),tac:tac[i],seed:Math.random()*6}}});
+  LIVE.local=true;LIVE.room='ORDI';LIVE.fin=false;LIVE.prev={};LIVE.said={};LIVE.rank=0;LIVE.data={host:LIVE.id,decor:route.decor,dname:route.name,dist:D,start:0,p};liveUI();
+  $('liveMsg').textContent=`Trois coureurs ordinateur (${lv==='facile'?'un peu plus lents que toi':lv==='dur'?'un peu plus rapides que toi':'à ton niveau'}) t’attendent. Touche « Lancer le départ ».`}
+function botTick(){if(!LIVE.local||!LIVE.data||!LIVE.data.start)return;const R=LIVE.data,now=Date.now();if(now<R.start)return;
+  for(const [id,p] of Object.entries(R.p)){if(!p.bot||p.f)continue;const t=(now-R.start)/1000,dt=Math.min(2,(now-(p.lastT||R.start))/1000);p.lastT=now;const fr=p.d/R.dist,b=p.bot;
+    let m=b.tac==='rapide'?(fr<0.3?1.06:fr<0.7?1:0.96):b.tac==='final'?(fr<0.8?0.97:1.1):1;m*=1+0.015*Math.sin(t/23+b.seed)+0.01*Math.sin(t/7+b.seed*2);
+    p.d=Math.min(R.dist,p.d+b.v*m/3.6*dt);p.t=Math.round(t);p.at=now;if(p.d>=R.dist)p.f=Math.round(t)}
+  const me=R.p[LIVE.id];if(me){me.d=run.dist;me.t=Math.round(run.time);me.at=now}}
+setInterval(()=>{try{botTick()}catch(e){}
+  try{if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.local&&LIVE.data.host===LIVE.id&&!LIVE.data.start){const n=Object.keys(LIVE.data.p||{}).length,now=Date.now();
+    if(now-(LIVE.pubBeat||0)>15000){LIVE.pubBeat=now;fb(`rooms/_open/${LIVE.pub}/${LIVE.room}`,'PUT',{at:{'.sv':'timestamp'},host:LIVE.id}).catch(()=>{})}
+    if(n>=2){if(!LIVE.autoAt){LIVE.autoAt=now+(n>=4?0:10000);$('liveMsg').textContent='Un adversaire t’a rejoint. Compte à rebours dans 10 secondes (ou dès 4 coureurs).'}
+      if(now>=LIVE.autoAt||n>=4){LIVE.autoAt=0;fb(`rooms/_open/${LIVE.pub}/${LIVE.room}`,'DELETE').catch(()=>{});liveGoX()}}
+    else if(now-(LIVE.pubSince||now)>90000&&!LIVE.lonely){LIVE.lonely=1;$('liveMsg').textContent='Personne pour l’instant. Tu peux continuer d’attendre ou quitter et courir contre l’ordinateur.'}}}catch(e){}},500);
+async function liveGoX(){if(LIVE.local&&LIVE.data){LIVE.data.start=Date.now()+10000;LIVE.said={};liveUI();return}return liveGo()}
+async function liveLeaveX(){const pub=LIVE.pub,r=LIVE.room,local=LIVE.local;LIVE.pub=0;LIVE.autoAt=0;LIVE.lonely=0;if(pub&&r&&!local)fb(`rooms/_open/${pub}/${r}`,'DELETE').catch(()=>{});LIVE.local=false;if(local){LIVE.room=null;LIVE.data=null;liveUI();return}return liveLeave()}
+$('liveRandom').onclick=liveRandom;$('liveBots').onclick=liveBotsStart;$('liveGo').onclick=liveGoX;$('liveQuit').onclick=liveLeaveX;
+(()=>{const ui=liveUI;liveUI=function(){ui.apply(this,arguments);try{if(LIVE.local&&LIVE.room){$('liveTitle').textContent=`Contre l’ordinateur · ${LIVE.data.dname} · ${fmt(LIVE.data.dist/1000,LIVE.data.dist%1000?1:0)} km`;if(!LIVE.data.start)$('liveState').textContent='Tes adversaires sont prêts. Le départ part 10 secondes après avoir touché « Lancer le départ ».'}
+  else if(LIVE.pub&&LIVE.room&&LIVE.data&&!LIVE.data.start){$('liveGo').hidden=true;$('liveState').textContent=`Course au hasard · ${Object.keys(LIVE.data.p||{}).length} coureur(s) inscrit(s).`}
+  $('liveRandom').disabled=!LIVE.url()}catch(e){}}})();
+liveUI();
 </script>
 </body>
 </html>
