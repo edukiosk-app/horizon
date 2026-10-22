@@ -515,7 +515,7 @@ button.mini{padding:6px 10px;font-size:13px}
         <p id="fbMsg" class="hint"></p>
       </div>
       <div id="liveOff">
-        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label id="raceVL">Vitesse de départ<select id="raceV"><option value="6">6 km/h</option><option value="7" selected>7 km/h</option><option value="8">8 km/h</option><option value="9">9 km/h</option><option value="10">10 km/h</option><option value="11">11 km/h</option><option value="12">12 km/h</option></select></label><label id="raceIL">Pente<select id="raceInc"><option value="0" selected>0 (plat)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="decor">suit le relief</option></select></label></div><p class="hint" id="raceSum" style="margin:6px 0 0"></p>
+        <div class="settings"><label>Ton prénom<input id="liveName" type="text" maxlength="16" placeholder="ex. Alexis"></label><label>Distance<select id="liveDist"><option value="0">Ma séance</option><option value="-1">Le parcours</option><option value="1000">1 km</option><option value="3000">3 km</option><option value="5000" selected>5 km</option><option value="10000">10 km</option><option value="15000">15 km</option><option value="20000">20 km</option><option value="21097">Semi (21,1 km)</option></select></label><label id="raceVL">Vitesse de départ<select id="raceV"><option value="6">6 km/h</option><option value="7" selected>7 km/h</option><option value="8">8 km/h</option><option value="9">9 km/h</option><option value="10">10 km/h</option><option value="11">11 km/h</option><option value="12">12 km/h</option></select></label><label id="raceIL">Pente<select id="raceInc"><option value="0" selected>0 (plat)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="decor">suit le relief</option></select></label></div><div class="settings" style="margin-top:6px"><label>Terrain<select id="raceMode"><option value="basique">course basique (piste, pente fixe)</option><option value="decor">décor et relief</option></select></label><label id="raceDL">Décor<select id="raceDecor"></select></label><label id="raceRL">Relief<select id="raceRelief"><option value="decor">celui du décor</option><option value="plat">plat</option><option value="lake">légèrement vallonné</option><option value="forest">vallonné</option><option value="mountain">montagne</option></select></label></div><p class="hint" id="raceSum" style="margin:6px 0 0"></p>
         <div id="liveJoinBox">
           <div class="row" style="margin-top:8px"><button id="liveNew" class="primary">Créer une course</button><span class="hint" style="margin:0">dans le décor choisi</span></div>
           <div class="row" style="margin-top:8px"><input id="liveCodeIn" type="text" maxlength="4" placeholder="CODE" style="width:7em;text-transform:uppercase"><button id="liveJoin">Rejoindre</button></div>
@@ -546,7 +546,7 @@ button.mini{padding:6px 10px;font-size:13px}
 
     <div class="panel stats">
       <div class="stat"><small>Vitesse km/h</small><b id="sSpeed">0,0</b></div>
-      <div class="stat climb"><small>Pente <span class="incU">niv.</span></small><b id="sInc">0,0</b></div>
+      <div class="stat climb"><small>Pente <span class="incU">niv.</span></small><b id="sInc">0,0</b><small id="sTer" style="display:block;margin-top:2px;text-transform:none;letter-spacing:0"></small></div>
       <div class="stat"><small>Allure /km</small><b id="sPace">–</b></div>
       <div class="stat"><small>Distance km</small><b id="sDist">0,00</b></div>
       <div class="stat"><small>Temps</small><b id="sTime">0:00</b></div>
@@ -634,7 +634,7 @@ button.mini{padding:6px 10px;font-size:13px}
           <div><small>Temps</small><b id="fsTime">0:00</b><i id="fsGain"></i></div>
           <div><small>Cardio</small><b id="fsHr">–</b><i>bpm</i></div>
         </div>
-        <div class="fs-gap" id="fsGap" hidden></div>
+        <div class="fs-gap" id="fsGap" hidden></div><div class="fs-gap" id="fsTer" hidden></div>
       </div>
       <div class="fs-bottom">
         <div class="fs-ctl"><span>Vitesse</span><button data-a="s" data-v="-1">−1</button><button data-a="s" data-v="-0.5">−0,5</button><button data-a="s" data-v="0.5">+0,5</button><button data-a="s" data-v="1">+1</button></div>
@@ -1877,7 +1877,7 @@ const LCOL=[0x22c55e,0xa855f7,0xec4899,0xeab308,0x06b6d4,0xf43f5e,0x84cc16];
 function liveName(){return(store.get('liveName','')||'').trim()||'Coureur'}
 async function fb(path,method='GET',body){const w=method!=='GET';const r=await fetch(`${LIVE.url()}/${path}.json${w?'?print=silent':''}`,{method,headers:{'Content-Type':'application/json'},body:body!==undefined?JSON.stringify(body):undefined});if(!r.ok)throw new Error('HTTP '+r.status);if(w)return null;const t=await r.text();if(!t)return null;try{return typeof t==='string'?JSON.parse(t):t}catch(e){return t}}
 async function liveClock(){const t0=Date.now();await fb('rooms/_clk/'+LIVE.id,'PUT',{t:{'.sv':'timestamp'}});const o=await fb('rooms/_clk/'+LIVE.id);const t1=Date.now();const v=o&&+o.t;if(v>0)LIVE.off=v-(t0+t1)/2}
-const srvNow=()=>Date.now()+LIVE.off;
+const srvNow=()=>Date.now()+(LIVE.local?0:LIVE.off);
 function liveApply(path,data){const k=path.split('/').filter(Boolean);if(!k.length){LIVE.data=data||{};return}LIVE.data=LIVE.data||{};let o=LIVE.data;
   for(let i=0;i<k.length-1;i++){if(!o[k[i]]||typeof o[k[i]]!=='object')o[k[i]]={};o=o[k[i]]}const last=k[k.length-1];if(data===null)delete o[last];else o[last]=data}
 function liveListen(){if(LIVE.es)LIVE.es.close();const es=new EventSource(`${LIVE.url()}/rooms/${LIVE.room}.json`);LIVE.es=es;
@@ -2406,6 +2406,38 @@ function reliefPts(pts,k){try{const m=reliefMode();if(!k||!window.VR||m==='decor
 (()=>{const sr=setRoute;setRoute=function(pts,name,decor){return sr.call(this,reliefPts(pts,decor),name,decor)};
   const sel=$('relief'),old=sel.onchange;sel.onchange=()=>{old&&old();try{if(route&&route.decor&&run.state!=='running'&&run.state!=='paused'){setRoute(VR.routePts(route.decor),route.name,route.decor);if(!$('view-run').hidden)RM.init()}}catch(e){}};
   try{if(route&&route.decor&&reliefMode()!=='decor')setRoute(VR.routePts(route.decor),route.name,route.decor)}catch(e){}})();
+</script>
+<script>
+/* 1) « Terminer » en plein écran : le tapis s'arrête tout de suite (pause), puis on confirme la fin */
+$('fsStop').onclick=()=>{const b=$('fsStop');if(b.dataset.ok){delete b.dataset.ok;b.textContent='Terminer';$('fsPause').textContent='Pause';$('stop').onclick();return}
+  b.dataset.ok=1;b.textContent='Confirmer la fin';if(run.state==='running'){try{$('pause').onclick();$('fsPause').textContent='Reprendre'}catch(e){}}
+  clearTimeout(b._t);b._t=setTimeout(()=>{delete b.dataset.ok;b.textContent='Terminer'},10000)};
+/* 2) terrain lisible : montée, descente ou plat, et ce qui arrive ensuite */
+function terKind(g){return g>=1.5?'up':g<=-1.5?'down':'flat'}
+function terTxt(k,g){return k==='up'?`montée ${Math.round(g)} %`:k==='down'?`descente ${Math.round(-g)} %`:'plat'}
+setInterval(()=>{try{const on=route&&(run.state==='running'||run.state==='paused');const fs=$('fsTer'),el=$('sTer');
+  if(!on){el.textContent='';fs.hidden=true;return}
+  const x=wrapX(run.dist),g=gradeAt(x+10),k=terKind(g);let nxt='';
+  for(let d=25;d<=300;d+=25){const g2=gradeAt(x+d+10),k2=terKind(g2);if(k2!==k){nxt=` · ${k2==='flat'?'replat':k2==='up'?'montée':'descente'} dans ${Math.round(d/10)*10} m`;break}}
+  const col=k==='up'?'#fb923c':k==='down'?'#60a5fa':'';el.textContent='Terrain : '+terTxt(k,g);el.style.color=col;
+  fs.hidden=false;fs.textContent=(k==='up'?'Montée ':k==='down'?'Descente ':'Plat')+(k==='flat'?'':Math.round(Math.abs(g))+' %')+nxt;fs.style.color=col||'#fff';
+  if(run.state==='running'&&!$('zen').checked){const dn=(eleAt(x+150)-eleAt(x+50))/100*100;if(dn<=-3&&g>-1.5&&run.time-(run.downSaid??-1e9)>90){run.downSaid=run.time;say(`Descente dans 50 mètres, ${Math.round(-dn)} pour cent`,`Downhill in 50 metres, ${Math.round(-dn)} percent`)}}}catch(e){}},700);
+/* 3) tout le choix de la course au même endroit : basique ou décor + relief */
+(()=>{const md=$('raceMode'),dc=$('raceDecor'),rl=$('raceRelief');if(!md||!window.VR)return;
+  Object.entries(VR.DEFS).forEach(([k,d])=>{const o=document.createElement('option');o.value=k;o.textContent=d.name.replace(/ de 400 m/,'');dc.append(o)});
+  const useDecor=k=>{if(!VR.DEFS[k]||run.state==='running'||run.state==='paused')return;const d=VR.DEFS[k];wps=[];$('rname').value=d.name;setRoute(VR.routePts(k),d.name,k);store.set('lastRoute','d:'+k);drawPrep();if(!$('view-run').hidden)RM.init()};
+  const setRel=v=>{$('relief').value=v;$('relief').onchange()};
+  md.value=store.get('raceMode',$('raceInc').value==='decor'?'decor':'basique');
+  md.onchange=()=>{store.set('raceMode',md.value);if(md.value==='basique'){if($('raceInc').value==='decor')$('raceInc').value=store.get('raceIncB','0');store.set('raceInc',$('raceInc').value);setRel('decor');useDecor('track')}
+    else{$('raceInc').value='decor';store.set('raceInc','decor');rl.value=$('relief').value;if(route&&route.decor)dc.value=route.decor;else useDecor(dc.value||'forest')}raceSumUI()};
+  dc.onchange=()=>{useDecor(dc.value);raceSumUI()};rl.onchange=()=>{setRel(rl.value);raceSumUI()};
+  $('raceInc').addEventListener('change',()=>{if($('raceInc').value!=='decor')store.set('raceIncB',$('raceInc').value);else{md.value='decor';md.onchange()}});
+  const rs=raceSumUI;raceSumUI=function(){rs.apply(this,arguments);const dec=md.value==='decor',b=raceBase();$('raceDL').hidden=$('raceRL').hidden=!dec;$('raceIL').hidden=!b||dec;
+    if(dec&&$('raceInc').value!=='decor')$('raceInc').value='decor';if(route&&route.decor&&dc.value!==route.decor)dc.value=route.decor;if(rl.value!==$('relief').value)rl.value=$('relief').value;
+    if(b){const D=getD(),dn=route&&route.decor&&VR.DEFS[route.decor]?VR.DEFS[route.decor].name:'parcours',rel=rl.options[rl.selectedIndex].text;
+      $('raceSum').textContent=dec?`Course : ${fmt(D/1000,D%1000?1:0)} km · départ à ${$('raceV').value} km/h · décor ${dn} · relief ${rel}. La pente du tapis suit les montées ; tu peux en ajouter ou en retirer avec les boutons.`
+        :`Course basique : ${fmt(D/1000,D%1000?1:0)} km sur la piste · départ à ${$('raceV').value} km/h · pente ${$('raceInc').value==='0'?'0 (plat)':$('raceInc').value+(PTS()?' niv.':' %')}. Tu changes la vitesse et la pente pendant la course avec les boutons.`}};
+  if(md.value==='basique'&&$('raceInc').value==='decor')$('raceInc').value='0';raceSumUI()})();
 </script>
 </body>
 </html>

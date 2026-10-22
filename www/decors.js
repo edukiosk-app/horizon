@@ -373,7 +373,7 @@
       const xm = lv ? lv.x : (shown(S.me) ?? 0), A = at(xm, laneMe); me.position.copy(A.pos); me.rotation.y = Math.atan2(A.dir.x, A.dir.z); if (FIG) animate(me, S.me.v, fdt); else pulse(me, nowT);
       const gl = window.trGhost && window.trGhost(); if (gl) S.ref.v = gl.v; const xr = gl ? gl.x : shown(S.ref); if (xr != null) { const B = at(xr, laneRef); ref.position.copy(B.pos); ref.rotation.y = Math.atan2(B.dir.x, B.dir.z); if (FIG) animate(ref, S.ref.v, fdt); else pulse(ref, nowT); ref.visible = true; } else ref.visible = false;
       if (window.trOthers) { try { others(window.trOthers()); } catch (e) {} }
-      OTH.forEach((o) => { if (o.tx == null) { o.g.visible = false; return; } o.dx = o.dx == null || Math.abs(o.tx - o.dx) > 50 ? o.tx : o.dx + (o.tx - o.dx) * Math.min(1, fdt * 4); const xo = o.dx; const C = at(xo, o.lane); o.g.position.copy(C.pos); o.g.visible = true; pulse(o.g, nowT); });
+      OTH.forEach((o) => { if (o.tx == null) { o.g.visible = false; return; } o.dx = o.dx == null || Math.abs(o.tx - o.dx) > 50 ? o.tx : o.dx + (o.tx - o.dx) * Math.min(1, fdt * 4); const xo = o.dx; const C = at(xo, o.lane); o.g.position.copy(C.pos); o.g.visible = o.g.position.distanceTo(cam.position) > 6; pulse(o.g, nowT); });
       const lead = S.lead === 'me' ? me : S.lead === 'ref' && ref.visible ? ref : null; medal.visible = !!lead;
       if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
       let want, look;
