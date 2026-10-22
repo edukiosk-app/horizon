@@ -1,4 +1,4 @@
-// Pont entre Horizon et Android : Bluetooth, voix, écran allumé, partage.
+// Pont entre Treadverse et Android : Bluetooth, voix, écran allumé, partage.
 import { Capacitor } from '@capacitor/core';
 import { BleClient, numberToUUID } from '@capacitor-community/bluetooth-le';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
@@ -72,6 +72,7 @@ if (Capacitor.isNativePlatform()) {
   // Voix : moteur de synthèse d'Android
   window.NativeTTS = {
     speak: (text, lang, rate) => TextToSpeech.speak({ text, lang, rate: rate || 1.0, pitch: 1.0, volume: 1.0, category: 'playback', queueStrategy: 1 }).catch(() => {}),
+    stop: () => TextToSpeech.stop().catch(() => {}),
   };
   window.HORIZON_ANDROID = true;
   document.documentElement.classList.add('android');
