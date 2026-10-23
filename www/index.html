@@ -1541,7 +1541,7 @@ $('ivUpload').onclick=async()=>{const m=$('upMsg');m.textContent='Envoi…';
   try{const fd=new FormData();fd.append('file',new Blob([buildGPX()],{type:'application/gpx+xml'}),'horizon.gpx');
     const nm=encodeURIComponent((route?.name||'Course')+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${workout?', séance '+workout.name:''}.`);
     const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
-    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true,distance:Math.round(typeof S!=='undefined'&&S&&S.km?S.km*1000:run.dist)},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
     m.textContent='Course envoyée dans Intervals.icu.';$('ivUpload').disabled=true}catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 
 /* ---------- cardio de la montre (Bluetooth) ---------- */
@@ -2161,7 +2161,7 @@ $('bilanIv').onclick=async()=>{const S=store.get('lastBilan',null),m=$('bilanMsg
   try{const fd=new FormData();fd.append('file',new Blob([S.gpx],{type:'application/gpx+xml'}),'treadverse.gpx');
     const C=S.comp,nm=encodeURIComponent(C?`${C.title}, ${C.place?(C.place===1?'1er':C.place+'e')+' sur '+C.of:'abandon'} (Treadverse)`:S.name+' (Treadverse)'),desc=encodeURIComponent(`Course sur tapis avec Treadverse${S.w?', séance '+S.w:''}.`+(C?`\n\nClassement :\n${C.rank.join('\n')}`:''));
     const r=await iv(`/athlete/${ivAth()}/activities?name=${nm}&description=${desc}`,{method:'POST',body:fd});
-    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
+    const id=r?.id||r?.activities?.[0]?.id;if(id){try{await iv(`/activity/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({type:'VirtualRun',trainer:true,distance:Math.round(typeof S!=='undefined'&&S&&S.km?S.km*1000:run.dist)},ivFeel(typeof S!=='undefined'?S:null)))})}catch(e){}}
     S.sent=true;S.ivAct=id||null;store.set('lastBilan',S);$('bilanIv').disabled=true;$('bilanIv').textContent='Déjà envoyée sur Intervals.icu';m.textContent='Course envoyée dans Intervals.icu.';try{$('ivUpload').disabled=true;$('upMsg').textContent='Course envoyée dans Intervals.icu.'}catch(e){}}
   catch(e){m.textContent='Envoi impossible : '+e.message+'.'}};
 if(store.get('lastBilan',null))$('bilanOpen').hidden=false;
