@@ -3014,7 +3014,7 @@ const ROAR_ON=false;function roarSynth(kind){if(!ROAR_ON)return 0;const ac=roarC
 const advKind=s=>{const l=s&&s.label||'';return /ptérosaure|pterosaur/i.test(l)?'ptero':/prédateur|predator|dinosaure|dinosaur|t-?rex|raptor/i.test(l)?'rex':/citrouille|pumpkin/i.test(l)?'pumpkin':/araignée|spider/i.test(l)?'spider':/chauves?-souris|bats?\b/i.test(l)?'bats':null};
 ['start','fsPause','liveGo','liveBots'].forEach(id=>{const b=$(id);if(b)b.addEventListener('pointerdown',()=>{roarCtx();if(workout||$('wsel').value)rexLoad()},{passive:true})});
 let roarStep=-1;setInterval(()=>{try{if(!workout||run.state!=='running')return;const st=curStep(),i=run.step;if(!st||roarStep===i)return;const k=advKind(workout.steps[i+1]);if(!k)return;
-  const left=st.dur?st.dur-run.stepT:(st.dist-run.stepD)/Math.max(0.5,(run.speed||st.v||8)/3.6);if(left<=3.6&&left>0.3){roarStep=i;roar(k)}}catch(e){}},200);
+  const left=st.dur?st.dur-run.stepT:(st.dist-run.stepD)/Math.max(0.5,(run.speed||st.v||8)/3.6);if(left<=(k==='rex'?5.2:3.6)&&left>0.3){roarStep=i;roar(k)}}catch(e){}},200);
 (()=>{const es=enterStep;enterStep=function(i){const r=es.apply(this,arguments);try{const s=workout&&workout.steps[i],k=advKind(s);
   if(i===0&&workout.steps.some(x=>advKind(x)==='rex'))rexLoad();if(k&&i===0)roar(k);if(k&&k!=='ptero'&&RM.kind==='decor'&&RM.map&&RM.map.chase)RM.map.chase(Math.min(60000,(s.dur||stepSec(s))*1000),k)}catch(e){}return r}})();
 </script>
@@ -3310,6 +3310,19 @@ $('coGo').onclick=coStart;coBestUI();try{if(!BK_KEYS.includes('coBest'))BK_KEYS.
 for(const k of Object.keys(T)){try{THUMB[k]=T[k];DDESC[k]=D[k];const b=document.querySelector(`#decors .decor[data-k="${k}"]`);if(!b)continue;b.style.display='';
   b.innerHTML=`<img src="${T[k]}" alt=""><span class="tx"><b>${esc(VR.DEFS[k].name)}</b><small>${esc(D[k])}</small></span>`;b.addEventListener('click',()=>{setTimeout(()=>{reliefCards()},0)})}catch(e){}}
 try{CH_LV[4].races=[[5000,'egypt','decor'],[10000,'vegas','decor'],[5000,'wall','decor'],[3000,'scifi','decor'],[10000,'mountain','mountain']];chRender()}catch(e){}})();
+</script>
+<script>
+/* ===== rugissement du T-Rex : son débloqué au premier toucher, chargé d'avance, plus fort, sans le « 3, 2, 1 » par-dessus ===== */
+let ROAR_OUT=null,ROAR_UNTIL=0;
+(()=>{const un=()=>{try{const ac=roarCtx();if(ac&&ac.state!=='running')ac.resume().catch(()=>{});const w=workouts().find(o=>o.name===$('wsel').value);
+    if((workout&&workout.steps.some(s=>advKind(s)==='rex'))||(w&&/prédateur|predator|dinosaure|t-?rex/i.test((w.text||'')+(w.name||''))))rexLoad()}catch(e){}};
+  ['pointerdown','touchstart','keydown'].forEach(t=>document.addEventListener(t,un,{passive:true,capture:true}));try{$('wsel').addEventListener('change',un)}catch(e){}})();
+roar=function(kind){if(!$('voice').checked||kind!=='rex')return 0;const ac=roarCtx();if(!ac)return 0;const ok=REXS.filter(u=>REXB[u]);if(!ok.length){rexLoad();return 0}
+  const b=REXB[ok[Math.floor(Math.random()*ok.length)]];ROAR_UNTIL=performance.now()+b.duration*1000+300;
+  const play=()=>{try{if(!ROAR_OUT){const g=ac.createGain();g.gain.value=1.6;const c=ac.createDynamicsCompressor();c.threshold.value=-8;c.knee.value=2;c.ratio.value=20;c.attack.value=0.002;c.release.value=0.15;g.connect(c);c.connect(ac.destination);ROAR_OUT=g}
+    const s=ac.createBufferSource();s.buffer=b;s.connect(ROAR_OUT);s.start()}catch(e){}};
+  if(ac.state!=='running')ac.resume().then(play).catch(()=>{});else play();return b.duration};
+(()=>{const s0=say;say=function(fr,en){if(performance.now()<ROAR_UNTIL&&/^[123]$/.test(String(fr)))return;return s0.apply(this,arguments)}})();
 </script>
 </body>
 
