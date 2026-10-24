@@ -27,6 +27,7 @@
     lake: (th) => { const r = 1 + 0.08 * Math.sin(3 * th + 0.3) + 0.05 * Math.sin(5 * th + 1); return [1.15 * r * Math.cos(th), r * Math.sin(th)]; },
     scifi: (th) => { const r = 1 + 0.12 * Math.sin(2 * th) + 0.06 * Math.sin(5 * th + 0.7); return [2.2 * r * Math.cos(th), r * Math.sin(th)]; },
     jungle: (th) => { const r = 1 + 0.18 * Math.sin(3 * th + 1.1) + 0.09 * Math.sin(7 * th + 0.4); return [1.3 * r * Math.cos(th), r * Math.sin(th)]; },
+    bridge: (th) => { const r = 1 + 0.14 * Math.sin(3 * th + 0.4) + 0.07 * Math.sin(6 * th + 1.7); return [1.4 * r * Math.cos(th), r * Math.sin(th)]; },
     halloween: (th) => { const r = 1 + 0.16 * Math.sin(4 * th + 0.9) + 0.08 * Math.sin(7 * th + 2.1) + 0.04 * Math.sin(11 * th); return [1.25 * r * Math.cos(th), r * Math.sin(th)]; },
   };
   function loopPts(curve, L) {
@@ -49,6 +50,7 @@
     lake: (s, L) => { const w = W(s, L); return 5 + 1.5 * Math.sin(3 * w) + 0.8 * Math.sin(7 * w); },
     scifi: (s, L) => { const w = W(s, L); return 12 + 4 * Math.sin(2 * w + 0.5) + 1.5 * Math.sin(5 * w); },
     jungle: (s, L) => { const w = W(s, L); return 20 + 9 * Math.sin(2 * w + 0.2) + 3.5 * Math.sin(6 * w + 1) + 1 * Math.sin(13 * w); },
+    bridge: (s, L) => { const w = W(s, L); return 60 + 7 * Math.sin(2 * w + 0.6) + 2.5 * Math.sin(5 * w + 1.4); },
     halloween: (s, L) => { const w = W(s, L); return 15 + 6 * Math.sin(2 * w + 1.2) + 2.5 * Math.sin(5 * w + 0.3) + 0.8 * Math.sin(12 * w); },
   };
 
@@ -63,6 +65,7 @@
     scifi: { name: 'Ville du futur', desc: 'Une piste suspendue entre les tours de néon, sous une planète à anneaux. Arches lumineuses à traverser.', len: 4000, loop: true },
     jungle: { name: 'Jungle préhistorique', desc: 'Un sentier entre les fougères géantes, des dinosaures au loin et un volcan qui fume.', len: 5000, loop: true },
     lake: { name: 'Tour du lac', desc: 'Une boucle autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
+    bridge: { name: 'Pont du gouffre', desc: 'Un pont de pierre suspendu au-dessus d\'un gouffre, dans la brume. Le décor de Collapse Run.', len: 5000, loop: true },
     halloween: { name: 'Forêt hantée', desc: 'Halloween : une forêt la nuit sous la pleine lune, citrouilles, tombes, chauves-souris et fantômes.', len: 5000, loop: true },
   };
   function routePts(k) {
@@ -96,6 +99,7 @@
       scifi: { sky: [0x0b0730, 0x3a1a6e, 0xc2367a], fog: [0x2a1250, 60, 650], sun: [0.3, 0.5, -0.8], sunC: 0xffb3f0, sunI: 0.5, hemi: [0x8a7dff, 0x200a30, 0.6] },
       jungle: { sky: [0x7a9bb0, 0xe7c59a, 0xf3d7b0], fog: [0xd9c3a0, 40, 420], sun: [-0.3, 0.35, -0.9], sunC: 0xffd9a8, sunI: 1.05, hemi: [0xe8f0d8, 0x4a4a2a, 0.65] },
       lake: { sky: [0x4a86c5, 0xbcd6ea, 0xe6eef0], fog: [0xd3e1ea, 140, 900], sun: [-0.4, 0.5, -0.7], sunC: 0xfff1d6, sunI: 1.0, hemi: [0xd7e8ff, 0x46603a, 0.7] },
+      bridge: { sky: [0x3b4a66, 0x8d9db4, 0xb9c3cf], fog: [0x9aa6b6, 40, 380], sun: [0.4, 0.5, -0.75], sunC: 0xfff0dc, sunI: 0.95, hemi: [0xdfe8ff, 0x3a3a44, 0.8] },
       halloween: { sky: [0x0b0a26, 0x2e1c48, 0x6a2c4a], fog: [0x2a1c44, 28, 260], sun: [0.25, 0.45, -0.85], sunC: 0xdfe6ff, sunI: 0.9, hemi: [0x9a8ad0, 0x2a1c10, 0.95] },
     }[k === 'hilly' ? 'track' : k] || {};
     scene.background = new T.Color(TH.fog[0]); scene.fog = new T.Fog(TH.fog[0], TH.fog[1], TH.fog[2]);
@@ -149,7 +153,7 @@
       ban.lookAt(ban.position.clone().sub(A.dir)); scene.add(ban);
     }
 
-    let board = null, S_waves = null; const ANIM = [];
+    let board = null, S_waves = null, BRIDGE = null; const ANIM = [];
     if (!forest) {
       // terrain, piste, couloirs, talus pour les bosses
       const g = new T.Mesh(new T.PlaneGeometry(700, 500), lam(0x3f7d3a)); g.rotation.x = -Math.PI / 2; g.position.y = -0.05; scene.add(g);
@@ -221,16 +225,17 @@
         mountain: { ground: 0x6b7a4a, base: 0x5f6d45, path: 0x9b8b74, pw: 1.8, trees: [['pine', 1]], step: 4.5, far: 45, rocks: 260, ferns: 0, hills: true, peaks: true },
         lake: { ground: 0x4f8a3a, base: 0x4a8236, path: 0x9b7b52, pw: 1.8, trees: [['leaf', 0.55], ['pine', 0.45]], step: 3, far: 38, rocks: 40, ferns: 250, lake: true },
         jungle: { ground: 0x5d6b2e, base: 0x55632a, path: 0x8a6a46, pw: 1.8, trees: [['fern', 0.8], ['palm', 0.2]], step: 6, far: 40, rocks: 50, ferns: 400, hills: true, jungle: true },
+        bridge: { ground: 0x6b6b70, base: 0x23262e, path: 0x8a8578, pw: 1.6, trees: [['pine', 1]], step: 999999, far: 30, rocks: 0, ferns: 0, bridge: true },
         halloween: { ground: 0x3a3822, base: 0x2a2918, path: 0x7a6044, pw: 1.6, trees: [['dead', 0.7], ['pine', 0.3]], step: 3, far: 36, rocks: 0, ferns: 0, hills: true, halloween: true },
       }[k];
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6, SEAREL = CF.sea && Math.max(...P.map((p) => p.y)) - minY > 4;
       if (CF.lake) { ribbon(-14, -2, 3, lam(CF.ground), -0.08, (o, s2) => o <= -14 ? waterY - 0.3 - at(s2).pos.y : 0); ribbon(-2, 45, 4, lam(CF.ground), -0.08); }
-      else if (!CF.sea) ribbon(-45, 45, 4, lam(CF.ground), -0.08);
+      else if (!CF.sea && !CF.bridge) ribbon(-45, 45, 4, lam(CF.ground), -0.08);
       else if (SEAREL) { const sg = lam(CF.ground), drop = (o, s2) => Math.abs(o) > 10 ? -at(s2).pos.y - 0.4 : 0;
         ribbon(-6, 6, 4, sg, -0.08); ribbon(6, 18, 4, sg, -0.08, drop); ribbon(-18, -6, 4, sg, -0.08, drop); }
-      ribbon(-CF.pw, CF.pw, 2, lam(CF.path), 0.0);
-      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : minY - 2; base.receiveShadow = true; scene.add(base);
+      if (!CF.bridge) ribbon(-CF.pw, CF.pw, 2, lam(CF.path), 0.0);
+      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : CF.bridge ? minY - 160 : minY - 2; base.receiveShadow = true; scene.add(base);
       if (CF.sea) {
         const seaM = new T.Mesh(new T.PlaneGeometry(9000, 3000), new T.MeshPhongMaterial({ color: 0x1f6f8b, shininess: 90, specular: 0xffc48a, emissive: 0x0a2a3a }));
         const shZ = Math.max(...P.map((p) => p.z)) + 9; seaM.rotation.x = -Math.PI / 2; seaM.position.set(0, 0.15, 1500 + shZ - 1); scene.add(seaM);
@@ -284,6 +289,30 @@
         spots.dead.forEach(([x, y, z, f, r], i) => { q.setFromEuler(e.set(0.06 * Math.sin(r * 3), r, 0.06 * Math.cos(r * 5))); sc.set(f, f, f); m4.compose(new T.Vector3(x, y + 2.1 * f, z), q, sc); tr.setMatrixAt(i, m4);
           for (let j = 0; j < 4; j++) { const a = r + j * 1.57 + rnd() * 0.5, h = (2.2 + j * 0.55) * f, tilt = 0.75 + rnd() * 0.5; q.setFromEuler(e.set(0, -a, tilt, 'YXZ')); sc.set(f, f * (0.7 + rnd() * 0.5), f);
             m4.compose(new T.Vector3(x + Math.cos(a) * 0.75 * f, y + h + 0.5 * f, z + Math.sin(a) * 0.75 * f), q, sc); br.setMatrixAt(i * 4 + j, m4); } }); }
+
+      if (CF.bridge) {
+        // dalles du pont (elles tombent derrière le coureur en Collapse Run)
+        const TL = 2, nt = Math.floor(L / TL), tiles = inst(new T.BoxGeometry(CF.pw * 2 + 0.6, 0.5, TL - 0.08), new T.MeshLambertMaterial({ color: 0x8a8578, flatShading: true }), nt);
+        const TM = []; for (let i = 0; i < nt; i++) { const A = at(i * TL + TL / 2); q.setFromEuler(e.set(0, Math.atan2(A.dir.x, A.dir.z), 0)); m4.compose(new T.Vector3(A.pos.x, A.pos.y - 0.25, A.pos.z), q, new T.Vector3(1, 1, 1)); tiles.setMatrixAt(i, m4); tiles.setColorAt(i, col.setHSL(0.09, 0.06, 0.42 + rnd() * 0.12)); TM.push([A.pos.clone(), Math.atan2(A.dir.x, A.dir.z)]); }
+        // garde-fous et piliers qui plongent dans le gouffre
+        const np = Math.floor(L / 30), pil = inst(new T.CylinderGeometry(0.9, 1.4, 1, 8), new T.MeshLambertMaterial({ color: 0x5d5a55, flatShading: true }), np);
+        for (let i = 0; i < np; i++) { const A = at(i * 30 + 15), h = A.pos.y - (minY - 160); m4.compose(new T.Vector3(A.pos.x, A.pos.y - 0.5 - h / 2, A.pos.z), new T.Quaternion(), new T.Vector3(1, h, 1)); pil.setMatrixAt(i, m4); }
+        const nr = Math.floor(L / 4), rail = inst(new T.BoxGeometry(0.18, 0.7, 0.18), lam(0x4a4743), nr * 2, false);
+        for (let i = 0; i < 0; i++) for (const sd of [-1, 1]) { const A = at(i * 4, sd * (CF.pw + 0.2)); m4.makeTranslation(A.pos.x, A.pos.y + 0.3, A.pos.z); rail.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), m4); }
+        // aiguilles rocheuses dans la brume
+        const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
+        for (let i = 0; i < 40; i++) { const A = at(rnd() * L, (rnd() < 0.5 ? -1 : 1) * (25 + rnd() * 160)), h = 140 + rnd() * 120, r = 8 + rnd() * 18;
+          const sp = new T.Mesh(new T.ConeGeometry(r, h, 7), new T.MeshLambertMaterial({ color: 0x6e6a66, flatShading: true })); sp.position.set(A.pos.x, minY - 160 + h / 2, A.pos.z); scene.add(sp); }
+        const mist = new T.Mesh(new T.PlaneGeometry(9000, 9000), new T.MeshBasicMaterial({ color: 0xcdd5df, transparent: true, opacity: 0.55, depthWrite: false })); mist.rotation.x = -Math.PI / 2; mist.position.y = minY - 45; scene.add(mist);
+        // effondrement : les dalles derrière le front tombent en tournant puis disparaissent
+        let FR = null; const fallN = Math.round(320 / TL);
+        const setTile = (i, d) => { i = ((i % nt) + nt) % nt; const [p, yaw] = TM[i]; if (d == null) { q.setFromEuler(e.set(0, yaw, 0)); m4.compose(new T.Vector3(p.x, p.y - 0.25, p.z), q, sc.set(1, 1, 1)); }
+          else { const drop = d * d * 0.06 + d * 0.35, r = (i * 37 % 7) / 7 - 0.5; if (drop > 140) { m4.makeScale(0, 0, 0); } else { q.setFromEuler(e.set(r * d * 0.08, yaw + r * d * 0.03, r * d * 0.05)); m4.compose(new T.Vector3(p.x, p.y - 0.25 - drop, p.z), q, sc.set(1, 1, 1)); } }
+          tiles.setMatrixAt(i, m4); };
+        BRIDGE = { set(front) { if (front == null) { if (FR != null) { for (let k = -fallN - 2; k <= 2; k++) setTile(Math.floor(FR / TL) + k, null); tiles.instanceMatrix.needsUpdate = true; } FR = null; return; }
+            if (FR != null && front < FR) for (let s3 = front - 2; s3 <= FR + 2; s3 += TL) setTile(Math.floor(s3 / TL), null);
+            FR = front; const i0 = Math.floor(front / TL); for (let k = 0; k <= fallN + 2; k++) { const d = front - (i0 - k) * TL; setTile(i0 - k, k > fallN ? null : Math.max(0, d)); } setTile(i0 + 1, null); setTile(i0 + 2, null); tiles.instanceMatrix.needsUpdate = true; } };
+      }
       if (CF.halloween) {
         const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
         // pleine lune et son halo
@@ -440,7 +469,7 @@
     function mkHunter() { const g = new T.Group(), a = runner(0xef4444), b = runner(0x991b1b); scene.remove(a); scene.remove(b); a.scale.setScalar(1.15); b.scale.setScalar(1.15); b.position.set(0.9, 0, -2.2); g.add(a, b);
       let last = performance.now(); g.userData = { anim: (t) => { const d = Math.min(0.1, (t - last) / 1000); last = t; animate(a, 4.2, d); animate(b, 4.2, d); } }; g.visible = false; scene.add(g); return g; }
     const CHS = {}; let CHG = null;
-    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'hunter' ? mkHunter() : kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
+    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'collapse' ? (() => { const g = new T.Group(); g.userData = { anim: () => {} }; scene.add(g); return g; })() : kind === 'hunter' ? mkHunter() : kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -465,14 +494,14 @@
       // prédateur
       let chaseK = 0, lookBk = false;
       if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (CHG) CHG.visible = false; } else {
-        chaseK = CH.ext != null && CH.kind === 'hunter' ? Math.max(0, Math.min(1, (30 - CH.ext) / 12)) : Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
-        const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : CH.kind === 'hunter' ? 0.7 : 1.0)), t = performance.now(); lookBk = CH.kind !== 'hunter' && (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
+        chaseK = CH.ext != null && (CH.kind === 'hunter' || CH.kind === 'collapse') ? Math.max(0, Math.min(1, (30 - CH.ext) / 12)) : Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
+        const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : CH.kind === 'hunter' ? 0.7 : 1.0)), t = performance.now(); lookBk = CH.kind === 'collapse' ? (CH.ext != null && CH.ext < 22) : CH.kind !== 'hunter' && (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
         if (CH.kind === 'rex') { const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
         REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } else CHG.userData.anim(t); } }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
-      else if (lookBk) { const fr = at(xm + 13, laneMe - 1.0), bk = at(xm - 7, laneMe + 1.0); want = fr.pos.clone().setY(fr.pos.y + 4.2); look = bk.pos.clone().setY(bk.pos.y + 2.4); }
-      else { const back = at(xm - 9 - (CH.kind === 'hunter' && CH.ext != null ? Math.max(7, CH.ext + 3) : 7) * chaseK, laneMe - 0.8 * chaseK), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4 + 3.8 * chaseK); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
+      else if (lookBk) { const fr = at(xm + (CH.kind === 'collapse' ? 9 : 13), laneMe - 1.0), bk = at(xm - (CH.kind === 'collapse' ? 16 : 7), laneMe + 1.0); want = fr.pos.clone().setY(fr.pos.y + 4.2); look = bk.pos.clone().setY(bk.pos.y + 2.4); }
+      else { const back = at(xm - 9 - ((CH.kind === 'hunter' || CH.kind === 'collapse') && CH.ext != null ? Math.max(7, CH.ext + 3) : 7) * chaseK, laneMe - 0.8 * chaseK), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4 + 3.8 * chaseK); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
       const kk = 1 - Math.exp(-6 * Math.max(fdt, 0.016));
       camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, kk) : want.clone(); lookPos = lookPos && lookPos.distanceTo(look) < 60 ? lookPos.lerp(look, kk) : look.clone(); cam.position.copy(camPos); cam.lookAt(lookPos);
       if (board) { const lap = Math.floor((S.lapDist || 0) / 400) + 1, txt = 'TOUR ' + lap + '|' + ((S.lapDist || 0) / 1000).toFixed(2).replace('.', ',') + ' km';
@@ -495,6 +524,7 @@
       chaseGap(g) { CH.ext = g; },
       chaseMore(ms) { if (CH.dur) CH.dur += ms; },
       chaseStop() { CH.dur = 0; CH.ext = null; if (CHG) CHG.visible = false; },
+      collapse(front) { if (BRIDGE) BRIDGE.set(front); },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },
