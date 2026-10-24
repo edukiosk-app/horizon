@@ -2978,13 +2978,17 @@ function roarBuild(ac,t0,kind){const out=ac.createGain();out.gain.value=kind==='
 
 let ROAR_AC=null;
 function roarCtx(){try{if(!ROAR_AC)ROAR_AC=new(window.AudioContext||window.webkitAudioContext)();if(ROAR_AC.state==='suspended')ROAR_AC.resume();return ROAR_AC}catch(e){return null}}
-const ROAR_ON=false;function roar(kind){if(!ROAR_ON)return 0;const ac=roarCtx();if(!ac)return 0;try{return roarBuild(ac,ac.currentTime+0.05,kind||'rex')}catch(e){return 0}}
+const REXS=['sounds/rex1.mp3','sounds/rex2.mp3'],REXB={};
+async function rexLoad(){const ac=roarCtx();if(!ac)return;for(const u of REXS){if(REXB[u])continue;try{const r=await fetch(u);REXB[u]=await ac.decodeAudioData(await r.arrayBuffer())}catch(e){}}}
+function roar(kind){if(!$('voice').checked)return 0;if(kind!=='rex')return 0;const ac=roarCtx();if(!ac)return 0;const ok=REXS.filter(u=>REXB[u]);if(!ok.length){rexLoad();return 0}
+  const b=REXB[ok[Math.floor(Math.random()*ok.length)]],s=ac.createBufferSource(),g=ac.createGain();g.gain.value=1;s.buffer=b;s.connect(g);g.connect(ac.destination);s.start();return b.duration}
+const ROAR_ON=false;function roarSynth(kind){if(!ROAR_ON)return 0;const ac=roarCtx();if(!ac)return 0;try{return roarBuild(ac,ac.currentTime+0.05,kind||'rex')}catch(e){return 0}}
 const advKind=s=>{const l=s&&s.label||'';return /ptérosaure|pterosaur/i.test(l)?'ptero':/prédateur|predator|dinosaure|dinosaur|t-?rex|raptor/i.test(l)?'rex':null};
-['start','fsPause','liveGo','liveBots'].forEach(id=>{const b=$(id);if(b)b.addEventListener('pointerdown',roarCtx,{passive:true})});
+['start','fsPause','liveGo','liveBots'].forEach(id=>{const b=$(id);if(b)b.addEventListener('pointerdown',()=>{roarCtx();if(workout||$('wsel').value)rexLoad()},{passive:true})});
 let roarStep=-1;setInterval(()=>{try{if(!workout||run.state!=='running')return;const st=curStep(),i=run.step;if(!st||roarStep===i)return;const k=advKind(workout.steps[i+1]);if(!k)return;
   const left=st.dur?st.dur-run.stepT:(st.dist-run.stepD)/Math.max(0.5,(run.speed||st.v||8)/3.6);if(left<=3.6&&left>0.3){roarStep=i;roar(k)}}catch(e){}},200);
 (()=>{const es=enterStep;enterStep=function(i){const r=es.apply(this,arguments);try{const s=workout&&workout.steps[i],k=advKind(s);
-  if(k&&i===0)roar(k);if(k==='rex'&&RM.kind==='decor'&&RM.map&&RM.map.chase)RM.map.chase(Math.min(60000,(s.dur||stepSec(s))*1000))}catch(e){}return r}})();
+  if(i===0&&workout.steps.some(x=>advKind(x)==='rex'))rexLoad();if(k&&i===0)roar(k);if(k==='rex'&&RM.kind==='decor'&&RM.map&&RM.map.chase)RM.map.chase(Math.min(60000,(s.dur||stepSec(s))*1000))}catch(e){}return r}})();
 </script>
 <style>
 .rxbar button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;transition:opacity .15s}
