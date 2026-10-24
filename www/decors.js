@@ -27,6 +27,7 @@
     lake: (th) => { const r = 1 + 0.08 * Math.sin(3 * th + 0.3) + 0.05 * Math.sin(5 * th + 1); return [1.15 * r * Math.cos(th), r * Math.sin(th)]; },
     scifi: (th) => { const r = 1 + 0.12 * Math.sin(2 * th) + 0.06 * Math.sin(5 * th + 0.7); return [2.2 * r * Math.cos(th), r * Math.sin(th)]; },
     jungle: (th) => { const r = 1 + 0.18 * Math.sin(3 * th + 1.1) + 0.09 * Math.sin(7 * th + 0.4); return [1.3 * r * Math.cos(th), r * Math.sin(th)]; },
+    halloween: (th) => { const r = 1 + 0.16 * Math.sin(4 * th + 0.9) + 0.08 * Math.sin(7 * th + 2.1) + 0.04 * Math.sin(11 * th); return [1.25 * r * Math.cos(th), r * Math.sin(th)]; },
   };
   function loopPts(curve, L) {
     const raw = []; for (let i = 0; i <= 20000; i++) raw.push(curve(2 * Math.PI * i / 20000));
@@ -48,6 +49,7 @@
     lake: (s, L) => { const w = W(s, L); return 5 + 1.5 * Math.sin(3 * w) + 0.8 * Math.sin(7 * w); },
     scifi: (s, L) => { const w = W(s, L); return 12 + 4 * Math.sin(2 * w + 0.5) + 1.5 * Math.sin(5 * w); },
     jungle: (s, L) => { const w = W(s, L); return 20 + 9 * Math.sin(2 * w + 0.2) + 3.5 * Math.sin(6 * w + 1) + 1 * Math.sin(13 * w); },
+    halloween: (s, L) => { const w = W(s, L); return 15 + 6 * Math.sin(2 * w + 1.2) + 2.5 * Math.sin(5 * w + 0.3) + 0.8 * Math.sin(12 * w); },
   };
 
   const DEFS = {
@@ -61,6 +63,7 @@
     scifi: { name: 'Ville du futur', desc: 'Une piste suspendue entre les tours de néon, sous une planète à anneaux. Arches lumineuses à traverser.', len: 4000, loop: true },
     jungle: { name: 'Jungle préhistorique', desc: 'Un sentier entre les fougères géantes, des dinosaures au loin et un volcan qui fume.', len: 5000, loop: true },
     lake: { name: 'Tour du lac', desc: 'Une boucle autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
+    halloween: { name: 'Forêt hantée', desc: 'Halloween : une forêt la nuit sous la pleine lune, citrouilles, tombes, chauves-souris et fantômes.', len: 5000, loop: true },
   };
   function routePts(k) {
     const d = DEFS[k];
@@ -93,6 +96,7 @@
       scifi: { sky: [0x0b0730, 0x3a1a6e, 0xc2367a], fog: [0x2a1250, 60, 650], sun: [0.3, 0.5, -0.8], sunC: 0xffb3f0, sunI: 0.5, hemi: [0x8a7dff, 0x200a30, 0.6] },
       jungle: { sky: [0x7a9bb0, 0xe7c59a, 0xf3d7b0], fog: [0xd9c3a0, 40, 420], sun: [-0.3, 0.35, -0.9], sunC: 0xffd9a8, sunI: 1.05, hemi: [0xe8f0d8, 0x4a4a2a, 0.65] },
       lake: { sky: [0x4a86c5, 0xbcd6ea, 0xe6eef0], fog: [0xd3e1ea, 140, 900], sun: [-0.4, 0.5, -0.7], sunC: 0xfff1d6, sunI: 1.0, hemi: [0xd7e8ff, 0x46603a, 0.7] },
+      halloween: { sky: [0x0b0a26, 0x2e1c48, 0x6a2c4a], fog: [0x2a1c44, 28, 260], sun: [0.25, 0.45, -0.85], sunC: 0xdfe6ff, sunI: 0.9, hemi: [0x9a8ad0, 0x2a1c10, 0.95] },
     }[k === 'hilly' ? 'track' : k] || {};
     scene.background = new T.Color(TH.fog[0]); scene.fog = new T.Fog(TH.fog[0], TH.fog[1], TH.fog[2]);
     { const sd = new T.Vector3(...TH.sun).normalize(), g = new T.SphereGeometry(1400, 32, 16), p = g.attributes.position, col = [];
@@ -217,6 +221,7 @@
         mountain: { ground: 0x6b7a4a, base: 0x5f6d45, path: 0x9b8b74, pw: 1.8, trees: [['pine', 1]], step: 4.5, far: 45, rocks: 260, ferns: 0, hills: true, peaks: true },
         lake: { ground: 0x4f8a3a, base: 0x4a8236, path: 0x9b7b52, pw: 1.8, trees: [['leaf', 0.55], ['pine', 0.45]], step: 3, far: 38, rocks: 40, ferns: 250, lake: true },
         jungle: { ground: 0x5d6b2e, base: 0x55632a, path: 0x8a6a46, pw: 1.8, trees: [['fern', 0.8], ['palm', 0.2]], step: 6, far: 40, rocks: 50, ferns: 400, hills: true, jungle: true },
+        halloween: { ground: 0x3a3822, base: 0x2a2918, path: 0x7a6044, pw: 1.6, trees: [['dead', 0.7], ['pine', 0.3]], step: 3, far: 36, rocks: 0, ferns: 0, hills: true, halloween: true },
       }[k];
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6, SEAREL = CF.sea && Math.max(...P.map((p) => p.y)) - minY > 4;
@@ -245,7 +250,7 @@
       P.forEach((p) => { const kk = key(p.x, p.z); if (!grid.has(kk)) grid.set(kk, []); grid.get(kk).push(p); });
       const near = (x, z, r) => { for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) { const g = grid.get((Math.floor(x / 10) + dx) + ',' + (Math.floor(z / 10) + dz)); if (g) for (const p of g) if ((p.x - x) ** 2 + (p.z - z) ** 2 < r * r) return true; } return false; };
       const pick = () => { let r = rnd(), acc = 0; for (const [t, w] of CF.trees) { acc += w; if (r <= acc) return t; } return CF.trees[0][0]; };
-      const spots = { pine: [], leaf: [], palm: [], fern: [] };
+      const spots = { pine: [], leaf: [], palm: [], fern: [], dead: [] };
       for (let s2 = 0; s2 < L; s2 += CF.step) for (const side of [-1, 1]) {
         if (CF.lake && side < 0 && rnd() < 0.85) continue;                  // côté lac : peu d'arbres
         if (CF.sea && at(s2, side * 5).pos.z > at(s2).pos.z) continue;               // pas de palmiers côté mer
@@ -274,6 +279,41 @@
       if (spots.fern.length) { const n = spots.fern.length, tr = inst(new T.CylinderGeometry(0.25, 0.35, 5, 7), lam(0x5a4020), n), lv = inst(new T.SphereGeometry(1, 6, 3), new T.MeshLambertMaterial({ flatShading: true }), n * 7);
         spots.fern.forEach(([x, y, z, f, r], i) => { q.setFromEuler(e.set(0, r, 0)); sc.set(f, f, f); m4.compose(new T.Vector3(x, y + 2.5 * f, z), q, sc); tr.setMatrixAt(i, m4); col.setHSL(0.24 + rnd() * 0.06, 0.5, 0.24 + rnd() * 0.1);
           for (let j = 0; j < 7; j++) { const a = j / 7 * 6.28 + r; q.setFromEuler(e.set(0, -a, -0.45, 'YXZ')); sc.set(2.6 * f, 0.1 * f, 0.5 * f); m4.compose(new T.Vector3(x + Math.cos(a) * 2.2 * f, y + 4.4 * f, z + Math.sin(a) * 2.2 * f), q, sc); lv.setMatrixAt(i * 7 + j, m4); lv.setColorAt(i * 7 + j, col); } }); }
+
+      if (spots.dead.length) { const n = spots.dead.length, bark = new T.MeshLambertMaterial({ color: 0x2a2018, flatShading: true }), tr = inst(new T.CylinderGeometry(0.12, 0.3, 4.2, 6), bark, n), br = inst(new T.CylinderGeometry(0.04, 0.11, 2.2, 5), bark, n * 4);
+        spots.dead.forEach(([x, y, z, f, r], i) => { q.setFromEuler(e.set(0.06 * Math.sin(r * 3), r, 0.06 * Math.cos(r * 5))); sc.set(f, f, f); m4.compose(new T.Vector3(x, y + 2.1 * f, z), q, sc); tr.setMatrixAt(i, m4);
+          for (let j = 0; j < 4; j++) { const a = r + j * 1.57 + rnd() * 0.5, h = (2.2 + j * 0.55) * f, tilt = 0.75 + rnd() * 0.5; q.setFromEuler(e.set(0, -a, tilt, 'YXZ')); sc.set(f, f * (0.7 + rnd() * 0.5), f);
+            m4.compose(new T.Vector3(x + Math.cos(a) * 0.75 * f, y + h + 0.5 * f, z + Math.sin(a) * 0.75 * f), q, sc); br.setMatrixAt(i * 4 + j, m4); } }); }
+      if (CF.halloween) {
+        const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
+        // pleine lune et son halo
+        const moon = new T.Mesh(new T.SphereGeometry(70, 32, 20), new T.MeshBasicMaterial({ color: 0xf3f0d8, fog: false })); moon.scale.setScalar(1.4); moon.position.set(cx + 200, 330, cz - 950); scene.add(moon);
+        const glow = new T.Mesh(new T.SphereGeometry(110, 32, 20), new T.MeshBasicMaterial({ color: 0xbfc8ff, fog: false, transparent: true, opacity: 0.18, depthWrite: false })); glow.position.copy(moon.position); scene.add(glow);
+        // citrouilles lumineuses au bord du chemin (côtes et yeux qui brillent)
+        const np = Math.floor(L / 14), pk = inst(new T.SphereGeometry(0.42, 14, 10), new T.MeshLambertMaterial({ color: 0xf07a12, emissive: 0x8a3000, emissiveIntensity: 0.8 }), np),
+          stem = inst(new T.CylinderGeometry(0.05, 0.07, 0.18, 6), lam(0x3b5a1e), np, false), eyes = inst(new T.BoxGeometry(0.17, 0.15, 0.06), new T.MeshBasicMaterial({ color: 0xffe66b }), np * 3, false);
+        for (let i = 0; i < np; i++) { const side = i % 2 ? 1 : -1, A = at(i * 14 + 5 + rnd() * 5, side * (CF.pw + 0.7 + rnd() * 0.8)), f = 1.0 + rnd() * 0.8, fv = A.dir.clone().multiplyScalar(-1).addScaledVector(A.nrm, -side * 0.7), yaw = Math.atan2(fv.x, fv.z);
+          q.setFromEuler(e.set(0, yaw, 0)); sc.set(f * 1.2, f * 0.85, f * 1.2); m4.compose(new T.Vector3(A.pos.x, A.pos.y + 0.32 * f, A.pos.z), q, sc); pk.setMatrixAt(i, m4);
+          sc.set(f, f, f); m4.compose(new T.Vector3(A.pos.x, A.pos.y + 0.72 * f, A.pos.z), q, sc); stem.setMatrixAt(i, m4);
+          const fx = new T.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), rx = new T.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+          [[-0.15, 0.42], [0.15, 0.42], [0, 0.22]].forEach(([dx, dy], j) => { const p = new T.Vector3(A.pos.x, A.pos.y + dy * f, A.pos.z).addScaledVector(fx, 0.47 * f).addScaledVector(rx, dx * f);
+            sc.set(f * (j === 2 ? 2.2 : 1), f * (j === 2 ? 0.6 : 1), f); m4.compose(p, q, sc); eyes.setMatrixAt(i * 3 + j, m4); }); }
+        // cimetière : tombes arrondies et croix
+        const ng = 160, tomb = inst(new T.BoxGeometry(0.7, 1, 0.18), new T.MeshLambertMaterial({ color: 0x77777f, flatShading: true }), ng), top = inst(new T.CylinderGeometry(0.35, 0.35, 0.18, 12, 1, false, 0, Math.PI), new T.MeshLambertMaterial({ color: 0x77777f }), ng);
+        for (let i = 0; i < ng; i++) { const blk = Math.floor(i / 20), s2 = 400 + blk * (L / 8) + (i % 5) * 2.2, side = blk % 2 ? 1 : -1, A = at(s2, side * (CF.pw + 4 + Math.floor((i % 20) / 5) * 1.8));
+          const yaw = Math.atan2(A.dir.x, A.dir.z) + (rnd() - 0.5) * 0.4; q.setFromEuler(e.set((rnd() - 0.5) * 0.2, yaw + Math.PI / 2, (rnd() - 0.5) * 0.15)); sc.set(1, 1, 1);
+          m4.compose(new T.Vector3(A.pos.x, A.pos.y + 0.45, A.pos.z), q, sc); tomb.setMatrixAt(i, m4);
+          const q2 = q.clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(Math.PI / 2, 0, 0))); m4.compose(new T.Vector3(A.pos.x, A.pos.y + 0.95, A.pos.z), q2, sc); top.setMatrixAt(i, m4); }
+        // fantômes qui flottent et chauves-souris
+        const gm = new T.MeshLambertMaterial({ color: 0xf4f6ff, emissive: 0x9aa4d8, emissiveIntensity: 0.6, transparent: true, opacity: 0.82 }), ghosts = [];
+        for (let i = 0; i < 24; i++) { const g = new T.Group(), body = new T.Mesh(new T.ConeGeometry(0.75, 2, 14, 1, true), gm), head = new T.Mesh(new T.SphereGeometry(0.62, 16, 12), gm); body.position.y = 1.1; head.position.y = 2.1;
+          const eyeM = new T.MeshBasicMaterial({ color: 0x111111 }); [-0.2, 0.2].forEach((x) => { const ey = new T.Mesh(new T.SphereGeometry(0.1, 8, 6), eyeM); ey.position.set(x, 2.2, 0.55); g.add(ey); });
+          g.add(body, head); scene.add(g); ghosts.push({ g, s: 60 + i * (L / 24), off: (i % 2 ? 1 : -1) * (CF.pw + 2 + rnd() * 3), ph: rnd() * 6 }); }
+        const bm = new T.MeshBasicMaterial({ color: 0x0b0710, side: T.DoubleSide }), bats = [];
+        for (let i = 0; i < 26; i++) { const gg = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(-0.9, 0.25, -0.25), new T.Vector3(-0.3, 0, 0.3), new T.Vector3(0, 0, 0), new T.Vector3(0.9, 0.25, -0.25), new T.Vector3(0.3, 0, 0.3)]); const b = new T.Mesh(gg, bm); b.scale.setScalar(0.8 + rnd() * 0.6); scene.add(b); bats.push({ m: b, s: rnd() * L, r: 6 + rnd() * 14, h: 5 + rnd() * 9, ph: rnd() * 6.28, sp: 1500 + rnd() * 1500 }); }
+        ANIM.push((t) => { ghosts.forEach((o) => { const A = at(o.s + Math.sin(t / 4000 + o.ph) * 6, o.off); o.g.position.copy(A.pos).setY(A.pos.y + 0.6 + 0.35 * Math.sin(t / 700 + o.ph)); o.g.rotation.y = Math.atan2(-A.dir.x - A.nrm.x * Math.sign(o.off) * 0.6, -A.dir.z - A.nrm.z * Math.sign(o.off) * 0.6) + 0.25 * Math.sin(t / 1500 + o.ph); });
+          bats.forEach((o) => { const c = at(o.s), a = t / o.sp + o.ph; o.m.position.set(c.pos.x + Math.cos(a) * o.r, c.pos.y + o.h + Math.sin(t / 300 + o.ph), c.pos.z + Math.sin(a) * o.r); o.m.rotation.y = -a; o.m.rotation.z = 0.6 * Math.sin(t / 70 + o.ph); }); });
+      }
       if (CF.jungle) {
         const cx = P.reduce((a, p) => a + p.x, 0) / P.length, cz = P.reduce((a, p) => a + p.z, 0) / P.length;
         const vol = new T.Mesh(new T.ConeGeometry(320, 360, 24, 1, true), new T.MeshLambertMaterial({ color: 0x4a3a34, flatShading: true })); vol.position.set(cx + 150, minY + 160, cz - 1500); scene.add(vol);
@@ -298,7 +338,7 @@
           const snow = new T.Mesh(new T.ConeGeometry(r * 0.34, h * 0.34, 7), new T.MeshLambertMaterial({ color: 0xf4f7fa, flatShading: true })); snow.position.set(rock.position.x, 260 + h - h * 0.17 + 0.5, rock.position.z); scene.add(snow); } }
       // panneaux : départ, chaque kilomètre, côtes
       arch(0.5, 'DÉPART');
-      for (let km = 1; km * 1000 < L; km++) sign(km * 1000, CF.pw + 0.9, [{ t: km + ' km', size: 72 }], 1.5, 0.95, CF.sea ? '#0e4a6b' : '#5b3e24', '#f5f0e6');
+      for (let km = 1; km * 1000 < L; km++) sign(km * 1000, CF.pw + 0.9, [{ t: km + ' km', size: 72 }], 1.5, 0.95, CF.sea ? '#0e4a6b' : CF.halloween ? '#2b1140' : '#5b3e24', CF.halloween ? '#ff9a2e' : '#f5f0e6');
       if (CF.hills) { let lastHill = -500;
         for (let s2 = 0; s2 < L; s2 += 20) { const g = (at(s2 + 120).pos.y - at(s2 + 20).pos.y);
           if (g >= 4.5 && s2 - lastHill > 400) { lastHill = s2; sign(s2, -(CF.pw + 0.9), [{ t: 'CÔTE', size: 46 }, { t: Math.round(g) + ' %', size: 58 }], 1.4, 0.95, '#b45309'); } } }
@@ -377,7 +417,28 @@
         const th = new T.Mesh(new T.CylinderGeometry(0.42, 0.3, 1.5, 8), m); th.position.y = -0.7; L.add(th); const sh = new T.Mesh(new T.CylinderGeometry(0.22, 0.18, 1.2, 7), m); sh.position.set(0, -1.6, -0.2); sh.rotation.x = -0.3; L.add(sh);
         const ft = new T.Mesh(new T.BoxGeometry(0.45, 0.15, 0.8), m2); ft.position.set(0, -2.2, 0.15); L.add(ft); return L; });
       g.userData = { legs, jaw, head }; g.visible = false; scene.add(g); return g; }
-    function chase(ms) { if (!REXG) REXG = mkRex(); CH.t0 = performance.now(); CH.dur = ms || 30000; }
+    function mkPumpkin() { const g = new T.Group(), body = new T.Group(); g.add(body);
+      const pm = new T.MeshLambertMaterial({ color: 0xf07a12, emissive: 0x7a2a00, emissiveIntensity: 0.7, flatShading: true });
+      for (let i = 0; i < 8; i++) { const lobe = new T.Mesh(new T.SphereGeometry(1.15, 14, 12), pm); lobe.scale.set(0.55, 1, 1); lobe.rotation.y = i * Math.PI / 8; body.add(lobe); }
+      const st = new T.Mesh(new T.CylinderGeometry(0.15, 0.25, 0.6, 7), lam(0x3b5a1e)); st.position.y = 1.2; body.add(st);
+      const fm = new T.MeshBasicMaterial({ color: 0xffe066, side: T.DoubleSide });
+      [[-0.42, 0.3], [0.42, 0.3]].forEach(([x, y]) => { const e2 = new T.Mesh(new T.CircleGeometry(0.24, 3), fm); e2.position.set(x, y, 1.13); e2.rotation.z = Math.PI / 2; body.add(e2); });
+      const mouth = new T.Mesh(new T.PlaneGeometry(0.95, 0.24), fm); mouth.position.set(0, -0.28, 1.12); body.add(mouth);
+      body.position.y = 1.15; g.userData = { anim: (t) => { body.rotation.x = -t / 180; body.position.y = 1.15 + 0.2 * Math.abs(Math.sin(t / 160)); } }; g.visible = false; scene.add(g); return g; }
+    function mkSpider() { const g = new T.Group(), m = new T.MeshLambertMaterial({ color: 0x15101a, flatShading: true }), ey = new T.MeshBasicMaterial({ color: 0xff2020 });
+      const ab = new T.Mesh(new T.SphereGeometry(1.1, 14, 10), m); ab.scale.set(1, 0.85, 1.25); ab.position.set(0, 1.5, -0.9); g.add(ab);
+      const th = new T.Mesh(new T.SphereGeometry(0.65, 12, 9), m); th.position.set(0, 1.3, 0.6); g.add(th);
+      for (let i = 0; i < 6; i++) { const e2 = new T.Mesh(new T.SphereGeometry(0.09, 8, 6), ey); e2.position.set(-0.25 + (i % 3) * 0.25, 1.45 + Math.floor(i / 3) * 0.16, 1.18); g.add(e2); }
+      const legs = []; for (let i = 0; i < 8; i++) { const side = i < 4 ? -1 : 1, k = i % 4, piv = new T.Group(); piv.position.set(side * 0.45, 1.35, 0.9 - k * 0.45); g.add(piv);
+        const up = new T.Mesh(new T.CylinderGeometry(0.06, 0.08, 1.6, 6), m); up.position.set(side * 0.7, 0.35, 0); up.rotation.z = side * -1.1; piv.add(up);
+        const lo = new T.Mesh(new T.CylinderGeometry(0.03, 0.06, 1.9, 6), m); lo.position.set(side * 1.45, -0.55, 0); lo.rotation.z = side * 0.35; piv.add(lo); legs.push({ piv, ph: k * 1.3 + (side > 0 ? Math.PI : 0) }); }
+      g.userData = { anim: (t) => { legs.forEach((l) => { l.piv.rotation.y = 0.35 * Math.sin(t / 90 + l.ph); l.piv.rotation.x = 0.15 * Math.sin(t / 90 + l.ph + 1); }); ab.position.y = 1.5 + 0.08 * Math.sin(t / 120); } }; g.visible = false; scene.add(g); return g; }
+    function mkBats() { const g = new T.Group(), bm = new T.MeshBasicMaterial({ color: 0x0a0610, side: T.DoubleSide }), sw = [];
+      for (let i = 0; i < 40; i++) { const gg = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(-0.9, 0.25, -0.25), new T.Vector3(-0.3, 0, 0.3), new T.Vector3(0, 0, 0), new T.Vector3(0.9, 0.25, -0.25), new T.Vector3(0.3, 0, 0.3)]);
+        const b = new T.Mesh(gg, bm); b.scale.setScalar(0.6 + Math.random() * 0.5); g.add(b); sw.push({ b, x: (Math.random() - 0.5) * 4, y: 0.8 + Math.random() * 3.2, z: (Math.random() - 0.5) * 6, ph: Math.random() * 6.28 }); }
+      g.userData = { anim: (t) => sw.forEach((o) => { o.b.position.set(o.x + 0.6 * Math.sin(t / 400 + o.ph), o.y + 0.5 * Math.sin(t / 250 + o.ph), o.z + 0.8 * Math.cos(t / 500 + o.ph)); o.b.rotation.z = 0.7 * Math.sin(t / 60 + o.ph); }) }; g.visible = false; scene.add(g); return g; }
+    const CHS = {}; let CHG = null;
+    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -401,11 +462,11 @@
 
       // prédateur
       let chaseK = 0, lookBk = false;
-      if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (REXG) REXG.visible = false; } else {
+      if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (CHG) CHG.visible = false; } else {
         chaseK = Math.min(1, u * 8, (1 - u) * 6); const gap = 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
-        const R = at(xm - gap, laneMe + 1.3), t = performance.now(); lookBk = (performance.now() - CH.t0) < 4000 && CH.dur > 8000; REXG.position.copy(R.pos); REXG.rotation.y = Math.atan2(R.dir.x, R.dir.z); REXG.visible = true;
-        const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
-        REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } }
+        const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : 1.0)), t = performance.now(); lookBk = (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
+        if (CH.kind === 'rex') { const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
+        REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } else CHG.userData.anim(t); } }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
       else if (lookBk) { const fr = at(xm + 13, laneMe - 1.0), bk = at(xm - 7, laneMe + 1.0); want = fr.pos.clone().setY(fr.pos.y + 4.2); look = bk.pos.clone().setY(bk.pos.y + 2.4); }
