@@ -3024,10 +3024,14 @@ function mrUpsert(S){try{const L=store.get('myRuns',[]),i=L.findIndex(x=>x.date=
     L.push({date:r.date,name:a==='Décor'?((()=>{const lr=String(store.get('lastRoute',''));const k=lr.startsWith('d:')?lr.slice(2):'';return window.VR&&VR.DEFS[k]?VR.DEFS[k].name:'Décor virtuel'})()):a,w:b&&b!=='libre'&&b!=='__test'?b:'',km:r.dist/1000,t:r.time,hr:hr.length?Math.round(hr.reduce((x,y)=>x+y,0)/hr.length):0,s:r.s,legacy:true,
       sent:!!(B&&B.sent&&Math.abs(Date.parse(B.date)-Date.parse(r.date))<5*60e3)})}
   mrSave(L);store.set('myRunsImp',true)}catch(e){}})();
+function mrPath(name){let k=Object.keys(VR.DEFS).find(x=>VR.DEFS[x].name===name||I18N[VR.DEFS[x].name]===name);
+  if(!k){const lr=String(store.get('lastRoute',''));k=lr.startsWith('d:')&&VR.DEFS[lr.slice(2)]?lr.slice(2):'track'}
+  const P=VR.routePts(k),C=[0];for(let i=1;i<P.length;i++)C.push(C[i-1]+hav(P[i-1],P[i]));const L=C[C.length-1]||1;
+  return d=>{let x=d%L;if(x<0)x+=L;let lo=0,hi=C.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(C[m]<=x)lo=m;else hi=m}const a=P[lo],b=P[hi],f=(x-C[lo])/((C[hi]-C[lo])||1);return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,(a[2]??0)+((b[2]??0)-(a[2]??0))*f]}}
 function mrGPX(e){const nm=esc(e.name+' (Treadverse)'),T=Date.parse(e.date);let pts;
   if(e.g&&e.g.p.length)pts=e.g.p.map(([la,lo,el,t,h])=>`<trkpt lat="${la.toFixed(6)}" lon="${lo.toFixed(6)}"><ele>${el.toFixed(1)}</ele><time>${new Date(e.g.t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`);
-  else{if(!route)throw new Error(UIE()?'choose a route first':'choisis d’abord un parcours dans Préparer');const t0=T-e.t*1000;
-    pts=(e.s||[]).map(([t,d,h])=>{const p=posAt(wrapX(d));return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`})}
+  else{const pa=mrPath(e.name);const t0=T-e.t*1000;
+    pts=(e.s||[]).map(([t,d,h])=>{const p=pa(d);return`<trkpt lat="${p[0].toFixed(6)}" lon="${p[1].toFixed(6)}"><ele>${p[2].toFixed(1)}</ele><time>${new Date(t0+t*1000).toISOString()}</time>${h?`<extensions><gpxtpx:TrackPointExtension><gpxtpx:hr>${h}</gpxtpx:hr></gpxtpx:TrackPointExtension></extensions>`:''}</trkpt>`})}
   const t0=e.g&&e.g.t0?e.g.t0:T-e.t*1000;
   return`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Treadverse" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">\n<metadata><name>${nm}</name><time>${new Date(t0).toISOString()}</time></metadata>\n<trk><name>${nm}</name><type>running</type><trkseg>\n${pts.join('\n')}\n</trkseg></trk></gpx>`}
 async function mrSend(date,btn){const L=store.get('myRuns',[]),e=L.find(x=>x.date===date),m=$('mrMsg');if(!e||e.sent)return;btn.disabled=true;m.textContent='Envoi…';
