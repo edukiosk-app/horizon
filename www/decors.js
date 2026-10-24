@@ -359,6 +359,25 @@
       const sp = new T.Sprite(new T.SpriteMaterial({ map: new T.CanvasTexture(cv), depthWrite: false, transparent: true })); sp.scale.set(1.5, 1.5, 1); sp.position.y = 3.1; g.add(sp); const t0 = performance.now();
       const up = () => { const k = (performance.now() - t0) / 3000; if (k >= 1 || !S.alive) { g.remove(sp); return; } sp.position.y = 3.1 + k * 1.2; sp.material.opacity = k < 0.7 ? 1 : (1 - k) / 0.3; requestAnimationFrame(up); }; up(); }
 
+
+    // prédateur (séances Aventure) : surgit derrière le coureur pendant un sprint
+    let REXG = null; const CH = { t0: 0, dur: 0 };
+    function mkRex() { const g = new T.Group(), m = new T.MeshLambertMaterial({ color: 0x4d5a2c, flatShading: true }), m2 = new T.MeshLambertMaterial({ color: 0x8a8f5a, flatShading: true }), ey = new T.MeshBasicMaterial({ color: 0xffcc22 });
+      const P = (geo, mat, x, y, z, rx, rz) => { const o = new T.Mesh(geo, mat); o.position.set(x, y, z); if (rx) o.rotation.x = rx; if (rz) o.rotation.z = rz; o.castShadow = true; g.add(o); return o; };
+      const body = P(new T.SphereGeometry(1, 12, 9), m, 0, 2.6, 0); body.scale.set(0.95, 1.05, 2.1); body.rotation.x = -0.25;
+      P(new T.ConeGeometry(0.75, 3.6, 9), m, 0, 2.5, -2.9, -Math.PI / 2 - 0.25);
+      const neck = P(new T.CylinderGeometry(0.5, 0.75, 1.3, 8), m, 0, 3.6, 1.7, 0.9);
+      const head = new T.Group(); head.position.set(0, 4.2, 2.4); g.add(head);
+      const sk = new T.Mesh(new T.BoxGeometry(1.0, 0.8, 1.7), m); sk.position.set(0, 0.15, 0.6); head.add(sk);
+      const jaw = new T.Mesh(new T.BoxGeometry(0.9, 0.3, 1.5), m2); jaw.position.set(0, -0.35, 0.55); head.add(jaw);
+      [-0.38, 0.38].forEach((x) => { const e2 = new T.Mesh(new T.SphereGeometry(0.1, 6, 5), ey); e2.position.set(x, 0.38, 0.35); head.add(e2); });
+      const teeth = new T.MeshBasicMaterial({ color: 0xf2efe0 }); for (let i = 0; i < 6; i++) { const t = new T.Mesh(new T.ConeGeometry(0.06, 0.2, 4), teeth); t.rotation.x = Math.PI; t.position.set(-0.35 + i * 0.14, -0.15, 1.35); head.add(t); }
+      [-0.55, 0.55].forEach((x) => { P(new T.BoxGeometry(0.15, 0.6, 0.15), m, x * 0.9, 2.7, 1.6, 0.6); });
+      const legs = [-0.6, 0.6].map((x) => { const L = new T.Group(); L.position.set(x, 2.3, -0.2); g.add(L);
+        const th = new T.Mesh(new T.CylinderGeometry(0.42, 0.3, 1.5, 8), m); th.position.y = -0.7; L.add(th); const sh = new T.Mesh(new T.CylinderGeometry(0.22, 0.18, 1.2, 7), m); sh.position.set(0, -1.6, -0.2); sh.rotation.x = -0.3; L.add(sh);
+        const ft = new T.Mesh(new T.BoxGeometry(0.45, 0.15, 0.8), m2); ft.position.set(0, -2.2, 0.15); L.add(ft); return L; });
+      g.userData = { legs, jaw, head }; g.visible = false; scene.add(g); return g; }
+    function chase(ms) { if (!REXG) REXG = mkRex(); CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -379,9 +398,18 @@
       OTH.forEach((o) => { if (o.tx == null) { o.g.visible = false; return; } o.dx = o.dx == null || Math.abs(o.tx - o.dx) > 50 ? o.tx : o.dx + (o.tx - o.dx) * Math.min(1, fdt * 4); const xo = o.dx; const C = at(xo, o.lane); o.g.position.copy(C.pos); o.g.visible = o.g.position.distanceTo(cam.position) > 6; pulse(o.g, nowT); });
       const lead = S.lead === 'me' ? me : S.lead === 'ref' && ref.visible ? ref : null; medal.visible = !!lead;
       if (lead) { medal.position.copy(lead.position).setY(lead.position.y + (FIG ? 2.15 : 1.65) + 0.08 * Math.sin(performance.now() / 300)); medal.rotation.y += 0.04; }
+
+      // prédateur
+      let chaseK = 0, lookBk = false;
+      if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (REXG) REXG.visible = false; } else {
+        chaseK = Math.min(1, u * 8, (1 - u) * 6); const gap = 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
+        const R = at(xm - gap, laneMe + 1.3), t = performance.now(); lookBk = (performance.now() - CH.t0) < 4000 && CH.dur > 8000; REXG.position.copy(R.pos); REXG.rotation.y = Math.atan2(R.dir.x, R.dir.z); REXG.visible = true;
+        const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
+        REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
-      else { const back = at(xm - 9, laneMe), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
+      else if (lookBk) { const fr = at(xm + 13, laneMe - 1.0), bk = at(xm - 7, laneMe + 1.0); want = fr.pos.clone().setY(fr.pos.y + 4.2); look = bk.pos.clone().setY(bk.pos.y + 2.4); }
+      else { const back = at(xm - 9 - 7 * chaseK, laneMe - 0.8 * chaseK), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4 + 3.8 * chaseK); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
       const kk = 1 - Math.exp(-6 * Math.max(fdt, 0.016));
       camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, kk) : want.clone(); lookPos = lookPos && lookPos.distanceTo(look) < 60 ? lookPos.lerp(look, kk) : look.clone(); cam.position.copy(camPos); cam.lookAt(lookPos);
       if (board) { const lap = Math.floor((S.lapDist || 0) / 400) + 1, txt = 'TOUR ' + lap + '|' + ((S.lapDist || 0) / 1000).toFixed(2).replace('.', ',') + ' km';
@@ -400,6 +428,7 @@
       dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v, ref: ref.visible ? ref.position.toArray().map((v) => Math.round(v * 100) / 100) : null }; },
       others,
       react,
+      chase,
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },
