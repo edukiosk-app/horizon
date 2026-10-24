@@ -309,7 +309,7 @@
         ribbon(CF.pw, CF.pw + 2.5, 3, lam(0x55555f), 0.12); ribbon(-CF.pw - 2.5, -CF.pw, 3, lam(0x55555f), 0.12);
         ribbon(-0.08, 0.08, 2, new T.MeshBasicMaterial({ color: 0xffd23a, side: T.DoubleSide }), 0.02);
         // hôtels-tours avec bandes de fenêtres lumineuses
-        const B = []; for (let s2 = 0; s2 < L; s2 += 38) for (const side of [-1, 1]) { if (rnd() < 0.2) continue; const off = side * (CF.pw + 12 + rnd() * 30), A = at(s2, off); B.push([A.pos.x, A.pos.z, 40 + rnd() * 140, 16 + rnd() * 18, Math.atan2(A.dir.x, A.dir.z)]); }
+        const RES = [[600, 1], [1450, -1], [2250, 1], [3050, -1], [3800, 1], [4400, -1]]; const B = []; for (let s2 = 0; s2 < L; s2 += 38) for (const side of [-1, 1]) { if (rnd() < 0.2) continue; if (RES.some(([rs, rd]) => rd === side && s2 > rs - 300 && s2 < rs + 160)) continue; const off = side * (CF.pw + 12 + rnd() * 30), A = at(s2, off); B.push([A.pos.x, A.pos.z, 40 + rnd() * 140, 16 + rnd() * 18, Math.atan2(A.dir.x, A.dir.z)]); }
         const tw = inst(new T.BoxGeometry(1, 1, 1), new T.MeshLambertMaterial({ color: 0x4a4670, emissive: 0x1c1838 }), B.length), win = inst(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial(), B.length * 8, false);
         const NE = [0xffd166, 0xff4fd8, 0x4fe3ff, 0xff7a3a, 0xb07cff, 0x7dff8a];
         B.forEach(([x, z, h, w, yaw], i) => { q.setFromEuler(e.set(0, yaw, 0)); m4.compose(new T.Vector3(x, minY + h / 2, z), q, sc.set(w, h, w * 0.7)); tw.setMatrixAt(i, m4); const c = NE[Math.floor(rnd() * NE.length)];
@@ -326,9 +326,51 @@
         const nl = Math.floor(L / 30), lp = inst(new T.CylinderGeometry(0.08, 0.1, 6, 6), lam(0x555566), nl * 2), bulb = inst(new T.SphereGeometry(0.35, 10, 8), new T.MeshBasicMaterial({ color: 0xfff0c0 }), nl * 2, false);
         for (let i = 0; i < nl; i++) for (const sd of [-1, 1]) { const A = at(i * 30, sd * (CF.pw + 1.8)), k = i * 2 + (sd > 0 ? 1 : 0); m4.makeTranslation(A.pos.x, A.pos.y + 3, A.pos.z); lp.setMatrixAt(k, m4); m4.makeTranslation(A.pos.x, A.pos.y + 6.1, A.pos.z); bulb.setMatrixAt(k, m4); }
         // fontaines dansantes
-        const jets = []; for (let f = 0; f < 3; f++) { const A = at(900 + f * 1500, -(CF.pw + 22)); const pool = new T.Mesh(new T.CircleGeometry(16, 32), new T.MeshPhongMaterial({ color: 0x1a4a7a, emissive: 0x0a2040, shininess: 90 })); pool.rotation.x = -Math.PI / 2; pool.position.copy(A.pos).setY(A.pos.y + 0.05); scene.add(pool);
-          for (let j = 0; j < 9; j++) { const jt = new T.Mesh(new T.CylinderGeometry(0.25, 0.5, 1, 8), new T.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.75 })); jt.position.set(A.pos.x + (j - 4) * 3, A.pos.y, A.pos.z); scene.add(jt); jets.push({ m: jt, y0: A.pos.y, ph: j * 0.5 + f }); } }
-        ANIM.push((t) => jets.forEach((o) => { const h = 2 + 9 * Math.max(0, Math.sin(t / 600 + o.ph)); o.m.scale.y = h; o.m.position.y = o.y0 + h / 2; }));
+        const jets = []; for (let f = 0; f < 2; f++) { const A = at(950 + f * 2500, -(CF.pw + 34)); const pool = new T.Mesh(new T.CircleGeometry(30, 40), new T.MeshPhongMaterial({ color: 0x1a4a7a, emissive: 0x0a2040, shininess: 90 })); pool.rotation.x = -Math.PI / 2; pool.position.copy(A.pos).setY(A.pos.y + 0.05); scene.add(pool);
+          for (let j = 0; j < 17; j++) { const jt = new T.Mesh(new T.CylinderGeometry(0.3, 0.6, 1, 8), new T.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.75 })); jt.position.set(A.pos.x + (j - 8) * 3, A.pos.y, A.pos.z); scene.add(jt); jets.push({ m: jt, y0: A.pos.y, ph: j * 0.5 + f }); } }
+        ANIM.push((t) => jets.forEach((o) => { const h = 3 + 16 * Math.max(0, Math.sin(t / 600 + o.ph)); o.m.scale.y = h; o.m.position.y = o.y0 + h / 2; }));
+
+        // monuments évoqués (domaine public, sans nom ni enseigne de casino)
+        const place = (s2, side, back) => { const A = at(s2, side * (CF.pw + back)); return { A, yaw: Math.atan2(-A.nrm.x * side, -A.nrm.z * side) }; };
+        const gold = new T.MeshLambertMaterial({ color: 0xc99a46, emissive: 0x7a4a0a, emissiveIntensity: 0.8, flatShading: true });
+        { const { A, yaw } = place(600, 1, 30), g = new T.Group(); // petite tour Eiffel
+          const leg = (h, r0, y0, spread, tilt) => { for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4, m = new T.Mesh(new T.BoxGeometry(r0, h, r0), gold); m.position.set(Math.cos(a) * spread, y0 + h / 2, Math.sin(a) * spread); m.rotation.set(Math.sin(a) * tilt, 0, -Math.cos(a) * tilt); g.add(m); } };
+          leg(30, 2.4, 0, 13, 0.38); const p1 = new T.Mesh(new T.BoxGeometry(22, 2, 22), gold); p1.position.y = 28; g.add(p1);
+          leg(32, 1.6, 29, 6.5, 0.18); const p2 = new T.Mesh(new T.BoxGeometry(11, 1.6, 11), gold); p2.position.y = 60; g.add(p2);
+          const sp = new T.Mesh(new T.CylinderGeometry(0.6, 3.2, 42, 4), gold); sp.position.y = 82; sp.rotation.y = Math.PI / 4; g.add(sp); const tip = new T.Mesh(new T.ConeGeometry(0.6, 8, 6), gold); tip.position.y = 107; g.add(tip);
+          for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4, ar = new T.Mesh(new T.TorusGeometry(7, 0.8, 6, 16, Math.PI), gold); ar.position.set(Math.cos(a) * 9, 10, Math.sin(a) * 9); ar.rotation.y = -a + Math.PI / 2; g.add(ar); }
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw; scene.add(g); }
+        { const { A, yaw } = place(1450, -1, 100), g = new T.Group(); // pyramide de verre noir, faisceau et sphinx
+          const py = new T.Mesh(new T.ConeGeometry(85, 100, 4, 1), new T.MeshPhongMaterial({ color: 0x1a1e30, emissive: 0x141a38, specular: 0xaab8ff, shininess: 120, flatShading: true })); py.rotation.y = Math.PI / 4; py.position.y = 50; g.add(py);
+          const beam = new T.Mesh(new T.CylinderGeometry(1.2, 2.5, 1400, 12, 1, true), new T.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0.35, fog: false, depthWrite: false })); beam.position.y = 100 + 700; g.add(beam);
+          const sm = new T.MeshLambertMaterial({ color: 0xc9a161, flatShading: true }), bx = (w, h, d, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), sm); m.position.set(x, y, z); g.add(m); };
+          bx(9, 7, 26, 0, 3.5, 70); bx(7.5, 9, 7, 0, 9.5, 82); bx(9, 3, 4.5, 0, 14.5, 80.5); bx(3, 2.5, 11, -3, 1.25, 88); bx(3, 2.5, 11, 3, 1.25, 88);
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw + Math.PI; scene.add(g); }
+        { const { A, yaw } = place(2250, 1, 22), g = new T.Group(); // statue de la Liberté devant des gratte-ciel
+          const cu = new T.MeshLambertMaterial({ color: 0x7fb7a0, flatShading: true }), st = new T.MeshLambertMaterial({ color: 0xb8ad98, flatShading: true });
+          const ped = new T.Mesh(new T.BoxGeometry(9, 14, 9), st); ped.position.y = 7; g.add(ped); const robe = new T.Mesh(new T.ConeGeometry(3.2, 15, 10), cu); robe.position.y = 21.5; g.add(robe);
+          const head = new T.Mesh(new T.SphereGeometry(1.3, 10, 8), cu); head.position.y = 30; g.add(head); for (let i = 0; i < 7; i++) { const a = -1.2 + i * 0.4, sp = new T.Mesh(new T.ConeGeometry(0.22, 1.8, 4), cu); sp.position.set(Math.sin(a) * 1.3, 31, Math.cos(a) * 1.3); sp.rotation.set(Math.cos(a) * 0.8, 0, -Math.sin(a) * 0.8); g.add(sp); }
+          const arm = new T.Mesh(new T.CylinderGeometry(0.5, 0.6, 7, 8), cu); arm.position.set(2.2, 31, 0); arm.rotation.z = -0.25; g.add(arm); const fl = new T.Mesh(new T.ConeGeometry(0.9, 2.2, 8), new T.MeshBasicMaterial({ color: 0xffc94a })); fl.position.set(3.1, 35.4, 0); g.add(fl);
+          const tab = new T.Mesh(new T.BoxGeometry(1.4, 2.4, 0.5), cu); tab.position.set(-2, 25, 0.8); g.add(tab);
+          [[-28, 120, 16], [-8, 160, 14], [14, 95, 18], [34, 140, 15], [52, 80, 20]].forEach(([x, h, w]) => { for (let k = 0; k < 3; k++) { const hh = h * (1 - k * 0.28), ww = w * (1 - k * 0.25), b = new T.Mesh(new T.BoxGeometry(ww, hh / 3, ww), new T.MeshLambertMaterial({ color: 0x6d6a80, emissive: 0x2a2440 })); b.position.set(x, k * h / 3 + hh / 6, -60); g.add(b); } });
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw; scene.add(g); }
+        { const { A, yaw } = place(3050, -1, 14), g = new T.Group(); // canal façon Venise, gondoles, campanile
+          const can = new T.Mesh(new T.PlaneGeometry(140, 14), new T.MeshPhongMaterial({ color: 0x2a8a9a, shininess: 100, emissive: 0x0a3038 })); can.rotation.x = -Math.PI / 2; can.position.y = 0.1; g.add(can);
+          const cam = new T.Mesh(new T.BoxGeometry(9, 70, 9), new T.MeshLambertMaterial({ color: 0xb4583a, flatShading: true })); cam.position.set(50, 35, -22); g.add(cam); const roof = new T.Mesh(new T.ConeGeometry(7, 16, 4), new T.MeshLambertMaterial({ color: 0x3f6f52, flatShading: true })); roof.position.set(50, 78, -22); roof.rotation.y = Math.PI / 4; g.add(roof);
+          const bel = new T.Mesh(new T.BoxGeometry(10, 8, 10), new T.MeshLambertMaterial({ color: 0xe8dcc0 })); bel.position.set(50, 66, -22); g.add(bel);
+          const pal = new T.Mesh(new T.BoxGeometry(110, 22, 14), new T.MeshLambertMaterial({ color: 0xe9d6b8, emissive: 0x3a2a10 })); pal.position.set(-10, 11, -22); g.add(pal);
+          const gm = new T.MeshLambertMaterial({ color: 0x0c0c10 }), gond = []; for (let i = 0; i < 4; i++) { const gd = new T.Mesh(new T.BoxGeometry(9, 0.6, 1.4), gm); gd.position.set(-50 + i * 30, 0.5, 0); g.add(gd); gond.push({ m: gd, x0: -50 + i * 30, ph: i }); }
+          ANIM.push((t) => gond.forEach((o) => { o.m.position.x = ((o.x0 + t / 300 + 70) % 140) - 70; o.m.position.y = 0.5 + 0.08 * Math.sin(t / 500 + o.ph); }));
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw; scene.add(g); }
+        { const { A, yaw } = place(3800, 1, 30), g = new T.Group(); // château de conte
+          const wm = new T.MeshLambertMaterial({ color: 0xf0e6f0, flatShading: true }), wall = new T.Mesh(new T.BoxGeometry(50, 18, 14), wm); wall.position.y = 9; g.add(wall);
+          [[-25, 32, 0xd0303a], [25, 32, 0x3050d0], [-12, 44, 0xe0b020], [12, 44, 0xd0303a], [0, 58, 0x3050d0]].forEach(([x, h, c]) => { const tw = new T.Mesh(new T.CylinderGeometry(4.2, 4.6, h, 12), wm); tw.position.set(x, h / 2, 0); g.add(tw); const cn = new T.Mesh(new T.ConeGeometry(5.4, 14, 12), new T.MeshLambertMaterial({ color: c, flatShading: true })); cn.position.set(x, h + 7, 0); g.add(cn); });
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw; scene.add(g); }
+        { const { A, yaw } = place(4400, -1, 18), g = new T.Group(); // colonnade romaine et statues
+          const mb = new T.MeshLambertMaterial({ color: 0xf4f1ea }); for (let i = 0; i < 10; i++) { const c = new T.Mesh(new T.CylinderGeometry(1.1, 1.3, 20, 12), mb); c.position.set(-36 + i * 8, 10, 0); g.add(c); }
+          const ent = new T.Mesh(new T.BoxGeometry(84, 4, 5), mb); ent.position.y = 22; g.add(ent); const ped = new T.Mesh(new T.ConeGeometry(46, 9, 3), mb); ped.rotation.z = Math.PI / 2; ped.rotation.y = Math.PI / 2; ped.scale.set(1, 1, 0.12); ped.position.y = 28; g.add(ped);
+          for (const x of [-46, 46]) { const st = new T.Group(), b = new T.Mesh(new T.BoxGeometry(4, 3, 4), mb); b.position.y = 1.5; st.add(b); const bd = new T.Mesh(new T.CylinderGeometry(0.9, 1.2, 6, 8), mb); bd.position.y = 6; st.add(bd); const hd = new T.Mesh(new T.SphereGeometry(0.9, 10, 8), mb); hd.position.y = 9.8; st.add(hd); st.position.x = x; g.add(st); }
+          g.position.copy(A.pos).setY(minY); g.rotation.y = yaw; scene.add(g); }
       }
       if (CF.wall) {
         // muraille : faces latérales, créneaux, tours de guet
