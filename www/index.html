@@ -2191,7 +2191,7 @@ $('refLvl').addEventListener('change',()=>{try{updateGhostInfo()}catch(e){}});
 /* adversaire au hasard (file d'attente publique) et course contre l'ordinateur (coureurs simulés) */
 (()=>{const f0=fb;fb=function(path){if(LIVE.local&&String(path).startsWith('rooms/ORDI'))return Promise.resolve(null);return f0.apply(this,arguments)}})();
 const BOTN=['Léa','Karim','Sofia','Tom','Yuki','Diego','Inès','Lucas','Amara','Noah'];
-const okStart=(gpx)=>{const msg=$('liveMsg');if(!route||(!route.decor&&!gpx)){msg.textContent='Choisis d’abord un décor virtuel dans Préparer.';return false}if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return false}store.set('liveName',$('liveName').value.trim());return true};
+const okStart=(gpx)=>{const msg=$('liveMsg');if(run.state==='done'){try{$('bilan').hidden=true}catch(e){}startOver()}if(!route||(!route.decor&&!gpx)){msg.textContent='Choisis d’abord un décor virtuel dans Préparer.';return false}if(run.state!=='idle'){msg.textContent='Termine d’abord ta course en cours.';return false}store.set('liveName',$('liveName').value.trim());return true};
 async function liveRandom(){const msg=$('liveMsg');if(!LIVE.url()||!okStart())return;LIVE.randD=+$('randDist').value||5000;msg.textContent='Recherche d’un adversaire…';
   try{await liveClock();const D=getD(),now=srvNow(),open=await fb('rooms/_open/'+D)||{};
     const c=Object.entries(open).filter(([k,v])=>v&&v.at>now-45000&&v.host!==LIVE.id).sort((a,b)=>a[1].at-b[1].at);
@@ -3090,10 +3090,11 @@ function chRender(){const c=chGet(),lad=$('champLadder'),body=$('champBody');if(
   $('chGo').onclick=chStart;const rs=$('chReset');if(rs)rs.onclick=()=>{if(confirm(UIE()?'Restart this level? The points of this championship go back to zero.':'Recommencer ce niveau ? Les points de ce championnat repartent à zéro.')){c.race=0;c.pts={};c.res=[];chSet(c);chRender()}}}
 function chStart(){const c=chGet(),L=CH_LV[c.lvl],[D,dec,rel]=L.races[c.race],m=$('champMsg');
   if(run.state==='running'||run.state==='paused'){m.textContent=UIE()?'Finish your current run first.':'Termine d’abord ta course en cours.';return}
+  if(run.state==='done'){try{$('bilan').hidden=true}catch(e){}startOver()}m.textContent='';
   if(LIVE.room)try{liveLeaveX()}catch(e){}
   const ws=$('wsel');if(ws.value){ws.value='';try{ws.onchange&&ws.onchange()}catch(e){}}
   try{$('raceMode').value='decor';$('raceMode').onchange()}catch(e){}applyTerrain(dec,rel);$('liveDist').value=String(D);try{liveDistUI()}catch(e){}
-  LIVE.champ={lvl:c.lvl,race:c.race};liveBotsStart();const R=LIVE.data;if(!R||!LIVE.local){LIVE.champ=null;m.textContent=UIE()?'Cannot set up the race: connect the treadmill or tick “Simulation without treadmill”.':'Impossible de préparer la course : coche « Simulation sans tapis » ou connecte le tapis.';return}
+  LIVE.champ={lvl:c.lvl,race:c.race};liveBotsStart();const R=LIVE.data;if(!R||!LIVE.local){LIVE.champ=null;m.textContent=$('liveMsg').textContent||(UIE()?'The race could not be set up.':'La course n’a pas pu être préparée.');return}
   const ref=(D<=5000?+$('v5k').value:+$('v10k').value*(D>=10000?0.98:1))||+$('raceV').value||10,now=Date.now();
   for(const k of Object.keys(R.p))if(R.p[k].bot)delete R.p[k];
   L.names.forEach((n,i)=>{const f=L.f[0]+(L.f[1]-L.f[0])*i/6,form=1+(Math.random()-0.5)*0.04;R.p['r'+i]={n:n+' (ordi)',d:0,t:0,at:now,bot:{v:ref*f*form,tac:CH_TAC[i],seed:Math.random()*6}}});
