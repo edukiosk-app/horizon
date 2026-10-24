@@ -438,7 +438,7 @@
         const b = new T.Mesh(gg, bm); b.scale.setScalar(0.6 + Math.random() * 0.5); g.add(b); sw.push({ b, x: (Math.random() - 0.5) * 4, y: 0.8 + Math.random() * 3.2, z: (Math.random() - 0.5) * 6, ph: Math.random() * 6.28 }); }
       g.userData = { anim: (t) => sw.forEach((o) => { o.b.position.set(o.x + 0.6 * Math.sin(t / 400 + o.ph), o.y + 0.5 * Math.sin(t / 250 + o.ph), o.z + 0.8 * Math.cos(t / 500 + o.ph)); o.b.rotation.z = 0.7 * Math.sin(t / 60 + o.ph); }) }; g.visible = false; scene.add(g); return g; }
     const CHS = {}; let CHG = null;
-    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.t0 = performance.now(); CH.dur = ms || 30000; }
+    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -463,7 +463,7 @@
       // prédateur
       let chaseK = 0, lookBk = false;
       if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (CHG) CHG.visible = false; } else {
-        chaseK = Math.min(1, u * 8, (1 - u) * 6); const gap = 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
+        chaseK = Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
         const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : 1.0)), t = performance.now(); lookBk = (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
         if (CH.kind === 'rex') { const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
         REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } else CHG.userData.anim(t); } }
@@ -490,6 +490,8 @@
       others,
       react,
       chase,
+      chaseGap(g) { CH.ext = g; },
+      chaseMore(ms) { if (CH.dur) CH.dur += ms; },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },

@@ -3153,6 +3153,27 @@ const halEv=()=>({id:'HAL26',title:'La course d’Halloween',at:HAL_AT,rep:0,dis
   try{out=await sc.apply(this,arguments)}finally{if(NS)window.NativeShareImage=NS}return out}})();
 </script>
 <script>(()=>{const el=enLabel;enLabel=function(l){const k=String(l||'').trim();if(I18N[k])return I18N[k];return el.apply(this,arguments)}})();</script>
+<script>
+/* ===== poursuite réelle : le poursuivant court à la vitesse prévue du sprint ; s'il te rattrape, le sprint dure plus longtemps ===== */
+const CHZ={step:-1,gap:0,caught:false,t:0,ok:0,n:0,pen:0};
+const CHNM={rex:['Le T-Rex','The T-Rex'],pumpkin:['La citrouille','The pumpkin'],spider:['L’araignée','The spider'],bats:['Les chauves-souris','The bats']};
+const chPen=k=>k==='rex'?30:15;
+function chFlash(k){const d=document.createElement('div');d.className='chflash';d.style.background=k==='rex'?'rgba(220,38,38,.45)':k==='spider'?'rgba(80,0,90,.45)':k==='bats'?'rgba(30,10,40,.55)':'rgba(249,115,22,.45)';document.body.append(d);setTimeout(()=>d.remove(),1300);try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}}
+(()=>{const es=enterStep;enterStep=function(i){
+  try{if(workout&&CHZ.step>=0&&CHZ.step!==i){const k=advKind(workout.steps[CHZ.step]);if(k&&k!=='ptero'){CHZ.n++;if(!CHZ.caught)CHZ.ok++}CHZ.step=-1;try{RM.map&&RM.map.chaseGap&&RM.map.chaseGap(null)}catch(e){}}}catch(e){}
+  const r=es.apply(this,arguments);
+  try{const s=workout&&workout.steps[i],k=advKind(s);if(i===0){CHZ.ok=0;CHZ.n=0;CHZ.pen=0}if(k&&k!=='ptero'&&s.dur){CHZ.step=i;CHZ.gap=13;CHZ.caught=false;CHZ.t=0}}catch(e){}return r}})();
+setInterval(()=>{try{if(!workout||run.state!=='running'||CHZ.step!==run.step)return;const s=curStep();if(!s)return;const k=advKind(s),dt=0.25;CHZ.t+=dt;
+  if(CHZ.t>6&&!CHZ.caught){const vc=Math.max(0,(s.v||run.target)-0.3)/3.6,vr=(run.speed||0)/3.6;CHZ.gap=Math.min(20,CHZ.gap+(vr-vc)*dt);
+    if(CHZ.gap<=1.5){CHZ.caught=true;const P=chPen(k),nm=CHNM[k]||CHNM.rex,pl=k==='bats';s.dur+=P;CHZ.pen+=P;chFlash(k);
+      try{RM.map&&RM.map.chaseMore&&RM.map.chaseMore(P*1000)}catch(e){}
+      say(`${nm[0]} ${pl?'t’ont':'t’a'} rattrapé ! ${P} secondes de plus.`,`${nm[1]} caught you! ${P} more seconds.`);
+      CHZ.gap=6;try{renderSteps()}catch(e){}}}
+  try{RM.map&&RM.map.chaseGap&&RM.map.chaseGap(CHZ.gap)}catch(e){}}catch(e){}},250);
+(()=>{const bb=bilanBuild;bilanBuild=function(){const S=bb.apply(this,arguments);try{if(CHZ.step>=0){const k=advKind(workout&&workout.steps[CHZ.step]);if(k){CHZ.n++;if(!CHZ.caught)CHZ.ok++}CHZ.step=-1}
+  if(CHZ.n){S.extra.unshift(UIE()?`Escapes: ${CHZ.ok} of ${CHZ.n}${CHZ.pen?` · ${CHZ.pen} s of extra sprint`:' · flawless!'}`:`Évasions réussies : ${CHZ.ok} sur ${CHZ.n}${CHZ.pen?` · ${CHZ.pen} s de sprint en plus`:' · sans-faute !'}`);store.set('lastBilan',S)}CHZ.n=0;CHZ.ok=0;CHZ.pen=0}catch(e){}return S}})();
+</script>
+<style>.chflash{position:fixed;inset:0;z-index:9999;pointer-events:none;animation:chfl 1.3s ease-out forwards}@keyframes chfl{0%{opacity:0}10%{opacity:1}100%{opacity:0}}</style>
 </body>
 
 </html>
