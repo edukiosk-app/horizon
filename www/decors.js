@@ -553,7 +553,7 @@
     function mkHunter() { const g = new T.Group(), a = runner(0xef4444), b = runner(0x991b1b); scene.remove(a); scene.remove(b); a.scale.setScalar(1.15); b.scale.setScalar(1.15); b.position.set(0.9, 0, -2.2); g.add(a, b);
       let last = performance.now(); g.userData = { anim: (t) => { const d = Math.min(0.1, (t - last) / 1000); last = t; animate(a, 4.2, d); animate(b, 4.2, d); } }; g.visible = false; scene.add(g); return g; }
     const CHS = {}; let CHG = null;
-    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'collapse' ? (() => { const g = new T.Group(); g.userData = { anim: () => {} }; scene.add(g); return g; })() : kind === 'hunter' ? mkHunter() : kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
+    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'collapse' ? (() => { const g = new T.Group(); g.userData = { anim: () => {} }; scene.add(g); return g; })() : kind === 'hunter' ? mkHunter() : kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.extT = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -577,6 +577,8 @@
 
       // prédateur
       let chaseK = 0, lookBk = false;
+      if (CH.ext != null && CH.extT != null) CH.ext += (CH.extT - CH.ext) * Math.min(1, fdt * 3);
+      if (BRIDGE && CH.kind === 'collapse' && CH.dur && CH.ext != null) BRIDGE.set(xm - CH.ext);
       if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (CHG) CHG.visible = false; } else {
         chaseK = CH.ext != null && (CH.kind === 'hunter' || CH.kind === 'collapse') ? Math.max(0, Math.min(1, (30 - CH.ext) / 12)) : Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
         const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : CH.kind === 'hunter' ? 0.7 : 1.0)), t = performance.now(); lookBk = CH.kind === 'collapse' ? (CH.ext != null && CH.ext < 22) : CH.kind !== 'hunter' && (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
@@ -601,14 +603,14 @@
     return {
       route, decor: k,
       place(x, gx, total) { track(S.me, x); track(S.ref, gx); S.lapDist = total; },
-      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v, ref: ref.visible ? ref.position.toArray().map((v) => Math.round(v * 100) / 100) : null }; },
+      dbg() { return { cam: cam.position.toArray().map(Math.round), me: me.position.toArray().map((v) => Math.round(v * 100) / 100), x: S.me.x, v: S.me.v, ref: ref.visible ? ref.position.toArray().map((v) => Math.round(v * 100) / 100) : null, ch: CHG && CHG.visible ? CHG.position.distanceTo(me.position) : null }; },
       others,
       react,
       chase,
-      chaseGap(g) { CH.ext = g; },
+      chaseGap(g) { CH.extT = g; if (g == null || CH.ext == null || Math.abs(g - CH.ext) > 15) CH.ext = g; },
       chaseMore(ms) { if (CH.dur) CH.dur += ms; },
-      chaseStop() { CH.dur = 0; CH.ext = null; if (CHG) CHG.visible = false; },
-      collapse(front) { if (BRIDGE) BRIDGE.set(front); },
+      chaseStop() { CH.dur = 0; CH.ext = null; CH.extT = null; if (CHG) CHG.visible = false; },
+      collapse(front) { if (BRIDGE && (front == null || !(CH.kind === 'collapse' && CH.dur))) BRIDGE.set(front); },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },
