@@ -27,6 +27,9 @@
     lake: (th) => { const r = 1 + 0.08 * Math.sin(3 * th + 0.3) + 0.05 * Math.sin(5 * th + 1); return [1.15 * r * Math.cos(th), r * Math.sin(th)]; },
     scifi: (th) => { const r = 1 + 0.12 * Math.sin(2 * th) + 0.06 * Math.sin(5 * th + 0.7); return [2.2 * r * Math.cos(th), r * Math.sin(th)]; },
     jungle: (th) => { const r = 1 + 0.18 * Math.sin(3 * th + 1.1) + 0.09 * Math.sin(7 * th + 0.4); return [1.3 * r * Math.cos(th), r * Math.sin(th)]; },
+    egypt: (th) => { const r = 1 + 0.1 * Math.sin(2 * th + 0.3) + 0.06 * Math.sin(5 * th + 1.2); return [1.5 * r * Math.cos(th), r * Math.sin(th)]; },
+    vegas: (th) => [2.6 * Math.cos(th) + 0.15 * Math.sin(2 * th), 0.42 * Math.sin(th)],
+    wall: (th) => { const r = 1 + 0.2 * Math.sin(3 * th + 0.8) + 0.1 * Math.sin(5 * th + 0.2) + 0.05 * Math.sin(9 * th + 1.5); return [1.3 * r * Math.cos(th), r * Math.sin(th)]; },
     bridge: (th) => { const r = 1 + 0.14 * Math.sin(3 * th + 0.4) + 0.07 * Math.sin(6 * th + 1.7); return [1.4 * r * Math.cos(th), r * Math.sin(th)]; },
     halloween: (th) => { const r = 1 + 0.16 * Math.sin(4 * th + 0.9) + 0.08 * Math.sin(7 * th + 2.1) + 0.04 * Math.sin(11 * th); return [1.25 * r * Math.cos(th), r * Math.sin(th)]; },
   };
@@ -50,6 +53,9 @@
     lake: (s, L) => { const w = W(s, L); return 5 + 1.5 * Math.sin(3 * w) + 0.8 * Math.sin(7 * w); },
     scifi: (s, L) => { const w = W(s, L); return 12 + 4 * Math.sin(2 * w + 0.5) + 1.5 * Math.sin(5 * w); },
     jungle: (s, L) => { const w = W(s, L); return 20 + 9 * Math.sin(2 * w + 0.2) + 3.5 * Math.sin(6 * w + 1) + 1 * Math.sin(13 * w); },
+    egypt: (s, L) => { const w = W(s, L); return 8 + 2.5 * Math.sin(3 * w + 0.4) + 1 * Math.sin(7 * w); },
+    vegas: (s, L) => { const w = W(s, L); return 2 + 0.6 * Math.sin(2 * w); },
+    wall: (s, L) => { const w = W(s, L); return 160 + 22 * Math.sin(2 * w + 0.5) + 9 * Math.sin(5 * w + 1.3) + 3 * Math.sin(11 * w + 0.2); },
     bridge: (s, L) => { const w = W(s, L); return 60 + 7 * Math.sin(2 * w + 0.6) + 2.5 * Math.sin(5 * w + 1.4); },
     halloween: (s, L) => { const w = W(s, L); return 15 + 6 * Math.sin(2 * w + 1.2) + 2.5 * Math.sin(5 * w + 0.3) + 0.8 * Math.sin(12 * w); },
   };
@@ -65,6 +71,9 @@
     scifi: { name: 'Ville du futur', desc: 'Une piste suspendue entre les tours de néon, sous une planète à anneaux. Arches lumineuses à traverser.', len: 4000, loop: true },
     jungle: { name: 'Jungle préhistorique', desc: 'Un sentier entre les fougères géantes, des dinosaures au loin et un volcan qui fume.', len: 5000, loop: true },
     lake: { name: 'Tour du lac', desc: 'Une boucle autour d\'un lac, avec un ponton et des arbres.', len: 3000, loop: true },
+    egypt: { name: 'Pyramides', desc: 'Une piste dans le désert, face aux grandes pyramides et au sphinx, entre dunes, oasis et chameaux.', len: 5000, loop: true },
+    vegas: { name: 'Las Vegas', desc: 'Une grande avenue la nuit, entre les hôtels illuminés, les néons, les palmiers et les fontaines.', len: 5000, loop: true },
+    wall: { name: 'Grande Muraille', desc: 'Le chemin de ronde de la Grande Muraille, de tour de guet en tour de guet, sur les crêtes au-dessus de la brume.', len: 5000, loop: true },
     bridge: { name: 'Pont du gouffre', desc: 'Un pont de pierre suspendu au-dessus d\'un gouffre, dans la brume. Le décor de Collapse Run.', len: 5000, loop: true },
     halloween: { name: 'Forêt hantée', desc: 'Halloween : une forêt la nuit sous la pleine lune, citrouilles, tombes, chauves-souris et fantômes.', len: 5000, loop: true },
   };
@@ -99,6 +108,9 @@
       scifi: { sky: [0x0b0730, 0x3a1a6e, 0xc2367a], fog: [0x2a1250, 60, 650], sun: [0.3, 0.5, -0.8], sunC: 0xffb3f0, sunI: 0.5, hemi: [0x8a7dff, 0x200a30, 0.6] },
       jungle: { sky: [0x7a9bb0, 0xe7c59a, 0xf3d7b0], fog: [0xd9c3a0, 40, 420], sun: [-0.3, 0.35, -0.9], sunC: 0xffd9a8, sunI: 1.05, hemi: [0xe8f0d8, 0x4a4a2a, 0.65] },
       lake: { sky: [0x4a86c5, 0xbcd6ea, 0xe6eef0], fog: [0xd3e1ea, 140, 900], sun: [-0.4, 0.5, -0.7], sunC: 0xfff1d6, sunI: 1.0, hemi: [0xd7e8ff, 0x46603a, 0.7] },
+      egypt: { sky: [0x3b6fb2, 0xf3c98d, 0xffdca3], fog: [0xf1d3a2, 300, 2800], sun: [-0.5, 0.22, -0.8], sunC: 0xffc070, sunI: 1.15, hemi: [0xffe6c0, 0x8a6a40, 0.75] },
+      vegas: { sky: [0x05061c, 0x1d1248, 0x6a2a6a], fog: [0x1a1038, 70, 800], sun: [0.3, 0.5, -0.8], sunC: 0xffc0f0, sunI: 0.45, hemi: [0x9a8aff, 0x301020, 0.8] },
+      wall: { sky: [0x3f7cc0, 0xbcd5ea, 0xe8eff3], fog: [0xcbdbe6, 140, 1500], sun: [0.45, 0.55, -0.7], sunC: 0xfff3dc, sunI: 1.05, hemi: [0xdbeaff, 0x4c5a3a, 0.75] },
       bridge: { sky: [0x3b4a66, 0x8d9db4, 0xb9c3cf], fog: [0x9aa6b6, 40, 380], sun: [0.4, 0.5, -0.75], sunC: 0xfff0dc, sunI: 0.95, hemi: [0xdfe8ff, 0x3a3a44, 0.8] },
       halloween: { sky: [0x0b0a26, 0x2e1c48, 0x6a2c4a], fog: [0x2a1c44, 28, 260], sun: [0.25, 0.45, -0.85], sunC: 0xdfe6ff, sunI: 0.9, hemi: [0x9a8ad0, 0x2a1c10, 0.95] },
     }[k === 'hilly' ? 'track' : k] || {};
@@ -111,7 +123,7 @@
     const sunDir = new T.Vector3(...TH.sun).normalize();
     const sun = new T.DirectionalLight(TH.sunC, TH.sunI); sun.castShadow = HQ && k !== 'scifi'; sun.shadow.mapSize.set(1024, 1024);
     { const c = sun.shadow.camera; c.left = -35; c.right = 35; c.top = 35; c.bottom = -35; c.near = 1; c.far = 400; } sun.shadow.bias = -0.0006; scene.add(sun, sun.target);
-    ren.shadowMap.enabled = sun.castShadow; ren.shadowMap.type = T.PCFShadowMap; cam.far = k === 'mountain' ? 3000 : 1500; cam.updateProjectionMatrix();
+    ren.shadowMap.enabled = sun.castShadow; ren.shadowMap.type = T.PCFShadowMap; cam.far = k === 'mountain' || k === 'egypt' ? 3200 : 1500; cam.updateProjectionMatrix();
 
     // trajet en mètres (x vers l'est, z vers le sud, y en hauteur)
     const P = route.pts.map((p) => { const [x, y] = toXY(p); return new T.Vector3(x, p[2], -y); });
@@ -225,17 +237,21 @@
         mountain: { ground: 0x6b7a4a, base: 0x5f6d45, path: 0x9b8b74, pw: 1.8, trees: [['pine', 1]], step: 4.5, far: 45, rocks: 260, ferns: 0, hills: true, peaks: true },
         lake: { ground: 0x4f8a3a, base: 0x4a8236, path: 0x9b7b52, pw: 1.8, trees: [['leaf', 0.55], ['pine', 0.45]], step: 3, far: 38, rocks: 40, ferns: 250, lake: true },
         jungle: { ground: 0x5d6b2e, base: 0x55632a, path: 0x8a6a46, pw: 1.8, trees: [['fern', 0.8], ['palm', 0.2]], step: 6, far: 40, rocks: 50, ferns: 400, hills: true, jungle: true },
+        egypt: { ground: 0xd8b878, base: 0xd2ae6e, path: 0xb48d58, pw: 1.8, trees: [['palm', 1]], step: 110, far: 20, rocks: 30, ferns: 0, egypt: true },
+        vegas: { ground: 0x26262e, base: 0x1b1b22, path: 0x34343e, pw: 3.4, trees: [['palm', 1]], step: 9, far: 2.5, rocks: 0, ferns: 0, vegas: true },
+        wall: { ground: 0x5f7a3e, base: 0x55703a, path: 0x9c8f7a, pw: 2.2, trees: [['pine', 0.6], ['leaf', 0.4]], step: 5, far: 70, rocks: 0, ferns: 0, hills: true, wall: true },
         bridge: { ground: 0x6b6b70, base: 0x23262e, path: 0x8a8578, pw: 1.6, trees: [['pine', 1]], step: 999999, far: 30, rocks: 0, ferns: 0, bridge: true },
         halloween: { ground: 0x3a3822, base: 0x2a2918, path: 0x7a6044, pw: 1.6, trees: [['dead', 0.7], ['pine', 0.3]], step: 3, far: 36, rocks: 0, ferns: 0, hills: true, halloween: true },
       }[k];
       let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
       const minY = Math.min(...P.map((p) => p.y)), waterY = minY - 0.6, SEAREL = CF.sea && Math.max(...P.map((p) => p.y)) - minY > 4;
       if (CF.lake) { ribbon(-14, -2, 3, lam(CF.ground), -0.08, (o, s2) => o <= -14 ? waterY - 0.3 - at(s2).pos.y : 0); ribbon(-2, 45, 4, lam(CF.ground), -0.08); }
+      else if (CF.wall) { ribbon(-90, -CF.pw - 0.6, 6, lam(CF.ground), 0, (o) => -8 - Math.abs(o) * 0.45); ribbon(CF.pw + 0.6, 90, 6, lam(CF.ground), 0, (o) => -8 - Math.abs(o) * 0.45); }
       else if (!CF.sea && !CF.bridge) ribbon(-45, 45, 4, lam(CF.ground), -0.08);
       else if (SEAREL) { const sg = lam(CF.ground), drop = (o, s2) => Math.abs(o) > 10 ? -at(s2).pos.y - 0.4 : 0;
         ribbon(-6, 6, 4, sg, -0.08); ribbon(6, 18, 4, sg, -0.08, drop); ribbon(-18, -6, 4, sg, -0.08, drop); }
-      if (!CF.bridge) ribbon(-CF.pw, CF.pw, 2, lam(CF.path), 0.0);
-      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : CF.bridge ? minY - 160 : minY - 2; base.receiveShadow = true; scene.add(base);
+      if (!CF.bridge && !CF.wall) ribbon(-CF.pw, CF.pw, 2, lam(CF.path), 0.0);
+      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : CF.bridge ? minY - 160 : CF.wall ? minY - 55 : minY - 2; base.receiveShadow = true; scene.add(base);
       if (CF.sea) {
         const seaM = new T.Mesh(new T.PlaneGeometry(9000, 3000), new T.MeshPhongMaterial({ color: 0x1f6f8b, shininess: 90, specular: 0xffc48a, emissive: 0x0a2a3a }));
         const shZ = Math.max(...P.map((p) => p.z)) + 9; seaM.rotation.x = -Math.PI / 2; seaM.position.set(0, 0.15, 1500 + shZ - 1); scene.add(seaM);
@@ -260,10 +276,78 @@
         if (CF.lake && side < 0 && rnd() < 0.85) continue;                  // côté lac : peu d'arbres
         if (CF.sea && at(s2, side * 5).pos.z > at(s2).pos.z) continue;               // pas de palmiers côté mer
         const off = side * (CF.pw + 2 + rnd() ** 1.6 * (CF.lake && side < 0 ? 6 : CF.far)); const A = at(s2 + rnd() * 2, off);
-        if (near(A.pos.x, A.pos.z, CF.pw + 1.5)) continue; const t = pick(); spots[t].push([A.pos.x, (SEAREL && Math.abs(off) > 12 ? 0 : A.pos.y) - 0.1, A.pos.z, 0.75 + rnd() * 0.75, rnd() * 6.28]);
+        if (near(A.pos.x, A.pos.z, CF.pw + (CF.wall ? 6 : 1.5))) continue; if (CF.vegas && rnd() < 0.15) continue; const t = pick(); spots[t].push([A.pos.x, (SEAREL && Math.abs(off) > 12 ? 0 : CF.wall ? A.pos.y - 8 - Math.abs(off) * 0.45 : A.pos.y) - 0.1, A.pos.z, 0.75 + rnd() * 0.75, rnd() * 6.28]);
       }
       const m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(), col = new T.Color(), e = new T.Euler();
       const inst = (geo, mat, n, shadow = true) => { const m = new T.InstancedMesh(geo, mat, Math.max(1, n)); m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m; };
+
+      const CXZ = () => [P.reduce((a, p) => a + p.x, 0) / P.length, P.reduce((a, p) => a + p.z, 0) / P.length];
+      if (CF.egypt) { const [cx, cz] = CXZ();
+        const stone = new T.MeshLambertMaterial({ color: 0xc89a55, flatShading: true });
+        const ext = Math.max(...P.map((p) => Math.hypot(p.x - cx, p.z - cz)));
+        [0.4, 2.5, 4.4].forEach((ang, gi) => { const gx = cx + Math.cos(ang) * (ext + 380), gz = cz + Math.sin(ang) * (ext + 380);
+          [[0, 280, 430], [470, 260, 400], [860, 140, 220]].forEach(([dx, h, w]) => { const py = new T.Mesh(new T.ConeGeometry(w / Math.SQRT2, h, 4, 1), stone); py.rotation.y = Math.PI / 4 + gi; py.position.set(gx - 430 + dx * Math.cos(gi), minY - 2 + h / 2, gz + dx * Math.sin(gi) * 0.6); scene.add(py); }); });
+        // sphinx (formes simples)
+        const sx = new T.Group(), sm = new T.MeshLambertMaterial({ color: 0xc9a161, flatShading: true }), bx = (w, h, d, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), sm); m.position.set(x, y, z); sx.add(m); };
+        bx(12, 9, 34, 0, 4.5, 0); bx(10, 12, 9, 0, 12, 16); bx(12, 4, 6, 0, 18.5, 14); bx(4, 3, 14, -4, 1.5, 22); bx(4, 3, 14, 4, 1.5, 22); sx.position.set(cx + 160, minY - 2, cz + 110); sx.rotation.y = 0.5; sx.scale.setScalar(1.6); scene.add(sx);
+        // dunes
+        const dm = new T.MeshLambertMaterial({ color: 0xdcb878, flatShading: true });
+        for (let i = 0; i < 40; i++) { const A = at(rnd() * L, (rnd() < 0.5 ? -1 : 1) * (40 + rnd() * 220)), r = 25 + rnd() * 60, d = new T.Mesh(new T.SphereGeometry(r, 12, 6, 0, 6.29, 0, Math.PI / 2), dm); d.scale.set(1, 0.18 + rnd() * 0.15, 0.6 + rnd() * 0.5); d.position.set(A.pos.x, minY - 2, A.pos.z); d.rotation.y = rnd() * 3; scene.add(d); }
+        // oasis au départ
+        const oa = at(60, -14), pool = new T.Mesh(new T.CircleGeometry(9, 28), new T.MeshPhongMaterial({ color: 0x2a8aa8, shininess: 100, emissive: 0x0a3040 })); pool.rotation.x = -Math.PI / 2; pool.position.set(oa.pos.x, oa.pos.y + 0.05, oa.pos.z); scene.add(pool);
+        for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28, x = oa.pos.x + Math.cos(a) * 11, z = oa.pos.z + Math.sin(a) * 11; spots.palm.push([x, oa.pos.y - 0.1, z, 0.9 + rnd() * 0.5, rnd() * 6.28]); }
+        // chameaux qui marchent
+        const cm = new T.MeshLambertMaterial({ color: 0xa87a48, flatShading: true }), camels = [];
+        for (let i = 0; i < 6; i++) { const g = new T.Group(), part = (geo, x, y, z, rx) => { const m = new T.Mesh(geo, cm); m.position.set(x, y, z); if (rx) m.rotation.x = rx; g.add(m); return m; };
+          const bd = part(new T.SphereGeometry(1, 10, 8), 0, 2, 0); bd.scale.set(0.8, 0.7, 1.5); part(new T.SphereGeometry(0.55, 8, 6), 0, 2.7, 0); part(new T.CylinderGeometry(0.22, 0.3, 1.6, 6), 0, 2.8, 1.5, -0.6); part(new T.BoxGeometry(0.35, 0.4, 0.8), 0, 3.5, 2.2);
+          const legs = [[-0.4, 0.8], [0.4, 0.8], [-0.4, -0.9], [0.4, -0.9]].map(([x, z]) => { const L2 = new T.Group(); L2.position.set(x, 1.6, z); const lg = new T.Mesh(new T.CylinderGeometry(0.12, 0.1, 1.6, 6), cm); lg.position.y = -0.8; L2.add(lg); g.add(L2); return L2; });
+          scene.add(g); camels.push({ g, legs, s: 200 + i * 700, off: (i % 2 ? 1 : -1) * (12 + rnd() * 10), v: 0.9 + rnd() * 0.4 }); }
+        ANIM.push((t) => camels.forEach((o, i) => { const A = at(o.s + t / 1000 * o.v, o.off); o.g.position.copy(A.pos).setY(A.pos.y); o.g.rotation.y = Math.atan2(A.dir.x, A.dir.z); o.legs.forEach((l, j) => { l.rotation.x = 0.35 * Math.sin(t / 260 + j * 1.6); }); }));
+      }
+      if (CF.vegas) { const [cx, cz] = CXZ();
+        // trottoirs et marquage
+        ribbon(CF.pw, CF.pw + 2.5, 3, lam(0x55555f), 0.12); ribbon(-CF.pw - 2.5, -CF.pw, 3, lam(0x55555f), 0.12);
+        ribbon(-0.08, 0.08, 2, new T.MeshBasicMaterial({ color: 0xffd23a, side: T.DoubleSide }), 0.02);
+        // hôtels-tours avec bandes de fenêtres lumineuses
+        const B = []; for (let s2 = 0; s2 < L; s2 += 38) for (const side of [-1, 1]) { if (rnd() < 0.2) continue; const off = side * (CF.pw + 12 + rnd() * 30), A = at(s2, off); B.push([A.pos.x, A.pos.z, 40 + rnd() * 140, 16 + rnd() * 18, Math.atan2(A.dir.x, A.dir.z)]); }
+        const tw = inst(new T.BoxGeometry(1, 1, 1), new T.MeshLambertMaterial({ color: 0x4a4670, emissive: 0x1c1838 }), B.length), win = inst(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial(), B.length * 8, false);
+        const NE = [0xffd166, 0xff4fd8, 0x4fe3ff, 0xff7a3a, 0xb07cff, 0x7dff8a];
+        B.forEach(([x, z, h, w, yaw], i) => { q.setFromEuler(e.set(0, yaw, 0)); m4.compose(new T.Vector3(x, minY + h / 2, z), q, sc.set(w, h, w * 0.7)); tw.setMatrixAt(i, m4); const c = NE[Math.floor(rnd() * NE.length)];
+          for (let j = 0; j < 8; j++) { m4.compose(new T.Vector3(x, minY + h * (0.1 + j * 0.11), z), q, sc.set(w + 0.3, j === 7 ? 2.2 : 0.7, w * 0.7 + 0.3)); win.setMatrixAt(i * 8 + j, m4); win.setColorAt(i * 8 + j, col.set(j === 7 ? c : j % 2 ? 0xffe9a8 : 0xfff6d8)); } });
+        // enseignes au néon (noms génériques)
+        const words = ['CASINO', 'JACKPOT', '★ 777 ★', 'SHOW', 'HOTEL', 'BUFFET', 'NEON NIGHTS', 'LUCKY RUN', 'WEDDING CHAPEL', 'TREADVERSE'];
+        for (let i = 0; i < 26; i++) { const side = i % 2 ? 1 : -1, A = at(80 + i * (L / 26), side * (CF.pw + 7)), c = '#' + NE[i % NE.length].toString(16).padStart(6, '0'), { tex } = canvasTex([{ t: words[i % words.length], size: 64 }], 512, 128, '#0b0618', c);
+          const bd = new T.Mesh(new T.PlaneGeometry(12, 3), new T.MeshBasicMaterial({ map: tex, side: T.DoubleSide, fog: false })); bd.position.copy(A.pos).setY(A.pos.y + 8.5); bd.lookAt(A.pos.clone().addScaledVector(A.dir, -20).addScaledVector(A.nrm, -side * 8).setY(bd.position.y)); scene.add(bd);
+          const post = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 7, 6), lam(0x333344)); post.position.copy(A.pos).setY(A.pos.y + 3.5); scene.add(post); }
+        // panneau d'accueil (dessin original) et lampadaires
+        { const A = at(25, -(CF.pw + 4)), { tex } = canvasTex([{ t: 'WELCOME TO', size: 44 }, { t: 'NEON CITY', size: 76 }, { t: 'RUN ALL NIGHT', size: 34 }], 512, 320, '#f8f4e8', '#d0204a');
+          const bd = new T.Mesh(new T.PlaneGeometry(6, 3.75), new T.MeshBasicMaterial({ map: tex, side: T.DoubleSide })); bd.position.copy(A.pos).setY(A.pos.y + 4.5); bd.lookAt(at(0, -(CF.pw + 4)).pos.clone().setY(bd.position.y)); scene.add(bd);
+          const p2 = new T.Mesh(new T.CylinderGeometry(0.2, 0.2, 3, 8), lam(0xdddddd)); p2.position.copy(A.pos).setY(A.pos.y + 1.5); scene.add(p2); }
+        const nl = Math.floor(L / 30), lp = inst(new T.CylinderGeometry(0.08, 0.1, 6, 6), lam(0x555566), nl * 2), bulb = inst(new T.SphereGeometry(0.35, 10, 8), new T.MeshBasicMaterial({ color: 0xfff0c0 }), nl * 2, false);
+        for (let i = 0; i < nl; i++) for (const sd of [-1, 1]) { const A = at(i * 30, sd * (CF.pw + 1.8)), k = i * 2 + (sd > 0 ? 1 : 0); m4.makeTranslation(A.pos.x, A.pos.y + 3, A.pos.z); lp.setMatrixAt(k, m4); m4.makeTranslation(A.pos.x, A.pos.y + 6.1, A.pos.z); bulb.setMatrixAt(k, m4); }
+        // fontaines dansantes
+        const jets = []; for (let f = 0; f < 3; f++) { const A = at(900 + f * 1500, -(CF.pw + 22)); const pool = new T.Mesh(new T.CircleGeometry(16, 32), new T.MeshPhongMaterial({ color: 0x1a4a7a, emissive: 0x0a2040, shininess: 90 })); pool.rotation.x = -Math.PI / 2; pool.position.copy(A.pos).setY(A.pos.y + 0.05); scene.add(pool);
+          for (let j = 0; j < 9; j++) { const jt = new T.Mesh(new T.CylinderGeometry(0.25, 0.5, 1, 8), new T.MeshBasicMaterial({ color: 0xc8f0ff, transparent: true, opacity: 0.75 })); jt.position.set(A.pos.x + (j - 4) * 3, A.pos.y, A.pos.z); scene.add(jt); jets.push({ m: jt, y0: A.pos.y, ph: j * 0.5 + f }); } }
+        ANIM.push((t) => jets.forEach((o) => { const h = 2 + 9 * Math.max(0, Math.sin(t / 600 + o.ph)); o.m.scale.y = h; o.m.position.y = o.y0 + h / 2; }));
+      }
+      if (CF.wall) {
+        // muraille : faces latérales, créneaux, tours de guet
+        const brick = new T.MeshLambertMaterial({ color: 0x8f8170, side: T.DoubleSide, flatShading: true });
+        for (const sd of [-1, 1]) { ribbon(sd * (CF.pw + 0.6), sd * (CF.pw + 0.61), 3, brick, 0, (o) => Math.abs(o) > CF.pw + 0.605 ? -8.5 : 0.9); ribbon(sd * CF.pw, sd * (CF.pw + 0.6), 3, brick, 0.9); }
+        ribbon(-CF.pw, CF.pw, 3, lam(CF.path), 0.02);
+        const nc = Math.floor(L / 2.4), cren = inst(new T.BoxGeometry(0.6, 0.9, 1.2), brick, nc * 2);
+        for (let i = 0; i < nc; i++) for (const sd of [-1, 1]) { const A = at(i * 2.4, sd * (CF.pw + 0.3)); q.setFromEuler(e.set(0, Math.atan2(A.dir.x, A.dir.z), 0)); m4.compose(new T.Vector3(A.pos.x, A.pos.y + 1.35, A.pos.z), q, sc.set(1, 1, 1)); cren.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), m4); }
+        for (let s2 = 200; s2 < L; s2 += 420) { const A = at(s2), yaw = Math.atan2(A.dir.x, A.dir.z), tg = new T.Group();
+          [-1, 1].forEach((sd) => { const w = new T.Mesh(new T.BoxGeometry(3, 16, 9), brick); w.position.set(sd * (CF.pw + 2), -2, 0); tg.add(w); });
+          const roof = new T.Mesh(new T.BoxGeometry(CF.pw * 2 + 7, 3, 9), brick); roof.position.y = 5.5; tg.add(roof);
+          for (let k = -3; k <= 3; k++) { const c2 = new T.Mesh(new T.BoxGeometry(0.9, 1.2, 9.4), brick); c2.position.set(k * 1.6, 7.6, 0); tg.add(c2); }
+          tg.position.copy(A.pos); tg.rotation.y = yaw; scene.add(tg); }
+        // montagnes et brume
+        const [cx, cz] = CXZ();
+        for (let i = 0; i < 26; i++) { const a = i / 26 * 6.28 + rnd() * 0.2, d = 900 + rnd() * 500, h = 160 + rnd() * 220, r = h * (1.2 + rnd() * 0.6);
+          const mt = new T.Mesh(new T.ConeGeometry(r, h, 8), new T.MeshLambertMaterial({ color: 0x5f7a52, flatShading: true })); mt.position.set(cx + Math.cos(a) * d, minY - 55 + h / 2, cz + Math.sin(a) * d); scene.add(mt); }
+        const mist = new T.Mesh(new T.PlaneGeometry(9000, 9000), new T.MeshBasicMaterial({ color: 0xe6edf2, transparent: true, opacity: 0.45, depthWrite: false })); mist.rotation.x = -Math.PI / 2; mist.position.y = minY - 25; scene.add(mist);
+      }
       if (spots.pine.length) { const n = spots.pine.length, tr = inst(new T.CylinderGeometry(0.16, 0.24, 2.6, 6), lam(0x4a3524), n), cones = [0, 1, 2].map(() => inst(new T.ConeGeometry(1, 2.4, 9), new T.MeshLambertMaterial({ flatShading: true }), n));
         spots.pine.forEach(([x, y, z, f, r], i) => { q.setFromEuler(e.set(0, r, 0)); sc.set(f, f, f); m4.compose(new T.Vector3(x, y + 1.3 * f, z), q, sc); tr.setMatrixAt(i, m4);
           col.setHSL(0.30 + rnd() * 0.05, 0.45, 0.17 + rnd() * 0.08); cones.forEach((c, j) => { const rr = (1.9 - j * 0.42) * f; sc.set(rr, f, rr); m4.compose(new T.Vector3(x, y + (2.7 + j * 1.3) * f, z), q, sc); c.setMatrixAt(i, m4); c.setColorAt(i, col); }); }); }
@@ -367,7 +451,7 @@
           const snow = new T.Mesh(new T.ConeGeometry(r * 0.34, h * 0.34, 7), new T.MeshLambertMaterial({ color: 0xf4f7fa, flatShading: true })); snow.position.set(rock.position.x, 260 + h - h * 0.17 + 0.5, rock.position.z); scene.add(snow); } }
       // panneaux : départ, chaque kilomètre, côtes
       arch(0.5, 'DÉPART');
-      for (let km = 1; km * 1000 < L; km++) sign(km * 1000, CF.pw + 0.9, [{ t: km + ' km', size: 72 }], 1.5, 0.95, CF.sea ? '#0e4a6b' : CF.halloween ? '#2b1140' : '#5b3e24', CF.halloween ? '#ff9a2e' : '#f5f0e6');
+      for (let km = 1; km * 1000 < L; km++) sign(km * 1000, CF.wall ? CF.pw - 0.4 : CF.pw + 0.9, [{ t: km + ' km', size: 72 }], 1.5, 0.95, CF.sea ? '#0e4a6b' : CF.halloween ? '#2b1140' : CF.vegas ? '#140a2e' : CF.wall ? '#7a1c1c' : '#5b3e24', CF.halloween ? '#ff9a2e' : CF.vegas ? '#ff4fd8' : CF.wall ? '#f6d36b' : '#f5f0e6');
       if (CF.hills) { let lastHill = -500;
         for (let s2 = 0; s2 < L; s2 += 20) { const g = (at(s2 + 120).pos.y - at(s2 + 20).pos.y);
           if (g >= 4.5 && s2 - lastHill > 400) { lastHill = s2; sign(s2, -(CF.pw + 0.9), [{ t: 'CÔTE', size: 46 }, { t: Math.round(g) + ' %', size: 58 }], 1.4, 0.95, '#b45309'); } } }
