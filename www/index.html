@@ -751,6 +751,8 @@ if(UIL==='en'){
 <script src="decors.js"></script>
 <script>
 "use strict";
+/* mise en forme des durées, disponible dès le chargement (profil, records) */
+if(typeof hdur!=="function")window.hdur=t=>{t=Math.round(t||0);const h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=t%60,p=n=>String(n).padStart(2,"0");return h?`${h} h ${p(m)} min${s?" "+p(s)+" s":""}`:m?`${m} min${s?" "+p(s)+" s":""}`:`${s} s`};
 const $=id=>document.getElementById(id);
 const fmt=(n,d=1)=>(+n).toFixed(d).replace('.',window.UIL==='en'?'.':',');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -3330,6 +3332,7 @@ roar=function(kind){if(!$('voice').checked||kind!=='rex')return 0;const ac=roarC
 for(const k of Object.keys(T)){try{THUMB[k]=T[k];DDESC[k]=D[k];const b=document.querySelector(`#decors .decor[data-k="${k}"]`);if(!b)continue;b.style.display='';
   b.innerHTML=`<img src="${T[k]}" alt=""><span class="tx"><b>${esc(VR.DEFS[k].name)}</b><small>${esc(D[k])}</small></span>`;b.addEventListener('click',()=>{setTimeout(()=>{reliefCards()},0)})}catch(e){}}})();
 </script>
+<script>/* profil redessiné une fois tous les scripts chargés */try{renderProfile()}catch(e){}</script>
 </body>
 
 </html>
