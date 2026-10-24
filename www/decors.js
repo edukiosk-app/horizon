@@ -261,7 +261,7 @@
       else if (SEAREL) { const sg = lam(CF.ground), drop = (o, s2) => Math.abs(o) > 10 ? -at(s2).pos.y - 0.4 : 0;
         ribbon(-6, 6, 4, sg, -0.08); ribbon(6, 18, 4, sg, -0.08, drop); ribbon(-18, -6, 4, sg, -0.08, drop); }
       if (!CF.bridge && !CF.wall) ribbon(-CF.pw, CF.pw, 2, lam(CF.path), CF.cp ? 0.35 : 0.0);
-      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : CF.bridge ? minY - 160 : CF.wall ? minY - 55 : CF.cp ? minY - 40 : minY - 2; base.receiveShadow = true; scene.add(base);
+      const base = new T.Mesh(new T.PlaneGeometry(9000, 9000), lam(CF.base)); base.rotation.x = -Math.PI / 2; base.position.y = CF.sea ? 0 : CF.lake ? waterY - 1.5 : CF.bridge ? minY - 160 : CF.wall ? minY - 55 : CF.cp ? Math.min(...CP.water.map((W2) => W2.lv)) - 0.9 : minY - 2; base.receiveShadow = true; scene.add(base);
       if (CF.sea) {
         const seaM = new T.Mesh(new T.PlaneGeometry(9000, 3000), new T.MeshPhongMaterial({ color: 0x1f6f8b, shininess: 90, specular: 0xffc48a, emissive: 0x0a2a3a }));
         const shZ = Math.max(...P.map((p) => p.z)) + 9; seaM.rotation.x = -Math.PI / 2; seaM.position.set(0, 0.15, 1500 + shZ - 1); scene.add(seaM);
@@ -304,7 +304,7 @@
           else if (CP.lawns.some((L2) => cpIn(x, y, L2))) cc.setHSL(0.25, 0.5, 0.42 + Math.random() * 0.03); else cc.setHSL(0.24 + Math.random() * 0.04, 0.45, 0.3 + Math.random() * 0.05);
           pos.setX(i, x); pos.setZ(i, -y); pos.setY(i, h); cols.push(cc.r, cc.g, cc.b); }
         geo.setAttribute('color', new T.Float32BufferAttribute(cols, 3)); geo.computeVertexNormals();
-        const tm = new T.Mesh(geo, new T.MeshLambertMaterial({ vertexColors: true })); tm.receiveShadow = true; scene.add(tm);
+        const tm = new T.Mesh(geo, new T.MeshLambertMaterial({ vertexColors: true, side: T.DoubleSide })); tm.receiveShadow = true; tm.frustumCulled = false; scene.add(tm);
         CP.water.forEach((W2) => { const sh = new T.Shape(); W2.p.forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y)); const m = new T.Mesh(new T.ShapeGeometry(sh), new T.MeshPhongMaterial({ color: 0x2f5f6e, shininess: 25, specular: 0x334455, emissive: 0x0a1c22 })); m.rotation.x = -Math.PI / 2; m.position.y = W2.lv; scene.add(m); });
         // bords de la chaussée et petit mur du parc
         ribbon(CF.pw - 0.2, CF.pw - 0.05, 3, new T.MeshBasicMaterial({ color: 0xf2f2f2, side: T.DoubleSide }), 0.38); ribbon(-CF.pw + 0.05, -CF.pw + 0.2, 3, new T.MeshBasicMaterial({ color: 0xf2f2f2, side: T.DoubleSide }), 0.38);
