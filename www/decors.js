@@ -680,7 +680,7 @@
       const fm = new T.MeshBasicMaterial({ color: 0xffe066, side: T.DoubleSide });
       [[-0.42, 0.3], [0.42, 0.3]].forEach(([x, y]) => { const e2 = new T.Mesh(new T.CircleGeometry(0.24, 3), fm); e2.position.set(x, y, 1.13); e2.rotation.z = Math.PI / 2; body.add(e2); });
       const mouth = new T.Mesh(new T.PlaneGeometry(0.95, 0.24), fm); mouth.position.set(0, -0.28, 1.12); body.add(mouth);
-      body.position.y = 1.15; g.userData = { anim: (t) => { body.rotation.x = -t / 180; body.position.y = 1.15 + 0.2 * Math.abs(Math.sin(t / 160)); } }; g.visible = false; scene.add(g); return g; }
+      body.position.y = 1.15; g.userData = { anim: (t) => { body.rotation.x = t / 180; body.position.y = 1.15 + 0.2 * Math.abs(Math.sin(t / 160)); } }; g.visible = false; scene.add(g); return g; }
     function mkSpider() { const g = new T.Group(), m = new T.MeshLambertMaterial({ color: 0x15101a, flatShading: true }), ey = new T.MeshBasicMaterial({ color: 0xff2020 });
       const ab = new T.Mesh(new T.SphereGeometry(1.1, 14, 10), m); ab.scale.set(1, 0.85, 1.25); ab.position.set(0, 1.5, -0.9); g.add(ab);
       const th = new T.Mesh(new T.SphereGeometry(0.65, 12, 9), m); th.position.set(0, 1.3, 0.6); g.add(th);
