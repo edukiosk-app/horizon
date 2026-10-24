@@ -437,8 +437,10 @@
       for (let i = 0; i < 40; i++) { const gg = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 0, 0), new T.Vector3(-0.9, 0.25, -0.25), new T.Vector3(-0.3, 0, 0.3), new T.Vector3(0, 0, 0), new T.Vector3(0.9, 0.25, -0.25), new T.Vector3(0.3, 0, 0.3)]);
         const b = new T.Mesh(gg, bm); b.scale.setScalar(0.6 + Math.random() * 0.5); g.add(b); sw.push({ b, x: (Math.random() - 0.5) * 4, y: 0.8 + Math.random() * 3.2, z: (Math.random() - 0.5) * 6, ph: Math.random() * 6.28 }); }
       g.userData = { anim: (t) => sw.forEach((o) => { o.b.position.set(o.x + 0.6 * Math.sin(t / 400 + o.ph), o.y + 0.5 * Math.sin(t / 250 + o.ph), o.z + 0.8 * Math.cos(t / 500 + o.ph)); o.b.rotation.z = 0.7 * Math.sin(t / 60 + o.ph); }) }; g.visible = false; scene.add(g); return g; }
+    function mkHunter() { const g = new T.Group(), a = runner(0xef4444), b = runner(0x991b1b); scene.remove(a); scene.remove(b); a.scale.setScalar(1.15); b.scale.setScalar(1.15); b.position.set(0.9, 0, -2.2); g.add(a, b);
+      let last = performance.now(); g.userData = { anim: (t) => { const d = Math.min(0.1, (t - last) / 1000); last = t; animate(a, 4.2, d); animate(b, 4.2, d); } }; g.visible = false; scene.add(g); return g; }
     const CHS = {}; let CHG = null;
-    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
+    function chase(ms, kind) { kind = kind || 'rex'; if (CHG) CHG.visible = false; if (!CHS[kind]) CHS[kind] = kind === 'hunter' ? mkHunter() : kind === 'pumpkin' ? mkPumpkin() : kind === 'spider' ? mkSpider() : kind === 'bats' ? mkBats() : (REXG = REXG || mkRex()); CHG = CHS[kind]; CH.kind = kind; CH.ext = null; CH.t0 = performance.now(); CH.dur = ms || 30000; }
     const S = { me: { x: 0, v: 0, t: 0, init: false }, ref: { x: null, v: 0, t: 0 }, lead: null, view: 'follow', alive: true, raf: 0, el, ren };
     function track(o, x) { const now = performance.now(); if (x == null) { o.x = null; return; }
       if (o.x == null || !o.init) { o.x = x; o.v = 0; o.t = now; o.init = true; return; }
@@ -463,14 +465,14 @@
       // prédateur
       let chaseK = 0, lookBk = false;
       if (CH.dur) { const u = (performance.now() - CH.t0) / CH.dur; if (u >= 1) { CH.dur = 0; if (CHG) CHG.visible = false; } else {
-        chaseK = Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
-        const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : 1.0)), t = performance.now(); lookBk = (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
+        chaseK = CH.ext != null && CH.kind === 'hunter' ? Math.max(0, Math.min(1, (30 - CH.ext) / 12)) : Math.min(1, u * 8, (1 - u) * 6); const gap = CH.ext != null ? Math.max(1.2, CH.ext) : 4.5 + 7 * (1 - Math.min(1, u * 4)) + 10 * Math.max(0, (u - 0.85) / 0.15);
+        const R = at(xm - gap, laneMe + (CH.kind === 'rex' ? 1.3 : CH.kind === 'bats' ? 0.4 : CH.kind === 'hunter' ? 0.7 : 1.0)), t = performance.now(); lookBk = CH.kind !== 'hunter' && (performance.now() - CH.t0) < 4000 && CH.dur > 8000; CHG.position.copy(R.pos); CHG.rotation.y = Math.atan2(R.dir.x, R.dir.z); CHG.visible = true;
         if (CH.kind === 'rex') { const ph = t / 140; REXG.userData.legs[0].rotation.x = 0.6 * Math.sin(ph); REXG.userData.legs[1].rotation.x = -0.6 * Math.sin(ph); REXG.position.y += 0.15 * Math.abs(Math.sin(ph));
         REXG.userData.jaw.rotation.x = 0.25 + 0.25 * Math.sin(t / 220); REXG.userData.head.rotation.x = 0.08 * Math.sin(t / 300); } else CHG.userData.anim(t); } }
       let want, look;
       if (S.view === 'top') { const c = forest ? A.pos : new T.Vector3(0, 0, 0); want = c.clone().add(new T.Vector3(0, forest ? 120 : 150, forest ? 40 : 60)); look = c.clone(); }
       else if (lookBk) { const fr = at(xm + 13, laneMe - 1.0), bk = at(xm - 7, laneMe + 1.0); want = fr.pos.clone().setY(fr.pos.y + 4.2); look = bk.pos.clone().setY(bk.pos.y + 2.4); }
-      else { const back = at(xm - 9 - 7 * chaseK, laneMe - 0.8 * chaseK), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4 + 3.8 * chaseK); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
+      else { const back = at(xm - 9 - (CH.kind === 'hunter' && CH.ext != null ? Math.max(7, CH.ext + 3) : 7) * chaseK, laneMe - 0.8 * chaseK), fwd = at(xm + 7, laneMe); want = back.pos.clone().setY(Math.max(back.pos.y, A.pos.y) + 3.4 + 3.8 * chaseK); look = fwd.pos.clone().setY(fwd.pos.y + (cam.aspect < 0.8 ? 2.6 : 1.0)); }
       const kk = 1 - Math.exp(-6 * Math.max(fdt, 0.016));
       camPos = camPos && camPos.distanceTo(want) < 60 ? camPos.lerp(want, kk) : want.clone(); lookPos = lookPos && lookPos.distanceTo(look) < 60 ? lookPos.lerp(look, kk) : look.clone(); cam.position.copy(camPos); cam.lookAt(lookPos);
       if (board) { const lap = Math.floor((S.lapDist || 0) / 400) + 1, txt = 'TOUR ' + lap + '|' + ((S.lapDist || 0) / 1000).toFixed(2).replace('.', ',') + ' km';
@@ -492,6 +494,7 @@
       chase,
       chaseGap(g) { CH.ext = g; },
       chaseMore(ms) { if (CH.dur) CH.dur += ms; },
+      chaseStop() { CH.dur = 0; CH.ext = null; if (CHG) CHG.visible = false; },
       setLeader(l) { S.lead = l; },
       toggleView() { S.view = S.view === 'follow' ? 'top' : 'follow'; return S.view; },
       resize() { camPos = null; lookPos = null; },
